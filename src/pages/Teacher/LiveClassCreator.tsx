@@ -60,6 +60,10 @@ export default function LiveClassCreator() {
     e.preventDefault();
 
     try {
+      // Convert datetime-local to ISO string with proper timezone
+      const startTimeISO = new Date(formData.startTime).toISOString();
+      const endTimeISO = new Date(formData.endTime).toISOString();
+
       if (editingClass) {
         // Update existing class
         const { error } = await supabase
@@ -68,8 +72,8 @@ export default function LiveClassCreator() {
             session_title: formData.sessionTitle,
             description: formData.description,
             stream_url: formData.streamUrl,
-            start_time: formData.startTime,
-            end_time: formData.endTime,
+            start_time: startTimeISO,
+            end_time: endTimeISO,
             subject: formData.subject,
             grade: formData.grade,
             section: formData.section,
@@ -88,8 +92,8 @@ export default function LiveClassCreator() {
             session_title: formData.sessionTitle,
             description: formData.description,
             stream_url: formData.streamUrl,
-            start_time: formData.startTime,
-            end_time: formData.endTime,
+            start_time: startTimeISO,
+            end_time: endTimeISO,
             subject: formData.subject,
             grade: formData.grade,
             section: formData.section,
@@ -122,12 +126,16 @@ export default function LiveClassCreator() {
 
   const handleEdit = (liveClass: LiveClass) => {
     setEditingClass(liveClass);
+    // Convert ISO string to datetime-local format (YYYY-MM-DDTHH:mm)
+    const startTimeLocal = new Date(liveClass.start_time).toISOString().slice(0, 16);
+    const endTimeLocal = new Date(liveClass.end_time).toISOString().slice(0, 16);
+    
     setFormData({
       sessionTitle: liveClass.session_title,
       description: liveClass.description || '',
       streamUrl: liveClass.stream_url,
-      startTime: liveClass.start_time,
-      endTime: liveClass.end_time,
+      startTime: startTimeLocal,
+      endTime: endTimeLocal,
       subject: liveClass.subject || '',
       grade: liveClass.grade || '',
       section: liveClass.section || '',

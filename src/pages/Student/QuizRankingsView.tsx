@@ -88,13 +88,36 @@ export default function QuizRankingsView() {
       // Fetch top 10 rankings
       const { data: rankings, error: rankingsError } = await supabase
         .from('quiz_rankings')
-        .select('*, profiles:student_id(full_name)')
+        .select('*')
         .eq('quiz_id', selectedQuiz)
         .order('rank', { ascending: true })
         .limit(10);
 
-      if (rankingsError) throw rankingsError;
-      setTopRankings(rankings || []);
+      if (rankingsError) {
+        console.error('Error fetching rankings:', rankingsError);
+        throw rankingsError;
+      }
+      
+      console.log('Rankings data:', rankings);
+      
+      // Fetch student names separately
+      if (rankings && rankings.length > 0) {
+        const studentIds = [...new Set(rankings.map(r => r.student_id))];
+        const { data: students } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', studentIds);
+        
+        const studentMap = new Map(students?.map(s => [s.id, s.full_name]) || []);
+        const rankingsWithStudents = rankings.map(ranking => ({
+          ...ranking,
+          profiles: { full_name: studentMap.get(ranking.student_id) || 'Unknown' }
+        }));
+        
+        setTopRankings(rankingsWithStudents);
+      } else {
+        setTopRankings([]);
+      }
 
       // Fetch my rank
       const { data: myRanking, error: myRankError } = await supabase
@@ -268,7 +291,7 @@ export default function QuizRankingsView() {
 
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg">
-                    {ranking.profiles.full_name}
+                    {ranking.profiles?.full_name || 'Unknown Student'}
                     {isMe && (
                       <span className="ml-2 px-2 py-1 bg-blue-600 text-white text-xs rounded-full">
                         You

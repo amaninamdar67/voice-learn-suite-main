@@ -24,7 +24,15 @@ export default function CustomVideoPlayer({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [embedError, setEmbedError] = useState(false);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const openInYouTube = () => {
+    const url = isLive 
+      ? `https://www.youtube.com/live/${videoId}`
+      : `https://www.youtube.com/watch?v=${videoId}`;
+    window.open(url, '_blank');
+  };
 
   // YouTube IFrame API
   useEffect(() => {
@@ -125,18 +133,55 @@ export default function CustomVideoPlayer({
 
   // Build YouTube URL with appropriate parameters
   const getYouTubeUrl = () => {
+    // Try multiple embed methods for live streams
+    if (isLive) {
+      // Method 1: Use /live/ endpoint with minimal restrictions
+      const baseUrl = `https://www.youtube.com/embed/live_stream`;
+      const params = new URLSearchParams({
+        channel: videoId, // Try as channel first
+        autoplay: autoplay ? '1' : '0',
+        mute: '0',
+        controls: '1',
+        fs: '1',
+        playsinline: '1',
+        enablejsapi: '1',
+        origin: window.location.origin,
+        widget_referrer: window.location.origin,
+      });
+      
+      // If that doesn't work, fall back to direct video ID
+      const fallbackUrl = `https://www.youtube-nocookie.com/embed/${videoId}`;
+      const fallbackParams = new URLSearchParams({
+        autoplay: autoplay ? '1' : '0',
+        mute: '0',
+        controls: '1',
+        fs: '1',
+        playsinline: '1',
+        rel: '0',
+        modestbranding: '1',
+        enablejsapi: '1',
+        origin: window.location.origin,
+        widget_referrer: window.location.origin,
+      });
+      
+      // Use the direct video ID method for live streams
+      return `${fallbackUrl}?${fallbackParams.toString()}`;
+    }
+    
+    // For regular videos
     const baseUrl = `https://www.youtube-nocookie.com/embed/${videoId}`;
     const params = new URLSearchParams({
-      rel: '0', // No related videos
-      modestbranding: '1', // Minimal YouTube branding
-      controls: isLive ? '0' : '1', // No controls for live
-      fs: '1', // Allow fullscreen
-      showinfo: '0', // No video info
-      iv_load_policy: '3', // No annotations
-      disablekb: isLive ? '1' : '0', // Disable keyboard for live
+      rel: '0',
+      modestbranding: '1',
+      controls: '1',
+      fs: '1',
+      showinfo: '0',
+      iv_load_policy: '3',
+      disablekb: '0',
       autoplay: autoplay ? '1' : '0',
-      enablejsapi: '1', // Enable JS API for tracking
+      enablejsapi: '1',
       origin: window.location.origin,
+      widget_referrer: window.location.origin,
     });
 
     return `${baseUrl}?${params.toString()}`;
@@ -164,6 +209,8 @@ export default function CustomVideoPlayer({
           className="absolute inset-0 w-full h-full"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen
+          sandbox="allow-same-origin allow-scripts allow-presentation allow-forms"
+          referrerPolicy="origin"
           title={title || 'Video Player'}
         />
       </div>

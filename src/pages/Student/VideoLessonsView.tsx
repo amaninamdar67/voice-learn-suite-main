@@ -38,13 +38,41 @@ export default function VideoLessonsView() {
 
   const fetchLessons = async () => {
     try {
+      console.log('Fetching video lessons for student...');
+      console.log('User ID:', user?.id);
+      console.log('Profile:', profile);
+      
       const { data, error } = await supabase
         .from('video_lessons')
-        .select('*, profiles!video_lessons_teacher_id_fkey(full_name)')
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setLessons(data || []);
+      console.log('Video lessons response:', { data, error });
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+      
+      // Fetch teacher names separately
+      if (data && data.length > 0) {
+        const teacherIds = [...new Set(data.map(l => l.teacher_id))];
+        const { data: teachers } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', teacherIds);
+        
+        const teacherMap = new Map(teachers?.map(t => [t.id, t.full_name]) || []);
+        const lessonsWithTeachers = data.map(lesson => ({
+          ...lesson,
+          profiles: { full_name: teacherMap.get(lesson.teacher_id) || 'Unknown' }
+        }));
+        
+        console.log('Setting lessons:', lessonsWithTeachers);
+        setLessons(lessonsWithTeachers);
+      } else {
+        setLessons([]);
+      }
     } catch (error) {
       console.error('Error fetching lessons:', error);
     } finally {

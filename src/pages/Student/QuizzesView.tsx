@@ -57,12 +57,30 @@ export default function QuizzesView() {
     try {
       const { data, error } = await supabase
         .from('quizzes')
-        .select('*, profiles!quizzes_teacher_id_fkey(full_name)')
+        .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setQuizzes(data || []);
+      
+      // Fetch teacher names separately
+      if (data && data.length > 0) {
+        const teacherIds = [...new Set(data.map(q => q.teacher_id))];
+        const { data: teachers } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', teacherIds);
+        
+        const teacherMap = new Map(teachers?.map(t => [t.id, t.full_name]) || []);
+        const quizzesWithTeachers = data.map(quiz => ({
+          ...quiz,
+          profiles: { full_name: teacherMap.get(quiz.teacher_id) || 'Unknown' }
+        }));
+        
+        setQuizzes(quizzesWithTeachers);
+      } else {
+        setQuizzes([]);
+      }
     } catch (error) {
       console.error('Error fetching quizzes:', error);
     } finally {
@@ -250,7 +268,9 @@ export default function QuizzesView() {
                     {question.marks} {question.marks === 1 ? 'mark' : 'marks'}
                   </span>
                 </div>
-                <h2 className="text-xl font-semibold">{question.question_text}</h2>
+                <h2 className="text-xl font-semibold leading-relaxed break-words whitespace-pre-wrap">
+                  {question.question_text}
+                </h2>
               </div>
 
               <div className="space-y-3">
@@ -268,14 +288,14 @@ export default function QuizzesView() {
                           : 'border-gray-300 hover:border-blue-300 hover:bg-gray-50'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                      <div className="flex items-start gap-3">
+                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
                           isSelected ? 'border-blue-600 bg-blue-600' : 'border-gray-400'
                         }`}>
                           {isSelected && <div className="w-3 h-3 bg-white rounded-full" />}
                         </div>
-                        <span className="font-semibold text-gray-700">{option}.</span>
-                        <span className="flex-1">{optionText}</span>
+                        <span className="font-semibold text-gray-700 flex-shrink-0">{option}.</span>
+                        <span className="flex-1 break-words whitespace-pre-wrap">{optionText}</span>
                       </div>
                     </button>
                   );

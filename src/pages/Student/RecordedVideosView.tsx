@@ -45,12 +45,30 @@ export default function RecordedVideosView() {
     try {
       const { data, error } = await supabase
         .from('recorded_videos')
-        .select('*, profiles!recorded_videos_teacher_id_fkey(full_name)')
+        .select('*')
         .order('is_featured', { ascending: false })
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setVideos(data || []);
+      
+      // Fetch teacher names separately
+      if (data && data.length > 0) {
+        const teacherIds = [...new Set(data.map(v => v.teacher_id))];
+        const { data: teachers } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', teacherIds);
+        
+        const teacherMap = new Map(teachers?.map(t => [t.id, t.full_name]) || []);
+        const videosWithTeachers = data.map(video => ({
+          ...video,
+          profiles: { full_name: teacherMap.get(video.teacher_id) || 'Unknown' }
+        }));
+        
+        setVideos(videosWithTeachers);
+      } else {
+        setVideos([]);
+      }
     } catch (error) {
       console.error('Error fetching videos:', error);
     } finally {

@@ -39,6 +39,13 @@ export default function LiveClassesView() {
 
   useEffect(() => {
     fetchClasses();
+    
+    // Refresh classes every 30 seconds to update status
+    const interval = setInterval(() => {
+      fetchClasses();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, [user, profile]);
 
   useEffect(() => {
@@ -69,11 +76,47 @@ export default function LiveClassesView() {
     try {
       const { data, error } = await supabase
         .from('live_classes')
-        .select('*, profiles!live_classes_teacher_id_fkey(full_name)')
+        .select('*')
         .order('start_time', { ascending: false });
 
       if (error) throw error;
-      setClasses(data || []);
+      
+      // Fetch teacher names separately
+      if (data && data.length > 0) {
+        const teacherIds = [...new Set(data.map(c => c.teacher_id))];
+        const { data: teachers } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', teacherIds);
+        
+        const teacherMap = new Map(teachers?.map(t => [t.id, t.full_name]) || []);
+        const now = new Date();
+        
+        const classesWithTeachers = data.map(liveClass => {
+          const startTime = new Date(liveClass.start_time);
+          const endTime = new Date(liveClass.end_time);
+          
+          // Determine actual status based on current time
+          let actualStatus: 'upcoming' | 'live' | 'ended' = liveClass.status;
+          if (now >= startTime && now <= endTime) {
+            actualStatus = 'live';
+          } else if (now > endTime) {
+            actualStatus = 'ended';
+          } else {
+            actualStatus = 'upcoming';
+          }
+          
+          return {
+            ...liveClass,
+            status: actualStatus,
+            profiles: { full_name: teacherMap.get(liveClass.teacher_id) || 'Unknown' }
+          };
+        });
+        
+        setClasses(classesWithTeachers);
+      } else {
+        setClasses([]);
+      }
     } catch (error) {
       console.error('Error fetching classes:', error);
     } finally {
@@ -237,7 +280,7 @@ export default function LiveClassesView() {
 
   const extractVideoId = (url: string): string | null => {
     const patterns = [
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/live\/)([^&\n?#]+)/,
       /^([a-zA-Z0-9_-]{11})$/
     ];
     
@@ -358,19 +401,61 @@ export default function LiveClassesView() {
               </button>
             </div>
 
-            <div className="flex-1">
-              {extractVideoId(selectedClass.stream_url) ? (
-                <CustomVideoPlayer
-                  videoId={extractVideoId(selectedClass.stream_url)!}
-                  title={selectedClass.session_title}
-                  isLive={true}
-                  autoplay={true}
-                />
-              ) : (
-                <div className="w-full h-full bg-gray-900 flex items-center justify-center">
-                  <p className="text-white">Invalid stream URL</p>
+            <div className="flex-1 flex flex-col gap-4">
+              {/* YouTube Streaming Notice */}
+              <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-lg p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    <svg className="w-12 h-12 text-red-600" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">
+                      Live Stream on YouTube
+                    </h3>
+                    <p className="text-gray-700 mb-4">
+                      This live class is hosted on YouTube. Click the button below to watch the stream.
+                    </p>
+                    <button
+                      onClick={() => window.open(selectedClass.stream_url, '_blank', 'noopener,noreferrer')}
+                      className="w-full px-6 py-4 bg-red-600 hover:bg-red-700 text-white text-lg font-bold rounded-lg flex items-center justify-center gap-3 transition-all transform hover:scale-105 shadow-lg"
+                    >
+                      <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                      </svg>
+                      Watch Live Stream on YouTube
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </button>
+                    <p className="text-sm text-gray-600 mt-3 text-center">
+                      The stream will open in a new tab
+                    </p>
+                  </div>
                 </div>
-              )}
+              </div>
+
+              {/* Try Embed Anyway (will likely fail) */}
+              <div className="bg-gray-100 rounded-lg p-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>Note:</strong> If the teacher has enabled embedding, the video will appear below:
+                </p>
+                <div className="bg-black rounded-lg overflow-hidden aspect-video">
+                  {extractVideoId(selectedClass.stream_url) ? (
+                    <CustomVideoPlayer
+                      videoId={extractVideoId(selectedClass.stream_url)!}
+                      title={selectedClass.session_title}
+                      isLive={true}
+                      autoplay={false}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-white">
+                      <p>Unable to extract video ID</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
