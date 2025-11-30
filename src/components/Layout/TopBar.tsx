@@ -38,6 +38,17 @@ export const TopBar: React.FC = () => {
     return saved !== 'false'; // Default to true
   });
 
+  // Listen for spacebar press event
+  React.useEffect(() => {
+    const handleSpacebarPress = () => {
+      // Trigger the same toggle function as the button
+      toggleListening();
+    };
+
+    window.addEventListener('voiceNavSpacebarPressed', handleSpacebarPress);
+    return () => window.removeEventListener('voiceNavSpacebarPressed', handleSpacebarPress);
+  }, [toggleListening]);
+
   const handleToggleVoiceNav = () => {
     const newValue = !voiceNavEnabled;
     setVoiceNavEnabled(newValue);
