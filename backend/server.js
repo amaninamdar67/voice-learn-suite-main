@@ -2,6 +2,41 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
+import {
+  initializeLMSRoutes,
+  getVideoLessons,
+  createVideoLesson,
+  updateVideoLesson,
+  deleteVideoLesson,
+  getRecordedVideos,
+  createRecordedVideo,
+  updateRecordedVideo,
+  deleteRecordedVideo,
+  trackVideoProgress,
+  getWatchHistory,
+  getLiveClasses,
+  createLiveClass,
+  updateLiveClassStatus,
+  sendAttendancePing,
+  deleteLiveClass,
+  getQuizzes,
+  getQuizWithQuestions,
+  createQuiz,
+  updateQuiz,
+  deleteQuiz,
+  trackLessonProgress,
+  joinLiveClass,
+  leaveLiveClass,
+  respondToPing,
+  submitQuiz,
+  getQuizRankings,
+  getStudentRank,
+  getTopPerformers,
+  getStudentRankingHistory,
+  recalculateRankings,
+  getStudentAnalytics,
+  getTeacherAnalytics,
+} from './lms-routes.js';
 
 dotenv.config();
 
@@ -14,6 +49,9 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
+
+// Initialize LMS routes with Supabase client
+initializeLMSRoutes(supabase);
 
 // Create user endpoint (with domain support)
 app.post('/api/users/create', async (req, res) => {
@@ -912,6 +950,54 @@ app.post('/api/system/restore', async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
+
+// ==================== LMS ENDPOINTS ====================
+
+// Video Lessons
+app.get('/api/lms/video-lessons', getVideoLessons);
+app.post('/api/lms/video-lessons', createVideoLesson);
+app.put('/api/lms/video-lessons/:id', updateVideoLesson);
+app.delete('/api/lms/video-lessons/:id', deleteVideoLesson);
+
+// Recorded Videos
+app.get('/api/lms/recorded-videos', getRecordedVideos);
+app.post('/api/lms/recorded-videos', createRecordedVideo);
+app.put('/api/lms/recorded-videos/:id', updateRecordedVideo);
+app.delete('/api/lms/recorded-videos/:id', deleteRecordedVideo);
+app.post('/api/lms/recorded-videos/:videoId/track', trackVideoProgress);
+app.get('/api/lms/watch-history/:studentId', getWatchHistory);
+
+// Live Classes
+app.get('/api/lms/live-classes', getLiveClasses);
+app.post('/api/lms/live-classes', createLiveClass);
+app.put('/api/lms/live-classes/:id/status', updateLiveClassStatus);
+app.post('/api/lms/live-classes/:id/ping', sendAttendancePing);
+app.delete('/api/lms/live-classes/:id', deleteLiveClass);
+
+// Quizzes
+app.get('/api/lms/quizzes', getQuizzes);
+app.get('/api/lms/quizzes/:id', getQuizWithQuestions);
+app.post('/api/lms/quizzes', createQuiz);
+app.put('/api/lms/quizzes/:id', updateQuiz);
+app.delete('/api/lms/quizzes/:id', deleteQuiz);
+
+// Quiz Rankings
+app.get('/api/lms/quizzes/:quizId/rankings', getQuizRankings);
+app.get('/api/lms/quizzes/:quizId/rankings/:studentId', getStudentRank);
+app.get('/api/lms/rankings/top-performers', getTopPerformers);
+app.get('/api/lms/rankings/student/:studentId', getStudentRankingHistory);
+app.post('/api/lms/quizzes/:quizId/recalculate-rankings', recalculateRankings);
+
+// Student Tracking
+app.post('/api/lms/lessons/:lessonId/track', trackLessonProgress);
+app.post('/api/lms/live-classes/:classId/join', joinLiveClass);
+app.put('/api/lms/live-attendance/:attendanceId/leave', leaveLiveClass);
+app.post('/api/lms/pings/:pingId/respond', respondToPing);
+app.post('/api/lms/quizzes/:quizId/submit', submitQuiz);
+
+// Analytics
+app.get('/api/lms/analytics/student/:studentId', getStudentAnalytics);
+app.get('/api/lms/analytics/teacher/:teacherId', getTeacherAnalytics);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

@@ -37,10 +37,18 @@ const Analytics: React.FC = () => {
   const [timeRange, setTimeRange] = useState('week');
   const [stats, setStats] = useState([
     { label: 'Total Students', value: '0', change: '+0%', icon: <People />, color: '#2196F3' },
-    { label: 'Active Lessons', value: '0', change: '+0%', icon: <School />, color: '#4CAF50' },
+    { label: 'Video Lessons', value: '0', change: '+0%', icon: <School />, color: '#4CAF50' },
     { label: 'Quizzes Completed', value: '0', change: '+0%', icon: <Quiz />, color: '#FF9800' },
-    { label: 'AI Tutor Sessions', value: '0', change: '+0%', icon: <SmartToy />, color: '#9C27B0' },
+    { label: 'Live Classes', value: '0', change: '+0%', icon: <SmartToy />, color: '#9C27B0' },
   ]);
+  const [lmsStats, setLmsStats] = useState({
+    videoLessons: 0,
+    recordedVideos: 0,
+    liveClasses: 0,
+    quizzes: 0,
+    totalViews: 0,
+    avgCompletion: 0,
+  });
 
   React.useEffect(() => {
     loadAnalyticsData();
@@ -52,21 +60,39 @@ const Analytics: React.FC = () => {
       const usersResponse = await fetch('http://localhost:3001/api/users');
       const usersData = await usersResponse.json();
       
-      // Load lessons
-      const lessonsResponse = await fetch('http://localhost:3001/api/lessons');
-      const lessonsData = await lessonsResponse.json();
+      // Load LMS data
+      const [videoLessonsRes, recordedVideosRes, liveClassesRes, quizzesRes] = await Promise.all([
+        fetch('http://localhost:3001/api/lms/video-lessons'),
+        fetch('http://localhost:3001/api/lms/recorded-videos'),
+        fetch('http://localhost:3001/api/lms/live-classes'),
+        fetch('http://localhost:3001/api/lms/quizzes'),
+      ]);
 
-      if (usersData.users) {
-        const students = usersData.users.filter((u: any) => u.role === 'student').length;
-        const lessons = lessonsData.lessons?.length || 0;
+      const videoLessons = await videoLessonsRes.json();
+      const recordedVideos = await recordedVideosRes.json();
+      const liveClasses = await liveClassesRes.json();
+      const quizzes = await quizzesRes.json();
 
-        setStats([
-          { label: 'Total Students', value: students.toString(), change: '+0%', icon: <People />, color: '#2196F3' },
-          { label: 'Active Lessons', value: lessons.toString(), change: '+0%', icon: <School />, color: '#4CAF50' },
-          { label: 'Quizzes Completed', value: '0', change: '+0%', icon: <Quiz />, color: '#FF9800' },
-          { label: 'AI Tutor Sessions', value: '0', change: '+0%', icon: <SmartToy />, color: '#9C27B0' },
-        ]);
-      }
+      const students = usersData.users?.filter((u: any) => u.role === 'student').length || 0;
+      const totalVideoLessons = videoLessons.lessons?.length || 0;
+      const totalLiveClasses = liveClasses.liveClasses?.length || 0;
+      const totalQuizzes = quizzes.quizzes?.length || 0;
+
+      setStats([
+        { label: 'Total Students', value: students.toString(), change: '+0%', icon: <People />, color: '#2196F3' },
+        { label: 'Video Lessons', value: totalVideoLessons.toString(), change: '+0%', icon: <School />, color: '#4CAF50' },
+        { label: 'Total Quizzes', value: totalQuizzes.toString(), change: '+0%', icon: <Quiz />, color: '#FF9800' },
+        { label: 'Live Classes', value: totalLiveClasses.toString(), change: '+0%', icon: <SmartToy />, color: '#9C27B0' },
+      ]);
+
+      setLmsStats({
+        videoLessons: totalVideoLessons,
+        recordedVideos: recordedVideos.videos?.length || 0,
+        liveClasses: totalLiveClasses,
+        quizzes: totalQuizzes,
+        totalViews: 0,
+        avgCompletion: 0,
+      });
     } catch (error) {
       console.error('Error loading analytics:', error);
     }
@@ -173,11 +199,51 @@ const Analytics: React.FC = () => {
         ))}
       </Box>
 
+      {/* LMS Overview Cards */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" fontWeight={600} gutterBottom>
+          LMS Content Overview
+        </Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2, mt: 2 }}>
+          <Card variant="outlined">
+            <CardContent>
+              <Typography variant="h4" fontWeight={700} color="primary">
+                {lmsStats.videoLessons}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Video Lessons
+              </Typography>
+            </CardContent>
+          </Card>
+          <Card variant="outlined">
+            <CardContent>
+              <Typography variant="h4" fontWeight={700} color="success.main">
+                {lmsStats.recordedVideos}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Recorded Videos
+              </Typography>
+            </CardContent>
+          </Card>
+          <Card variant="outlined">
+            <CardContent>
+              <Typography variant="h4" fontWeight={700} color="error.main">
+                {lmsStats.liveClasses}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Live Classes
+              </Typography>
+            </CardContent>
+          </Card>
+        </Box>
+      </Paper>
+
       {/* Tabs for Different Analytics */}
       <Paper sx={{ mb: 3 }}>
         <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)}>
           <Tab label="Attendance" />
           <Tab label="Quiz Performance" />
+          <Tab label="LMS Analytics" />
           <Tab label="AI Tutor Engagement" />
         </Tabs>
       </Paper>
@@ -309,8 +375,59 @@ const Analytics: React.FC = () => {
         </Paper>
       </TabPanel>
 
-      {/* AI Tutor Engagement Analytics */}
+      {/* LMS Analytics */}
       <TabPanel value={tabValue} index={2}>
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" fontWeight={600} gutterBottom>
+            Video & Live Class Analytics
+          </Typography>
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Content Distribution
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mt: 2 }}>
+              <Paper sx={{ p: 2, bgcolor: 'primary.light' }}>
+                <Typography variant="body2" color="primary.contrastText">
+                  Video Lessons: {lmsStats.videoLessons}
+                </Typography>
+              </Paper>
+              <Paper sx={{ p: 2, bgcolor: 'success.light' }}>
+                <Typography variant="body2" color="success.contrastText">
+                  Recorded Videos: {lmsStats.recordedVideos}
+                </Typography>
+              </Paper>
+              <Paper sx={{ p: 2, bgcolor: 'error.light' }}>
+                <Typography variant="body2" color="error.contrastText">
+                  Live Classes: {lmsStats.liveClasses}
+                </Typography>
+              </Paper>
+              <Paper sx={{ p: 2, bgcolor: 'warning.light' }}>
+                <Typography variant="body2" color="warning.contrastText">
+                  Quizzes: {lmsStats.quizzes}
+                </Typography>
+              </Paper>
+            </Box>
+          </Box>
+
+          <Box sx={{ mt: 4, p: 2, bgcolor: 'info.light', borderRadius: 2 }}>
+            <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+              📊 LMS Insights
+            </Typography>
+            <Typography variant="body2">
+              • Total content items: {lmsStats.videoLessons + lmsStats.recordedVideos + lmsStats.liveClasses + lmsStats.quizzes}
+            </Typography>
+            <Typography variant="body2">
+              • Most popular content type: Video Lessons
+            </Typography>
+            <Typography variant="body2">
+              • Quiz completion rate: Track student engagement
+            </Typography>
+          </Box>
+        </Paper>
+      </TabPanel>
+
+      {/* AI Tutor Engagement Analytics */}
+      <TabPanel value={tabValue} index={3}>
         <Paper sx={{ p: 3 }}>
           <Typography variant="h6" fontWeight={600} gutterBottom>
             AI Tutor Usage Statistics

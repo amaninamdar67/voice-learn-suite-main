@@ -27,6 +27,20 @@ import QuizCreator from "./pages/Teacher/QuizCreator";
 import ChildrenView from "./pages/Parent/ChildrenView";
 import MentoringView from "./pages/Mentor/MentoringView";
 
+// LMS Teacher Pages
+import VideoLessonUpload from "./pages/Teacher/VideoLessonUpload";
+import RecordedVideosUpload from "./pages/Teacher/RecordedVideosUpload";
+import LiveClassCreator from "./pages/Teacher/LiveClassCreator";
+import QuizCreatorNew from "./pages/Teacher/QuizCreatorNew";
+import QuizRankingsDashboard from "./pages/Teacher/QuizRankingsDashboard";
+
+// LMS Student Pages
+import RecordedVideosView from "./pages/Student/RecordedVideosView";
+import VideoLessonsView from "./pages/Student/VideoLessonsView";
+import LiveClassesView from "./pages/Student/LiveClassesView";
+import QuizzesView from "./pages/Student/QuizzesView";
+import QuizRankingsView from "./pages/Student/QuizRankingsView";
+
 const queryClient = new QueryClient();
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -196,6 +210,111 @@ const App = () => (
                   </PrivateRoute>
                 }
               />
+              
+              {/* LMS Teacher Routes */}
+              <Route
+                path="/teacher/video-lessons"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <VideoLessonUpload />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/teacher/recorded-videos"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <RecordedVideosUpload />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/teacher/live-classes"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <LiveClassCreator />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/teacher/quiz-creator"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <QuizCreatorNew />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/teacher/quiz-rankings"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <QuizRankingsDashboard />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+
+              {/* LMS Student Routes */}
+              <Route
+                path="/student/recorded-videos"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <RecordedVideosView />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/student/video-lessons"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <VideoLessonsView />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/student/live-classes"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <LiveClassesView />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/student/quizzes"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <QuizzesView />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/student/quiz-rankings"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <QuizRankingsView />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              
               <Route path="/" element={<Navigate to="/login" />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

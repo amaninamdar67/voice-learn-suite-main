@@ -43,10 +43,23 @@ const menuItems: MenuItem[] = [
   { text: 'Users', icon: <People />, path: '/users', roles: ['admin'] },
   { text: 'Analytics', icon: <Analytics />, path: '/analytics', roles: ['admin'] },
   { text: 'System Config', icon: <Settings />, path: '/system-config', roles: ['admin'] },
+  
+  // Teacher LMS Menu
+  { text: 'Video Lessons', icon: <School />, path: '/teacher/video-lessons', roles: ['teacher'] },
+  { text: 'Recorded Videos', icon: <VideoLibrary />, path: '/teacher/recorded-videos', roles: ['teacher'] },
+  { text: 'Live Classes', icon: <VideoLibrary />, path: '/teacher/live-classes', roles: ['teacher'] },
+  { text: 'Quiz Creator', icon: <Quiz />, path: '/teacher/quiz-creator', roles: ['teacher'] },
+  { text: 'Quiz Rankings', icon: <Quiz />, path: '/teacher/quiz-rankings', roles: ['teacher'] },
+  
+  // Student LMS Menu
+  { text: 'Video Lessons', icon: <School />, path: '/student/video-lessons', roles: ['student'] },
+  { text: 'Recorded Videos', icon: <VideoLibrary />, path: '/student/recorded-videos', roles: ['student'] },
+  { text: 'Live Classes', icon: <VideoLibrary />, path: '/student/live-classes', roles: ['student'] },
+  { text: 'Quizzes', icon: <Quiz />, path: '/student/quizzes', roles: ['student'] },
+  { text: 'Quiz Rankings', icon: <Quiz />, path: '/student/quiz-rankings', roles: ['student'] },
+  
+  // Legacy/Other
   { text: 'Lessons', icon: <School />, path: '/lessons', roles: ['teacher', 'student'] },
-  { text: 'Videos', icon: <VideoLibrary />, path: '/videos', roles: ['teacher', 'student'] },
-  { text: 'Live Class', icon: <VideoLibrary />, path: '/live-class', roles: ['teacher', 'student'] },
-  { text: 'Quizzes', icon: <Quiz />, path: '/quizzes', roles: ['teacher', 'student'] },
   { text: 'Projects', icon: <Assignment />, path: '/projects', roles: ['teacher', 'student', 'mentor'] },
   { text: 'Discussions', icon: <Message />, path: '/discussions', roles: ['teacher', 'student', 'parent'] },
   { text: 'My Children', icon: <Person />, path: '/children', roles: ['parent'] },
