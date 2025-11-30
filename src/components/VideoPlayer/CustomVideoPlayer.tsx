@@ -190,30 +190,19 @@ export default function CustomVideoPlayer({
   return (
     <div
       ref={containerRef}
-      className={`relative bg-black rounded-lg overflow-hidden ${className}`}
+      className={`relative bg-black ${className}`}
+      style={{ width: '100%', height: '100%' }}
     >
-      {/* Video Title Overlay (top) */}
-      {title && !isFullscreen && (
-        <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/70 to-transparent p-4 z-10">
-          <h3 className="text-white font-medium text-sm md:text-base line-clamp-1">
-            {title}
-          </h3>
-        </div>
-      )}
-
-      {/* YouTube IFrame */}
-      <div className="relative aspect-video">
-        <iframe
-          ref={iframeRef}
-          src={getYouTubeUrl()}
-          className="absolute inset-0 w-full h-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowFullScreen
-          sandbox="allow-same-origin allow-scripts allow-presentation allow-forms"
-          referrerPolicy="origin"
-          title={title || 'Video Player'}
-        />
-      </div>
+      {/* YouTube IFrame - Full Container */}
+      <iframe
+        ref={iframeRef}
+        src={getYouTubeUrl()}
+        className="absolute inset-0 w-full h-full"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+        title={title || 'Video Player'}
+        style={{ border: 'none' }}
+      />
 
       {/* Custom Controls Overlay (bottom) */}
       {!isLive && (

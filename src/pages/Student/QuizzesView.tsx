@@ -214,66 +214,72 @@ export default function QuizzesView() {
     const progress = ((currentQuestion + 1) / questions.length) * 100;
 
     return (
-      <div className="fixed inset-0 bg-gray-50 z-50 overflow-y-auto">
-        <div className="max-w-4xl mx-auto p-6">
+      <div className="fixed inset-0 bg-gradient-to-br from-blue-50 to-purple-50 z-[100] overflow-y-auto">
+        <div className="max-w-3xl mx-auto p-6 py-12">
           {/* Header */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 mb-4">
             <div className="flex justify-between items-start mb-4">
-              <div>
-                <h1 className="text-2xl font-bold">{selectedQuiz.title}</h1>
-                <p className="text-gray-600">{selectedQuiz.description}</p>
+              <div className="flex-1">
+                <h1 className="text-xl md:text-2xl font-bold text-gray-900">{selectedQuiz.title}</h1>
+                {selectedQuiz.description && (
+                  <p className="text-sm text-gray-600 mt-1">{selectedQuiz.description}</p>
+                )}
               </div>
               <button
                 onClick={handleCloseQuiz}
-                className="text-gray-500 hover:text-gray-700"
+                className="ml-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="Close quiz"
               >
                 <X size={24} />
               </button>
             </div>
 
-            <div className="flex items-center gap-4 text-sm text-gray-600">
-              <span className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-3 md:gap-4 text-xs md:text-sm text-gray-600 mb-4">
+              <span className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 rounded-full">
                 <FileText size={16} />
-                Question {currentQuestion + 1} of {questions.length}
+                <span className="font-medium">Question {currentQuestion + 1} of {questions.length}</span>
               </span>
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 rounded-full">
                 <Award size={16} />
-                {selectedQuiz.total_marks} marks
+                <span className="font-medium">{selectedQuiz.total_marks} marks</span>
               </span>
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 rounded-full">
                 <Clock size={16} />
-                {selectedQuiz.duration_minutes} minutes
+                <span className="font-medium">{selectedQuiz.duration_minutes} min</span>
               </span>
             </div>
 
-            <div className="mt-4">
-              <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="relative">
+              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                 <div
-                  className="bg-blue-600 h-2 rounded-full transition-all"
+                  className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-300 ease-out"
                   style={{ width: `${progress}%` }}
                 />
               </div>
+              <span className="absolute right-0 -top-6 text-xs font-semibold text-gray-600">
+                {Math.round(progress)}%
+              </span>
             </div>
           </div>
 
-          {/* Question */}
+          {/* Question Card */}
           {question && (
-            <div className="bg-white rounded-lg shadow-md p-8">
+            <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 mb-4">
               <div className="mb-6">
-                <div className="flex items-start gap-3 mb-4">
-                  <span className="px-3 py-1 bg-blue-100 text-blue-700 font-semibold rounded">
+                <div className="flex items-start gap-3 mb-5">
+                  <span className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-lg shadow-sm">
                     Q{currentQuestion + 1}
                   </span>
-                  <span className="px-3 py-1 bg-green-100 text-green-700 font-semibold rounded">
+                  <span className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-lg shadow-sm">
                     {question.marks} {question.marks === 1 ? 'mark' : 'marks'}
                   </span>
                 </div>
-                <h2 className="text-xl font-semibold leading-relaxed break-words whitespace-pre-wrap">
+                <h2 className="text-lg md:text-xl font-semibold leading-relaxed break-words whitespace-pre-wrap text-gray-800">
                   {question.question_text}
                 </h2>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-3 mb-6">
                 {['A', 'B', 'C', 'D'].map((option) => {
                   const optionText = question[`option_${option.toLowerCase()}` as keyof Question] as string;
                   const isSelected = answers[question.id] === option;
@@ -295,7 +301,7 @@ export default function QuizzesView() {
                           {isSelected && <div className="w-3 h-3 bg-white rounded-full" />}
                         </div>
                         <span className="font-semibold text-gray-700 flex-shrink-0">{option}.</span>
-                        <span className="flex-1 break-words whitespace-pre-wrap">{optionText}</span>
+                        <span className="flex-1 break-words">{optionText}</span>
                       </div>
                     </button>
                   );
@@ -303,7 +309,7 @@ export default function QuizzesView() {
               </div>
 
               {/* Navigation */}
-              <div className="flex justify-between mt-8">
+              <div className="flex justify-between gap-4">
                 <button
                   onClick={() => setCurrentQuestion(Math.max(0, currentQuestion - 1))}
                   disabled={currentQuestion === 0}
@@ -343,8 +349,8 @@ export default function QuizzesView() {
     const passed = quizResult.percentage >= 60;
 
     return (
-      <div className="fixed inset-0 bg-gray-50 z-50 overflow-y-auto">
-        <div className="max-w-2xl mx-auto p-6">
+      <div className="fixed inset-0 bg-gray-50 z-[100] overflow-y-auto">
+        <div className="max-w-2xl mx-auto p-6 py-12">
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
             <div className="mb-6">
               {passed ? (
@@ -411,60 +417,65 @@ export default function QuizzesView() {
           const hasAttempted = !!result;
 
           return (
-            <div key={quiz.id} className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex justify-between items-start mb-3">
-                <h3 className="font-semibold text-lg line-clamp-2 flex-1">{quiz.title}</h3>
+            <div key={quiz.id} className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col">
+              <div className="p-6 flex-1">
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="font-semibold text-lg line-clamp-2 flex-1">{quiz.title}</h3>
+                  {hasAttempted && (
+                    <CheckCircle size={20} className="text-green-600" />
+                  )}
+                </div>
+
+                {quiz.description && (
+                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">{quiz.description}</p>
+                )}
+
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Award size={16} />
+                    <span>{quiz.total_marks} marks</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Clock size={16} />
+                    <span>{quiz.duration_minutes} minutes</span>
+                  </div>
+                </div>
+
                 {hasAttempted && (
-                  <CheckCircle size={20} className="text-green-600" />
+                  <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                    <p className="text-sm font-medium text-green-700">
+                      Last Score: {result.score}/{quiz.total_marks} ({Math.round(result.percentage)}%)
+                    </p>
+                  </div>
                 )}
-              </div>
 
-              {quiz.description && (
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2">{quiz.description}</p>
-              )}
-
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Award size={16} />
-                  <span>{quiz.total_marks} marks</span>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {quiz.subject && (
+                    <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
+                      {quiz.subject}
+                    </span>
+                  )}
+                  {quiz.grade && (
+                    <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
+                      Grade {quiz.grade}
+                    </span>
+                  )}
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Clock size={16} />
-                  <span>{quiz.duration_minutes} minutes</span>
+
+                <div className="text-sm text-gray-600">
+                  By {quiz.profiles.full_name}
                 </div>
               </div>
 
-              {hasAttempted && (
-                <div className="mb-4 p-3 bg-green-50 rounded-lg">
-                  <p className="text-sm font-medium text-green-700">
-                    Last Score: {result.score}/{quiz.total_marks} ({Math.round(result.percentage)}%)
-                  </p>
-                </div>
-              )}
-
-              <div className="flex flex-wrap gap-2 mb-4">
-                {quiz.subject && (
-                  <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
-                    {quiz.subject}
-                  </span>
-                )}
-                {quiz.grade && (
-                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
-                    Grade {quiz.grade}
-                  </span>
-                )}
+              {/* Button at bottom with fixed position */}
+              <div className="p-4 bg-gray-50 border-t">
+                <button
+                  onClick={() => handleStartQuiz(quiz)}
+                  className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  {hasAttempted ? 'Retake Quiz' : 'Start Quiz'}
+                </button>
               </div>
-
-              <div className="text-sm text-gray-600 mb-4">
-                By {quiz.profiles.full_name}
-              </div>
-
-              <button
-                onClick={() => handleStartQuiz(quiz)}
-                className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700"
-              >
-                {hasAttempted ? 'Retake Quiz' : 'Start Quiz'}
-              </button>
             </div>
           );
         })}

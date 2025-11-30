@@ -386,73 +386,72 @@ export default function LiveClassesView() {
 
       {/* Live Class Player Modal */}
       {selectedClass && (
-        <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
-          <div className="w-full h-full flex flex-col">
-            <div className="bg-gray-900 p-4 flex justify-between items-center">
+        <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="w-full max-w-6xl mx-auto flex flex-col gap-4 my-auto">
+            <div className="bg-gradient-to-r from-red-600 to-pink-600 px-6 py-4 rounded-lg flex justify-between items-center shadow-lg">
               <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse" />
-                <h2 className="text-white text-xl font-bold">{selectedClass.session_title}</h2>
+                <div className="flex items-center gap-2 px-3 py-1 bg-white/20 rounded-full backdrop-blur-sm">
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                  <span className="text-white text-sm font-bold">LIVE</span>
+                </div>
+                <div>
+                  <h2 className="text-white text-xl font-bold">{selectedClass.session_title}</h2>
+                  <p className="text-red-100 text-sm">By {selectedClass.profiles.full_name}</p>
+                </div>
               </div>
               <button
                 onClick={handleLeaveClass}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                className="px-6 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-semibold transition-all backdrop-blur-sm"
               >
                 Leave Class
               </button>
             </div>
 
-            <div className="flex-1 flex flex-col gap-4">
-              {/* YouTube Streaming Notice */}
-              <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-lg p-6">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0">
-                    <svg className="w-12 h-12 text-red-600" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">
-                      Live Stream on YouTube
-                    </h3>
-                    <p className="text-gray-700 mb-4">
-                      This live class is hosted on YouTube. Click the button below to watch the stream.
-                    </p>
+            <div className="flex-1">
+              {/* Live Stream Player - 16:9 Aspect Ratio */}
+              <div className="w-full bg-black rounded-lg overflow-hidden shadow-2xl" style={{ aspectRatio: '16/9' }}>
+                {extractVideoId(selectedClass.stream_url) ? (
+                  <CustomVideoPlayer
+                    videoId={extractVideoId(selectedClass.stream_url)!}
+                    title={selectedClass.session_title}
+                    isLive={true}
+                    autoplay={true}
+                    className="w-full h-full"
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-white gap-4">
+                    <p className="text-lg">Unable to load stream</p>
                     <button
-                      onClick={() => window.open(selectedClass.stream_url, '_blank', 'noopener,noreferrer')}
-                      className="w-full px-6 py-4 bg-red-600 hover:bg-red-700 text-white text-lg font-bold rounded-lg flex items-center justify-center gap-3 transition-all transform hover:scale-105 shadow-lg"
+                      onClick={() => window.open(selectedClass.stream_url, '_blank')}
+                      className="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-semibold"
                     >
-                      <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                      </svg>
-                      Watch Live Stream on YouTube
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
+                      Open on YouTube
                     </button>
-                    <p className="text-sm text-gray-600 mt-3 text-center">
-                      The stream will open in a new tab
-                    </p>
                   </div>
-                </div>
+                )}
               </div>
 
-              {/* Try Embed Anyway (will likely fail) */}
-              <div className="bg-gray-100 rounded-lg p-4">
-                <p className="text-sm text-gray-600 mb-2">
-                  <strong>Note:</strong> If the teacher has enabled embedding, the video will appear below:
-                </p>
-                <div className="bg-black rounded-lg overflow-hidden aspect-video">
-                  {extractVideoId(selectedClass.stream_url) ? (
-                    <CustomVideoPlayer
-                      videoId={extractVideoId(selectedClass.stream_url)!}
-                      title={selectedClass.session_title}
-                      isLive={true}
-                      autoplay={false}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white">
-                      <p>Unable to extract video ID</p>
-                    </div>
+              {/* Class Info Below Video */}
+              <div className="mt-4 bg-white rounded-lg shadow-md p-4">
+                <h3 className="font-semibold text-lg mb-2">{selectedClass.session_title}</h3>
+                {selectedClass.description && (
+                  <p className="text-gray-600 text-sm mb-3">{selectedClass.description}</p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {selectedClass.subject && (
+                    <span className="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full">
+                      {selectedClass.subject}
+                    </span>
+                  )}
+                  {selectedClass.grade && (
+                    <span className="px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full">
+                      Grade {selectedClass.grade}
+                    </span>
+                  )}
+                  {selectedClass.section && (
+                    <span className="px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full">
+                      Section {selectedClass.section}
+                    </span>
                   )}
                 </div>
               </div>
@@ -524,62 +523,67 @@ function ClassCard({ liveClass, onJoin, getStatusBadge, formatDateTime, disabled
   disabled?: boolean;
 }) {
   return (
-    <div className={`bg-white rounded-lg shadow-md p-6 ${disabled ? 'opacity-60' : ''}`}>
-      <div className="flex justify-between items-start mb-3">
-        <h3 className="font-semibold text-lg line-clamp-2 flex-1">{liveClass.session_title}</h3>
-        {getStatusBadge(liveClass.status)}
-      </div>
-
-      {liveClass.description && (
-        <p className="text-sm text-gray-600 mb-4 line-clamp-2">{liveClass.description}</p>
-      )}
-
-      <div className="space-y-2 mb-4">
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Calendar size={16} />
-          <span>Start: {formatDateTime(liveClass.start_time)}</span>
+    <div className={`bg-white rounded-lg shadow-md overflow-hidden flex flex-col ${disabled ? 'opacity-60' : ''}`}>
+      <div className="p-6 flex-1">
+        <div className="flex justify-between items-start mb-3">
+          <h3 className="font-semibold text-lg line-clamp-2 flex-1">{liveClass.session_title}</h3>
+          {getStatusBadge(liveClass.status)}
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Clock size={16} />
-          <span>End: {formatDateTime(liveClass.end_time)}</span>
+
+        {liveClass.description && (
+          <p className="text-sm text-gray-600 mb-4 line-clamp-2">{liveClass.description}</p>
+        )}
+
+        <div className="space-y-2 mb-4">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Calendar size={16} />
+            <span>Start: {formatDateTime(liveClass.start_time)}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Clock size={16} />
+            <span>End: {formatDateTime(liveClass.end_time)}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 mb-4">
+          {liveClass.subject && (
+            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
+              {liveClass.subject}
+            </span>
+          )}
+          {liveClass.grade && (
+            <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
+              Grade {liveClass.grade}
+            </span>
+          )}
+        </div>
+
+        <div className="text-sm text-gray-600">
+          By {liveClass.profiles.full_name}
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-4">
-        {liveClass.subject && (
-          <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
-            {liveClass.subject}
-          </span>
+      {/* Button at bottom with fixed position */}
+      <div className="p-4 bg-gray-50 border-t">
+        {liveClass.status === 'live' && !disabled && (
+          <button
+            onClick={onJoin}
+            className="w-full py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 flex items-center justify-center gap-2 transition-colors"
+          >
+            <Radio size={20} />
+            Join Live Class
+          </button>
         )}
-        {liveClass.grade && (
-          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
-            Grade {liveClass.grade}
-          </span>
+
+        {liveClass.status === 'upcoming' && (
+          <button
+            disabled
+            className="w-full py-3 bg-gray-200 text-gray-500 font-semibold rounded-lg cursor-not-allowed"
+          >
+            Starts {formatDateTime(liveClass.start_time)}
+          </button>
         )}
       </div>
-
-      <div className="text-sm text-gray-600 mb-4">
-        By {liveClass.profiles.full_name}
-      </div>
-
-      {liveClass.status === 'live' && !disabled && (
-        <button
-          onClick={onJoin}
-          className="w-full py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 flex items-center justify-center gap-2"
-        >
-          <Radio size={20} />
-          Join Live Class
-        </button>
-      )}
-
-      {liveClass.status === 'upcoming' && (
-        <button
-          disabled
-          className="w-full py-3 bg-gray-200 text-gray-500 font-semibold rounded-lg cursor-not-allowed"
-        >
-          Starts {formatDateTime(liveClass.start_time)}
-        </button>
-      )}
     </div>
   );
 }
