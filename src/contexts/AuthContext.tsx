@@ -51,6 +51,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
 
       if (profile) {
+        // Check if user's domain is active
+        if (profile.domain_id) {
+          const { data: domain } = await supabase
+            .from('domains')
+            .select('is_active')
+            .eq('id', profile.domain_id)
+            .single();
+
+          if (domain && !domain.is_active) {
+            // Domain is inactive - logout and throw error
+            await supabase.auth.signOut();
+            throw new Error('Your organization/domain is currently inactive. Please contact your administrator.');
+          }
+        }
+
         const { data: authUser } = await supabase.auth.getUser();
         setUser({
           id: profile.id,
@@ -62,6 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Error loading profile:', error);
+      throw error; // Re-throw to show error message
     } finally {
       setLoading(false);
     }

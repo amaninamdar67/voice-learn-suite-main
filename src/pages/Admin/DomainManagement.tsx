@@ -1,108 +1,63 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Box,
-  Typography,
-  Paper,
-  Button,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Alert,
-  CircularProgress,
-  Chip,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
-  InputAdornment,
-  Divider,
-  Card,
-  CardContent,
-  CardActions,
-  Switch,
-  FormControlLabel,
+  Box, Typography, Paper, Button, IconButton, Dialog, DialogTitle, DialogContent,
+  DialogActions, TextField, Alert, CircularProgress, List, ListItem, ListItemButton,
+  ListItemText, InputAdornment, Divider, Card, CardContent, Switch, FormControlLabel,
 } from '@mui/material';
-import {
-  Add,
-  Edit,
-  Delete,
-  Search,
-  Settings as SettingsIcon,
-} from '@mui/icons-material';
+import { Add, Edit, Delete, Search, Settings as SettingsIcon } from '@mui/icons-material';
 
 interface Domain {
   id: string;
   name: string;
   description: string;
   is_active: boolean;
-  created_at: string;
 }
 
-interface Department {
+interface SubDomainData {
   id: string;
   domain_id: string;
   name: string;
-  description: string;
-  is_active: boolean;
-}
-
-interface SubDomain {
-  id: string;
-  domain_id: string;
-  name: string;
-  description: string;
   type: string;
-  is_active: boolean;
-}
-
-interface Semester {
-  id: string;
-  domain_id: string;
-  department_id?: string;
-  name: string;
+  department: string;
+  semester: string;
   description: string;
   is_active: boolean;
 }
 
 const DomainManagement: React.FC = () => {
   const [domains, setDomains] = useState<Domain[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [subDomains, setSubDomains] = useState<SubDomain[]>([]);
-  const [semesters, setSemesters] = useState<Semester[]>([]);
+  const [subDomains, setSubDomains] = useState<SubDomainData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-
   const [selectedDomain, setSelectedDomain] = useState<Domain | null>(null);
   const [domainSearch, setDomainSearch] = useState('');
-
-  // Dialog states
-  const [openUnifiedDialog, setOpenUnifiedDialog] = useState(false);
+  const [openAddDialog, setOpenAddDialog] = useState(false);
   const [openManageDialog, setOpenManageDialog] = useState(false);
   const [openDomainDialog, setOpenDomainDialog] = useState(false);
   const [editingDomain, setEditingDomain] = useState<Domain | null>(null);
-  const [managingSubDomain, setManagingSubDomain] = useState<SubDomain | null>(null);
-  const [editMode, setEditMode] = useState(false);
-  const [editedSubDomain, setEditedSubDomain] = useState<SubDomain | null>(null);
+  const [managingSubDomain, setManagingSubDomain] = useState<SubDomainData | null>(null);
 
-  // Unified form data
-  const [unifiedForm, setUnifiedForm] = useState({
-    subDomainName: '',
+  const [formData, setFormData] = useState({
+    name: '',
     type: 'ug',
-    departmentName: '',
-    semesterName: '',
+    department: '',
+    semester: '',
     description: '',
     isActive: true,
   });
 
-  // Domain form
-  const [domainForm, setDomainForm] = useState({
-    name: '',
-    description: '',
-  });
+  const [domainForm, setDomainForm] = useState({ name: '', description: '', isActive: true });
+
+  const typeOptions = [
+    { value: 'primary', label: 'Primary School' },
+    { value: 'high', label: 'High School' },
+    { value: 'college', label: 'College' },
+    { value: 'ug', label: 'Undergraduate' },
+    { value: 'pg', label: 'Postgraduate' },
+    { value: 'phd', label: 'PhD' },
+    { value: 'custom', label: 'Custom' },
+  ];
 
   useEffect(() => {
     loadData();
@@ -111,23 +66,34 @@ const DomainManagement: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [domainsRes, deptRes, subDomRes, semRes] = await Promise.all([
+      const [domainsRes, subDomainsRes, deptsRes, semsRes] = await Promise.all([
         fetch('http://localhost:3001/api/domains'),
-        fetch('http://localhost:3001/api/departments'),
         fetch('http://localhost:3001/api/subdomains'),
+        fetch('http://localhost:3001/api/departments'),
         fetch('http://localhost:3001/api/semesters'),
       ]);
 
       const domainsData = await domainsRes.json();
-      const deptData = await deptRes.json();
-      const subDomData = await subDomRes.json();
-      const semData = await semRes.json();
+      const subDomainsData = await subDomainsRes.json();
+      const deptsData = await deptsRes.json();
+      const semsData = await semsRes.json();
 
       const loadedDomains = domainsData.domains || [];
       setDomains(loadedDomains);
-      setDepartments(deptData.departments || []);
-      setSubDomains(subDomData.subdomains || []);
-      setSemesters(semData.semesters || []);
+
+      // Combine data: each subdomain gets first dept and first sem
+      const combined = (subDomainsData.subdomains || []).map((sd: any, index: number) => ({
+        id: sd.id,
+        domain_id: sd.domain_id,
+        name: sd.name,
+        type: sd.type,
+        department: (deptsData.departments || []).filter((d: any) => d.domain_id === sd.domain_id)[index]?.name || 'N/A',
+        semester: (semsData.semesters || []).filter((s: any) => s.domain_id === sd.domain_id)[index]?.name || 'N/A',
+        description: sd.description || '',
+        is_active: sd.is_active,
+      }));
+
+      setSubDomains(combined);
 
       if (!selectedDomain && loadedDomains.length > 0) {
         setSelectedDomain(loadedDomains[0]);
@@ -139,77 +105,52 @@ const DomainManagement: React.FC = () => {
     }
   };
 
-  const filteredDomains = domains.filter(domain =>
-    domain.name.toLowerCase().includes(domainSearch.toLowerCase())
-  );
-
-  const filteredSubDomains = subDomains.filter(sd => sd.domain_id === selectedDomain?.id);
-
-  const handleOpenUnifiedDialog = () => {
-    setUnifiedForm({
-      subDomainName: '',
-      type: 'ug',
-      departmentName: '',
-      semesterName: '',
-      description: '',
-      isActive: true,
-    });
-    setOpenUnifiedDialog(true);
-  };
-
-  const handleSubmitUnified = async () => {
+  const handleSubmitAdd = async () => {
     if (!selectedDomain) return;
     
     try {
       setError('');
       setLoading(true);
 
-      // Step 1: Create Sub-Domain
+      // Create sub-domain
       const subDomainRes = await fetch('http://localhost:3001/api/subdomains/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: unifiedForm.subDomainName,
-          type: unifiedForm.type,
-          description: unifiedForm.description,
+          name: formData.name,
+          type: formData.type === 'custom' ? formData.name : formData.type,
+          description: formData.description,
           domain_id: selectedDomain.id,
         }),
       });
 
-      const subDomainData = await subDomainRes.json();
-      if (!subDomainRes.ok) throw new Error(subDomainData.error || 'Failed to create sub-domain');
+      if (!subDomainRes.ok) throw new Error('Failed to create sub-domain');
 
-      // Step 2: Create Department
-      const deptRes = await fetch('http://localhost:3001/api/departments/create', {
+      // Create department
+      await fetch('http://localhost:3001/api/departments/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: unifiedForm.departmentName,
-          description: unifiedForm.description,
+          name: formData.department,
+          description: formData.description,
           domain_id: selectedDomain.id,
         }),
       });
 
-      const deptData = await deptRes.json();
-      if (!deptRes.ok) throw new Error(deptData.error || 'Failed to create department');
-
-      // Step 3: Create Semester
-      const semRes = await fetch('http://localhost:3001/api/semesters/create', {
+      // Create semester
+      await fetch('http://localhost:3001/api/semesters/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: unifiedForm.semesterName,
-          description: unifiedForm.description,
+          name: formData.semester,
+          description: formData.description,
           domain_id: selectedDomain.id,
-          department_id: deptData.department.id,
         }),
       });
 
-      const semData = await semRes.json();
-      if (!semRes.ok) throw new Error(semData.error || 'Failed to create semester');
-
-      setSuccess('Sub-Domain, Department, and Semester created successfully!');
-      setOpenUnifiedDialog(false);
+      setSuccess('Sub-Domain created successfully!');
+      setOpenAddDialog(false);
+      setFormData({ name: '', type: 'ug', department: '', semester: '', description: '', isActive: true });
       await loadData();
     } catch (err: any) {
       setError(err.message);
@@ -218,123 +159,23 @@ const DomainManagement: React.FC = () => {
     }
   };
 
-  const handleOpenManageDialog = (subDomain: SubDomain) => {
-    setManagingSubDomain(subDomain);
-    setEditedSubDomain({ ...subDomain });
-    setEditMode(false);
-    setOpenManageDialog(true);
-  };
-
-  const handleSaveSubDomain = async () => {
-    if (!editedSubDomain) return;
-
-    try {
-      const response = await fetch(`http://localhost:3001/api/subdomains/${editedSubDomain.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: editedSubDomain.name,
-          type: editedSubDomain.type,
-          description: editedSubDomain.description,
-          is_active: editedSubDomain.is_active,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to update sub-domain');
-      }
-
-      setSuccess('Sub-domain updated successfully!');
-      setEditMode(false);
-      await loadData();
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
-
   const handleDeleteSubDomain = async (id: string) => {
-    if (!window.confirm('Delete this sub-domain and all associated departments and semesters?')) return;
+    if (!window.confirm('Delete this sub-domain?')) return;
 
     try {
-      const response = await fetch(`http://localhost:3001/api/subdomains/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Delete failed');
-      }
-
-      setSuccess('Sub-domain deleted successfully!');
+      await fetch(`http://localhost:3001/api/subdomains/${id}`, { method: 'DELETE' });
+      setSuccess('Deleted successfully!');
       await loadData();
     } catch (err: any) {
       setError(err.message);
     }
   };
 
-  const handleOpenDomainDialog = (domain?: Domain) => {
-    setEditingDomain(domain || null);
-    setDomainForm({
-      name: domain?.name || '',
-      description: domain?.description || '',
-    });
-    setOpenDomainDialog(true);
-  };
+  const filteredDomains = domains.filter(d =>
+    d.name.toLowerCase().includes(domainSearch.toLowerCase())
+  );
 
-  const handleSubmitDomain = async () => {
-    try {
-      setError('');
-      const endpoint = editingDomain
-        ? `http://localhost:3001/api/domains/${editingDomain.id}`
-        : 'http://localhost:3001/api/domains/create';
-
-      const response = await fetch(endpoint, {
-        method: editingDomain ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(domainForm),
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Operation failed');
-
-      setSuccess(`Domain ${editingDomain ? 'updated' : 'created'} successfully!`);
-      setOpenDomainDialog(false);
-      await loadData();
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
-
-  const handleDeleteDomain = async (id: string) => {
-    const confirmMessage = 
-      'WARNING: Deleting this domain will also delete:\n' +
-      '- All sub-domains\n' +
-      '- All departments\n' +
-      '- All semesters\n\n' +
-      'Are you sure?';
-    
-    if (!window.confirm(confirmMessage)) return;
-
-    try {
-      const response = await fetch(`http://localhost:3001/api/domains/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Delete failed');
-      }
-
-      setSuccess('Domain deleted successfully!');
-      if (selectedDomain?.id === id) {
-        setSelectedDomain(null);
-      }
-      await loadData();
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
+  const filteredSubDomains = subDomains.filter(sd => sd.domain_id === selectedDomain?.id);
 
   if (loading && domains.length === 0) {
     return (
@@ -345,38 +186,18 @@ const DomainManagement: React.FC = () => {
   }
 
   return (
-    <Box sx={{ display: 'flex', height: 'calc(100vh - 180px)', gap: 0, ml: -3, mr: -3, position: 'relative' }}>
-      {/* Sidebar for Domains */}
-      <Paper
-        elevation={0}
-        sx={{
-          width: 280,
-          flexShrink: 0,
-          borderRadius: 0,
-          borderRight: '1px solid',
-          borderColor: 'divider',
-          display: 'flex',
-          flexDirection: 'column',
-          bgcolor: 'background.paper',
-        }}
-      >
+    <Box sx={{ display: 'flex', height: 'calc(100vh - 180px)', gap: 0, ml: -3, mr: -3 }}>
+      {/* Sidebar */}
+      <Paper elevation={0} sx={{ width: 280, flexShrink: 0, borderRadius: 0, borderRight: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="subtitle1" fontWeight={600} gutterBottom sx={{ mb: 1 }}>
-            Domains
-          </Typography>
+          <Typography variant="subtitle1" fontWeight={600} gutterBottom>Domains</Typography>
           <TextField
             fullWidth
             size="small"
             placeholder="Search domains..."
             value={domainSearch}
             onChange={(e) => setDomainSearch(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
+            InputProps={{ startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> }}
           />
         </Box>
 
@@ -386,15 +207,13 @@ const DomainManagement: React.FC = () => {
               <ListItemButton
                 selected={selectedDomain?.id === domain.id}
                 onClick={() => setSelectedDomain(domain)}
-                sx={{
-                  borderLeft: 3,
-                  borderColor: selectedDomain?.id === domain.id ? 'primary.main' : 'transparent',
-                }}
+                sx={{ borderLeft: 3, borderColor: selectedDomain?.id === domain.id ? 'primary.main' : 'transparent' }}
               >
                 <ListItemText
                   primary={domain.name}
-                  secondary={domain.is_active ? 'Active' : 'Inactive'}
+                  secondary={domain.is_active ? 'Active' : 'In-Active'}
                   primaryTypographyProps={{ fontWeight: selectedDomain?.id === domain.id ? 600 : 400 }}
+                  secondaryTypographyProps={{ color: domain.is_active ? 'success.main' : 'text.secondary' }}
                 />
               </ListItemButton>
             </ListItem>
@@ -403,13 +222,7 @@ const DomainManagement: React.FC = () => {
 
         <Divider />
         <Box sx={{ p: 1.5 }}>
-          <Button
-            fullWidth
-            variant="contained"
-            size="small"
-            startIcon={<Add />}
-            onClick={() => handleOpenDomainDialog()}
-          >
+          <Button fullWidth variant="contained" size="small" startIcon={<Add />} onClick={() => setOpenDomainDialog(true)}>
             Add Domain
           </Button>
         </Box>
@@ -417,503 +230,218 @@ const DomainManagement: React.FC = () => {
 
       {/* Main Content */}
       <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between' }}>
           <Box>
-            <Typography variant="h5" fontWeight={600} gutterBottom>
-              {selectedDomain?.name || 'Select a Domain'}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {selectedDomain?.description || 'Choose a domain from the sidebar to manage its structure'}
-            </Typography>
+            <Typography variant="h5" fontWeight={600}>{selectedDomain?.name || 'Select a Domain'}</Typography>
+            <Typography variant="body2" color="text.secondary">{selectedDomain?.description || 'Choose a domain'}</Typography>
           </Box>
           {selectedDomain && (
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<Edit />}
-              onClick={() => handleOpenDomainDialog(selectedDomain)}
-            >
+            <Button variant="outlined" size="small" startIcon={<Edit />} onClick={() => { setEditingDomain(selectedDomain); setDomainForm({ name: selectedDomain.name, description: selectedDomain.description, isActive: selectedDomain.is_active }); setOpenDomainDialog(true); }}>
               Manage Domain
             </Button>
           )}
         </Box>
 
-        {error && (
-          <Alert severity="error" sx={{ m: 2, mb: 0 }} onClose={() => setError('')}>
-            {error}
-          </Alert>
-        )}
-        {success && (
-          <Alert severity="success" sx={{ m: 2, mb: 0 }} onClose={() => setSuccess('')}>
-            {success}
-          </Alert>
-        )}
+        {error && <Alert severity="error" sx={{ m: 2, mb: 0 }} onClose={() => setError('')}>{error}</Alert>}
+        {success && <Alert severity="success" sx={{ m: 2, mb: 0 }} onClose={() => setSuccess('')}>{success}</Alert>}
 
         {selectedDomain && (
           <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6" fontWeight={600}>
-                Sub-Domains (Primary School / High School / College / UG / PG / PhD)
-              </Typography>
-              <Button
-                variant="contained"
-                startIcon={<Add />}
-                onClick={handleOpenUnifiedDialog}
-              >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+              <Typography variant="h6" fontWeight={600}>Sub-Domains</Typography>
+              <Button variant="contained" startIcon={<Add />} onClick={() => { setFormData({ name: '', type: 'ug', department: '', semester: '', description: '', isActive: true }); setOpenAddDialog(true); }}>
                 Add Sub-Domain
               </Button>
             </Box>
 
             {filteredSubDomains.length === 0 ? (
               <Paper sx={{ p: 8, textAlign: 'center' }}>
-                <Typography variant="h6" color="text.secondary" gutterBottom>
-                  No sub-domains found
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  Click "Add Sub-Domain" to create your first sub-domain with departments and semesters
-                </Typography>
+                <Typography variant="h6" color="text.secondary">No sub-domains found</Typography>
               </Paper>
             ) : (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {filteredSubDomains.map((subDomain) => {
-                  const subDepts = departments.filter(d => d.domain_id === subDomain.domain_id);
-                  const subSems = semesters.filter(s => s.domain_id === subDomain.domain_id);
-                  
-                  return (
-                    <Card key={subDomain.id} variant="outlined" sx={{ '&:hover': { boxShadow: 2 } }}>
-                      <CardContent sx={{ pb: 1 }}>
-                        {/* Header */}
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                          <Box sx={{ flex: 1 }}>
-                            <Typography variant="h6" fontWeight={600} gutterBottom>
-                              {subDomain.name}
-                            </Typography>
-                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                              <Chip label={subDomain.type} size="small" color="primary" variant="outlined" />
-                              <Chip
-                                label={subDomain.is_active ? 'Active' : 'Inactive'}
-                                size="small"
-                                color={subDomain.is_active ? 'success' : 'default'}
-                              />
-                            </Box>
-                          </Box>
-                          <IconButton size="small" onClick={() => handleOpenManageDialog(subDomain)} color="primary">
-                            <SettingsIcon fontSize="small" />
-                          </IconButton>
-                        </Box>
-                        
-                        {/* Description */}
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3, fontStyle: subDomain.description ? 'normal' : 'italic' }}>
-                          {subDomain.description || 'No description'}
-                        </Typography>
-
-                        <Divider sx={{ mb: 2 }} />
-
-                        {/* Departments & Semesters */}
-                        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
-                          <Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                              <Typography variant="subtitle2" fontWeight={600} color="text.primary">
-                                Departments
-                              </Typography>
-                              <Chip label={subDepts.length} size="small" color="primary" />
-                            </Box>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                              {subDepts.length === 0 ? (
-                                <Typography variant="caption" color="text.secondary" fontStyle="italic">
-                                  No departments
-                                </Typography>
-                              ) : (
-                                <>
-                                  {subDepts.slice(0, 3).map(d => (
-                                    <Chip key={d.id} label={d.name} size="small" variant="outlined" />
-                                  ))}
-                                  {subDepts.length > 3 && (
-                                    <Chip label={`+${subDepts.length - 3}`} size="small" color="primary" variant="outlined" />
-                                  )}
-                                </>
-                              )}
-                            </Box>
-                          </Box>
-                          <Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                              <Typography variant="subtitle2" fontWeight={600} color="text.primary">
-                                Semesters
-                              </Typography>
-                              <Chip label={subSems.length} size="small" color="secondary" />
-                            </Box>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                              {subSems.length === 0 ? (
-                                <Typography variant="caption" color="text.secondary" fontStyle="italic">
-                                  No semesters
-                                </Typography>
-                              ) : (
-                                <>
-                                  {subSems.slice(0, 3).map(s => (
-                                    <Chip key={s.id} label={s.name} size="small" variant="outlined" />
-                                  ))}
-                                  {subSems.length > 3 && (
-                                    <Chip label={`+${subSems.length - 3}`} size="small" color="secondary" variant="outlined" />
-                                  )}
-                                </>
-                              )}
-                            </Box>
-                          </Box>
-                        </Box>
-                      </CardContent>
-                      <Divider />
-                      <CardActions sx={{ justifyContent: 'flex-end', px: 2, py: 1.5 }}>
-                        <Button
-                          size="small"
-                          variant="contained"
-                          startIcon={<SettingsIcon />}
-                          onClick={() => handleOpenManageDialog(subDomain)}
-                        >
-                          Manage Sub-Domain
-                        </Button>
-                      </CardActions>
-                    </Card>
-                  );
-                })}
+                {filteredSubDomains.map((sd) => (
+                  <Card key={sd.id} variant="outlined">
+                    <CardContent>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                        <Typography variant="h6" fontWeight={600}>{sd.name}</Typography>
+                        <IconButton size="small" onClick={() => { setManagingSubDomain(sd); setFormData({ name: sd.name, type: sd.type, department: sd.department, semester: sd.semester, description: sd.description, isActive: sd.is_active }); setOpenManageDialog(true); }}>
+                          <SettingsIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                      <Box sx={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 1, mb: 1 }}>
+                        <Typography variant="body2" color="text.secondary" fontWeight={600}>Type:</Typography>
+                        <Typography variant="body2">{typeOptions.find(t => t.value === sd.type)?.label || sd.type}</Typography>
+                        <Typography variant="body2" color="text.secondary" fontWeight={600}>Department:</Typography>
+                        <Typography variant="body2">{sd.department}</Typography>
+                        <Typography variant="body2" color="text.secondary" fontWeight={600}>Semester:</Typography>
+                        <Typography variant="body2">{sd.semester}</Typography>
+                        <Typography variant="body2" color="text.secondary" fontWeight={600}>Description:</Typography>
+                        <Typography variant="body2">{sd.description || 'No description'}</Typography>
+                        <Typography variant="body2" color="text.secondary" fontWeight={600}>Status:</Typography>
+                        <Typography variant="body2" color={sd.is_active ? 'success.main' : 'text.secondary'}>● {sd.is_active ? 'Active' : 'In-Active'}</Typography>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                ))}
               </Box>
             )}
           </Box>
         )}
       </Box>
 
-      {/* Unified Add Sub-Domain Dialog */}
-      <Dialog open={openUnifiedDialog} onClose={() => setOpenUnifiedDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Add Sub-Domain (with Department & Semester)</DialogTitle>
+      {/* Add Sub-Domain Dialog */}
+      <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">Add Sub-Domain</Typography>
+            <FormControlLabel control={<Switch checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} />} label="Active" />
+          </Box>
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-            <Alert severity="info">
-              This form creates a Sub-Domain, Department, and Semester all at once for easier setup.
-            </Alert>
-
-            <TextField
-              fullWidth
-              label="Sub-Domain Name"
-              value={unifiedForm.subDomainName}
-              onChange={(e) => setUnifiedForm({ ...unifiedForm, subDomainName: e.target.value })}
-              required
-              placeholder="e.g., B.E, B.Tech, M.Sc"
-            />
-
-            <TextField
-              select
-              fullWidth
-              label="Type"
-              value={['primary', 'high', 'college', 'ug', 'pg', 'phd'].includes(unifiedForm.type) ? unifiedForm.type : 'custom'}
-              onChange={(e) => {
-                if (e.target.value === 'custom') {
-                  setUnifiedForm({ ...unifiedForm, type: '' });
-                } else {
-                  setUnifiedForm({ ...unifiedForm, type: e.target.value });
-                }
-              }}
-              SelectProps={{ native: true }}
-            >
-              <option value="primary">Primary School</option>
-              <option value="high">High School</option>
-              <option value="college">College</option>
-              <option value="ug">Undergraduate (UG)</option>
-              <option value="pg">Postgraduate (PG)</option>
-              <option value="phd">PhD</option>
-              <option value="custom">Custom (Enter your own)</option>
+            <TextField fullWidth label="Sub-Domain Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required placeholder="e.g., B.E, B.Tech" />
+            <TextField select fullWidth label="Type" value={['primary', 'high', 'college', 'ug', 'pg', 'phd'].includes(formData.type) ? formData.type : 'custom'} onChange={(e) => { if (e.target.value === 'custom') { setFormData({ ...formData, type: '' }); } else { setFormData({ ...formData, type: e.target.value }); } }} SelectProps={{ native: true }}>
+              {typeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
             </TextField>
-
-            {(!['primary', 'high', 'college', 'ug', 'pg', 'phd'].includes(unifiedForm.type)) && (
-              <TextField
-                fullWidth
-                label="Custom Type Name"
-                value={unifiedForm.type}
-                onChange={(e) => setUnifiedForm({ ...unifiedForm, type: e.target.value })}
-                placeholder="e.g., Diploma, Certificate, Vocational"
-                required
-                helperText="Enter your custom sub-domain type"
-              />
-            )}
-
-            <TextField
-              fullWidth
-              label="Department Name"
-              value={unifiedForm.departmentName}
-              onChange={(e) => setUnifiedForm({ ...unifiedForm, departmentName: e.target.value })}
-              required
-              placeholder="e.g., Computer Science, Mechanical"
-            />
-
-            <TextField
-              fullWidth
-              label="Semester Name"
-              value={unifiedForm.semesterName}
-              onChange={(e) => setUnifiedForm({ ...unifiedForm, semesterName: e.target.value })}
-              required
-              placeholder="e.g., Semester 1, Fall 2025"
-            />
-
-            <TextField
-              fullWidth
-              label="Description"
-              value={unifiedForm.description}
-              onChange={(e) => setUnifiedForm({ ...unifiedForm, description: e.target.value })}
-              multiline
-              rows={3}
-              placeholder="Shared description for all three"
-            />
-
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={unifiedForm.isActive}
-                  onChange={(e) => setUnifiedForm({ ...unifiedForm, isActive: e.target.checked })}
-                />
-              }
-              label="Active"
-            />
+            {!['primary', 'high', 'college', 'ug', 'pg', 'phd'].includes(formData.type) && <TextField fullWidth label="Custom Type Name" value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} placeholder="e.g., Diploma, Certificate" required />}
+            <TextField fullWidth label="Department Name" value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })} required placeholder="e.g., Computer Science" />
+            <TextField fullWidth label="Semester Name" value={formData.semester} onChange={(e) => setFormData({ ...formData, semester: e.target.value })} required placeholder="e.g., Semester 1" />
+            <TextField fullWidth label="Description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} multiline rows={3} />
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenUnifiedDialog(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={handleSubmitUnified}
-            disabled={!unifiedForm.subDomainName || !unifiedForm.departmentName || !unifiedForm.semesterName || loading}
-          >
-            {loading ? 'Creating...' : 'Create All'}
-          </Button>
+          <Button onClick={() => setOpenAddDialog(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleSubmitAdd} disabled={!formData.name || !formData.department || !formData.semester}>Create</Button>
         </DialogActions>
       </Dialog>
 
       {/* Manage Sub-Domain Dialog */}
-      <Dialog open={openManageDialog} onClose={() => setOpenManageDialog(false)} maxWidth="lg" fullWidth>
+      <Dialog open={openManageDialog} onClose={() => setOpenManageDialog(false)} maxWidth="md" fullWidth>
         <DialogTitle>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6">Manage Sub-Domain: {managingSubDomain?.name}</Typography>
-            <Button
-              size="small"
-              variant={editMode ? 'outlined' : 'contained'}
-              startIcon={<Edit />}
-              onClick={() => setEditMode(!editMode)}
-            >
-              {editMode ? 'Cancel Edit' : 'Edit'}
-            </Button>
+            <Typography variant="h6">Manage Sub-Domain</Typography>
+            <FormControlLabel control={<Switch checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} />} label="Active" />
           </Box>
         </DialogTitle>
         <DialogContent>
-          {editedSubDomain && (
-            <Box sx={{ mt: 2 }}>
-              {/* Sub-Domain Info */}
-              <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
-                <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                  Sub-Domain Information
-                </Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 2 }}>
-                  <TextField
-                    label="Name"
-                    value={editedSubDomain.name}
-                    onChange={(e) => setEditedSubDomain({ ...editedSubDomain, name: e.target.value })}
-                    size="small"
-                    InputProps={{ readOnly: !editMode }}
-                  />
-                  <TextField
-                    select
-                    label="Type"
-                    value={['primary', 'high', 'college', 'ug', 'pg', 'phd'].includes(editedSubDomain.type) ? editedSubDomain.type : 'custom'}
-                    onChange={(e) => {
-                      if (e.target.value === 'custom') {
-                        setEditedSubDomain({ ...editedSubDomain, type: '' });
-                      } else {
-                        setEditedSubDomain({ ...editedSubDomain, type: e.target.value });
-                      }
-                    }}
-                    size="small"
-                    SelectProps={{ native: true }}
-                    InputProps={{ readOnly: !editMode }}
-                    disabled={!editMode}
-                  >
-                    <option value="primary">Primary School</option>
-                    <option value="high">High School</option>
-                    <option value="college">College</option>
-                    <option value="ug">Undergraduate (UG)</option>
-                    <option value="pg">Postgraduate (PG)</option>
-                    <option value="phd">PhD</option>
-                    <option value="custom">Custom</option>
-                  </TextField>
-                  {!['primary', 'high', 'college', 'ug', 'pg', 'phd'].includes(editedSubDomain.type) && editMode && (
-                    <TextField
-                      label="Custom Type"
-                      value={editedSubDomain.type}
-                      onChange={(e) => setEditedSubDomain({ ...editedSubDomain, type: e.target.value })}
-                      size="small"
-                      placeholder="Enter custom type"
-                      sx={{ gridColumn: '1 / -1' }}
-                    />
-                  )}
-                  <TextField
-                    label="Description"
-                    value={editedSubDomain.description}
-                    onChange={(e) => setEditedSubDomain({ ...editedSubDomain, description: e.target.value })}
-                    size="small"
-                    fullWidth
-                    multiline
-                    rows={2}
-                    InputProps={{ readOnly: !editMode }}
-                    sx={{ gridColumn: '1 / -1' }}
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={editedSubDomain.is_active}
-                        onChange={(e) => setEditedSubDomain({ ...editedSubDomain, is_active: e.target.checked })}
-                        disabled={!editMode}
-                      />
-                    }
-                    label="Active"
-                  />
-                </Box>
-              </Paper>
-
-              {/* Departments */}
-              <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="subtitle2" fontWeight={600}>
-                    Departments ({departments.filter(d => d.domain_id === managingSubDomain.domain_id).length})
-                  </Typography>
-                  <Button size="small" variant="outlined" startIcon={<Add />}>
-                    Add Department
-                  </Button>
-                </Box>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {departments
-                    .filter(d => d.domain_id === managingSubDomain.domain_id)
-                    .map(dept => (
-                      <Chip
-                        key={dept.id}
-                        label={dept.name}
-                        onDelete={() => {}}
-                        deleteIcon={<Delete />}
-                        color={dept.is_active ? 'primary' : 'default'}
-                      />
-                    ))}
-                  {departments.filter(d => d.domain_id === managingSubDomain.domain_id).length === 0 && (
-                    <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                      No departments found
-                    </Typography>
-                  )}
-                </Box>
-              </Paper>
-
-              {/* Semesters */}
-              <Paper variant="outlined" sx={{ p: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="subtitle2" fontWeight={600}>
-                    Semesters ({semesters.filter(s => s.domain_id === managingSubDomain.domain_id).length})
-                  </Typography>
-                  <Button size="small" variant="outlined" startIcon={<Add />}>
-                    Add Semester
-                  </Button>
-                </Box>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {semesters
-                    .filter(s => s.domain_id === managingSubDomain.domain_id)
-                    .map(sem => (
-                      <Chip
-                        key={sem.id}
-                        label={sem.name}
-                        onDelete={() => {}}
-                        deleteIcon={<Delete />}
-                        color={sem.is_active ? 'secondary' : 'default'}
-                      />
-                    ))}
-                  {semesters.filter(s => s.domain_id === managingSubDomain.domain_id).length === 0 && (
-                    <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                      No semesters found
-                    </Typography>
-                  )}
-                </Box>
-              </Paper>
-            </Box>
-          )}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            <TextField fullWidth label="Sub-Domain Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+            <TextField select fullWidth label="Type" value={['primary', 'high', 'college', 'ug', 'pg', 'phd'].includes(formData.type) ? formData.type : 'custom'} onChange={(e) => { if (e.target.value === 'custom') { setFormData({ ...formData, type: '' }); } else { setFormData({ ...formData, type: e.target.value }); } }} SelectProps={{ native: true }}>
+              {typeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+            </TextField>
+            {!['primary', 'high', 'college', 'ug', 'pg', 'phd'].includes(formData.type) && <TextField fullWidth label="Custom Type Name" value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} placeholder="e.g., Diploma, Certificate" required />}
+            <TextField fullWidth label="Department" value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })} />
+            <TextField fullWidth label="Semester" value={formData.semester} onChange={(e) => setFormData({ ...formData, semester: e.target.value })} />
+            <TextField fullWidth label="Description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} multiline rows={3} />
+          </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'space-between' }}>
-          <Button
-            color="error"
-            variant="outlined"
-            startIcon={<Delete />}
-            onClick={() => {
-              if (managingSubDomain) {
-                setOpenManageDialog(false);
-                handleDeleteSubDomain(managingSubDomain.id);
-              }
-            }}
-          >
-            Delete Sub-Domain
-          </Button>
+        <DialogActions sx={{ justifyContent: 'space-between', px: 3, pb: 2 }}>
+          <Button color="error" variant="outlined" startIcon={<Delete />} onClick={() => { if (managingSubDomain) { setOpenManageDialog(false); handleDeleteSubDomain(managingSubDomain.id); } }}>Delete</Button>
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button onClick={() => {
-              setOpenManageDialog(false);
-              setEditMode(false);
-            }}>
-              Close
-            </Button>
-            {editMode && (
-              <Button variant="contained" onClick={handleSaveSubDomain}>
-                Save Changes
-              </Button>
-            )}
+            <Button onClick={() => setOpenManageDialog(false)}>Close</Button>
+            <Button variant="contained" onClick={async () => {
+              if (!managingSubDomain) return;
+              try {
+                await fetch(`http://localhost:3001/api/subdomains/${managingSubDomain.id}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    name: formData.name,
+                    type: formData.type,
+                    description: formData.description,
+                    is_active: formData.isActive,
+                  }),
+                });
+                setSuccess('Sub-domain updated successfully!');
+                setOpenManageDialog(false);
+                await loadData();
+              } catch (err: any) {
+                setError(err.message);
+              }
+            }}>Save Changes</Button>
           </Box>
         </DialogActions>
       </Dialog>
 
       {/* Domain Dialog */}
       <Dialog open={openDomainDialog} onClose={() => setOpenDomainDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingDomain ? 'Edit Domain' : 'Create Domain'}</DialogTitle>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">{editingDomain ? 'Edit Domain' : 'Create Domain'}</Typography>
+            <FormControlLabel control={<Switch checked={domainForm.isActive} onChange={(e) => setDomainForm({ ...domainForm, isActive: e.target.checked })} />} label="Active" />
+          </Box>
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-            <TextField
-              fullWidth
-              label="Domain Name"
-              value={domainForm.name}
-              onChange={(e) => setDomainForm({ ...domainForm, name: e.target.value })}
-              required
-              placeholder="e.g., MIT, Harvard University"
-            />
-            <TextField
-              fullWidth
-              label="Description"
-              value={domainForm.description}
-              onChange={(e) => setDomainForm({ ...domainForm, description: e.target.value })}
-              multiline
-              rows={3}
-            />
+            <TextField fullWidth label="Domain Name" value={domainForm.name} onChange={(e) => setDomainForm({ ...domainForm, name: e.target.value })} required />
+            <TextField fullWidth label="Description" value={domainForm.description} onChange={(e) => setDomainForm({ ...domainForm, description: e.target.value })} multiline rows={3} />
           </Box>
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'space-between', px: 3, pb: 2 }}>
-          <Box>
-            {editingDomain && (
-              <Button
-                color="error"
-                variant="outlined"
-                startIcon={<Delete />}
-                onClick={() => {
-                  setOpenDomainDialog(false);
-                  handleDeleteDomain(editingDomain.id);
-                }}
-              >
-                Delete Domain
-              </Button>
-            )}
-          </Box>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button onClick={() => setOpenDomainDialog(false)}>Cancel</Button>
+          {editingDomain && (
             <Button
-              variant="contained"
-              onClick={handleSubmitDomain}
-              disabled={!domainForm.name}
+              color="error"
+              variant="outlined"
+              startIcon={<Delete />}
+              onClick={async () => {
+                const confirmMessage = 
+                  'WARNING: Deleting this domain will also delete:\n' +
+                  '- All sub-domains\n' +
+                  '- All departments\n' +
+                  '- All semesters\n\n' +
+                  'Are you sure?';
+                
+                if (!window.confirm(confirmMessage)) return;
+
+                try {
+                  const response = await fetch(`http://localhost:3001/api/domains/${editingDomain.id}`, {
+                    method: 'DELETE',
+                  });
+
+                  if (!response.ok) throw new Error('Failed to delete domain');
+
+                  setSuccess('Domain deleted successfully!');
+                  setOpenDomainDialog(false);
+                  setEditingDomain(null);
+                  setSelectedDomain(null);
+                  await loadData();
+                } catch (err: any) {
+                  setError(err.message);
+                }
+              }}
             >
-              {editingDomain ? 'Update' : 'Create'}
+              Delete Domain
             </Button>
+          )}
+          <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
+            <Button onClick={() => setOpenDomainDialog(false)}>Cancel</Button>
+            <Button variant="contained" disabled={!domainForm.name} onClick={async () => {
+              try {
+                const endpoint = editingDomain 
+                  ? `http://localhost:3001/api/domains/${editingDomain.id}`
+                  : 'http://localhost:3001/api/domains/create';
+                
+                const response = await fetch(endpoint, {
+                  method: editingDomain ? 'PUT' : 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    name: domainForm.name,
+                    description: domainForm.description,
+                    is_active: domainForm.isActive,
+                  }),
+                });
+
+                if (!response.ok) throw new Error('Failed to save domain');
+
+                setSuccess(`Domain ${editingDomain ? 'updated' : 'created'} successfully!`);
+                setOpenDomainDialog(false);
+                setEditingDomain(null);
+                await loadData();
+              } catch (err: any) {
+                setError(err.message);
+              }
+            }}>{ editingDomain ? 'Update' : 'Create'}</Button>
           </Box>
         </DialogActions>
       </Dialog>
