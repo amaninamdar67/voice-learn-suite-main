@@ -112,9 +112,18 @@ export default function TeacherDashboard() {
 
   return (
     <div className="max-w-7xl mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Teacher Dashboard</h1>
-        <p className="text-gray-600 mt-1">Manage your content and track student progress</p>
+      <div className="mb-6 flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Teacher Dashboard</h1>
+          <p className="text-gray-600 mt-1">Manage your content and track student progress</p>
+        </div>
+        <button
+          onClick={() => navigate('/leaderboard')}
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors font-medium"
+        >
+          <Award size={20} />
+          View Leaderboard
+        </button>
       </div>
 
       {/* Stats Cards */}

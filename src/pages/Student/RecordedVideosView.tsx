@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 import CustomVideoPlayer from '../../components/VideoPlayer/CustomVideoPlayer';
 import PageCommentBox from '../../components/CommentBox/PageCommentBox';
-import { Video, Play, Star, TrendingUp, Clock, CheckCircle, X } from 'lucide-react';
+import { Video, Play, Star, TrendingUp, Clock, CheckCircle, X, Trophy } from 'lucide-react';
 
 interface RecordedVideo {
   id: string;
@@ -31,6 +32,7 @@ interface WatchHistory {
 
 export default function RecordedVideosView() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [videos, setVideos] = useState<RecordedVideo[]>([]);
   const [watchHistory, setWatchHistory] = useState<Record<string, WatchHistory>>({});
   const [loading, setLoading] = useState(true);
@@ -159,7 +161,16 @@ export default function RecordedVideosView() {
             <h1 className="text-3xl font-bold text-gray-900">Recorded Classes</h1>
             <p className="text-gray-600 mt-1">Browse and watch recorded video classes</p>
           </div>
-          <PageCommentBox pageName="Recorded Classes" category="recorded-classes" />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/leaderboard')}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors font-medium"
+            >
+              <Trophy size={20} />
+              View Leaderboard
+            </button>
+            <PageCommentBox pageName="Recorded Classes" category="recorded-classes" />
+          </div>
         </div>
       </div>
 

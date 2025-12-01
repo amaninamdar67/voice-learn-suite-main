@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 import { FileText, Clock, Award, CheckCircle, X, Trophy, ArrowRight, ArrowLeft } from 'lucide-react';
 
 interface Quiz {
@@ -37,6 +38,7 @@ interface QuizResult {
 
 export default function QuizzesView() {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [results, setResults] = useState<Record<string, QuizResult>>({});
   const [loading, setLoading] = useState(true);
@@ -408,9 +410,18 @@ export default function QuizzesView() {
   // Quiz List View
   return (
     <div className="max-w-7xl mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Quizzes</h1>
-        <p className="text-gray-600 mt-1">Test your knowledge and track your progress</p>
+      <div className="mb-6 flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Quizzes</h1>
+          <p className="text-gray-600 mt-1">Test your knowledge and track your progress</p>
+        </div>
+        <button
+          onClick={() => navigate('/leaderboard')}
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors font-medium"
+        >
+          <Trophy size={20} />
+          View Leaderboard
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

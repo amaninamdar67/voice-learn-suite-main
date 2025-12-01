@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 import { 
-  FileText, Plus, Edit, Trash2, Users, CheckCircle, Clock, X, Download 
+  FileText, Plus, Edit, Trash2, Users, CheckCircle, Clock, X, Download, Trophy 
 } from 'lucide-react';
 
 interface Assignment {
@@ -34,6 +35,7 @@ interface Submission {
 
 export default function AssignmentCreator() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -257,13 +259,22 @@ export default function AssignmentCreator() {
           <h1 className="text-3xl font-bold text-gray-900">Assignment Management</h1>
           <p className="text-gray-600 mt-1">Create and manage student assignments</p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus size={20} />
-          Create Assignment
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/leaderboard')}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors font-medium"
+          >
+            <Trophy size={20} />
+            View Leaderboard
+          </button>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={20} />
+            Create Assignment
+          </button>
+        </div>
       </div>
 
       {loading && (

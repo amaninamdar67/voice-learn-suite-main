@@ -654,11 +654,11 @@ export default function RecordedClassesCommunity() {
               </div>
             </div>
             
-            {/* Edit button in bottom right - only show if not editing and user owns post */}
+            {/* Edit button in top right - only show if not editing and user owns post */}
             {editingPost !== post.id && post.user_id === user?.id && (
               <button
                 onClick={() => handleEditPost(post)}
-                className="absolute bottom-20 right-4 text-gray-400 hover:text-blue-600 transition-colors flex items-center gap-1 text-sm z-10"
+                className="absolute top-4 right-4 text-gray-400 hover:text-blue-600 transition-colors flex items-center gap-1 text-sm z-10"
               >
                 <Edit2 size={16} />
                 <span>Edit</span>

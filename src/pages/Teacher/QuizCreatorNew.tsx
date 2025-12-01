@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Save, Eye, X, Trophy, Sparkles } from 'lucide-react';
 
 interface Question {
@@ -29,6 +30,7 @@ interface Quiz {
 
 export default function QuizCreatorNew() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -226,15 +228,24 @@ export default function QuizCreatorNew() {
           <h1 className="text-3xl font-bold text-gray-900">Quiz Creator</h1>
           <p className="text-gray-600 mt-1">Create quizzes with multiple choice questions</p>
         </div>
-        {!showForm && (
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            onClick={() => navigate('/leaderboard')}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors font-medium"
           >
-            <Plus size={20} />
-            Create Quiz
+            <Trophy size={20} />
+            View Leaderboard
           </button>
-        )}
+          {!showForm && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Plus size={20} />
+              Create Quiz
+            </button>
+          )}
+        </div>
       </div>
 
       {showForm && (

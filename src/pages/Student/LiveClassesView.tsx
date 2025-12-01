@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 import CustomVideoPlayer from '../../components/VideoPlayer/CustomVideoPlayer';
 import PageCommentBox from '../../components/CommentBox/PageCommentBox';
-import { Radio, Calendar, Clock, X, Bell, CheckCircle } from 'lucide-react';
+import { Radio, Calendar, Clock, X, Bell, CheckCircle, Trophy } from 'lucide-react';
 
 interface LiveClass {
   id: string;
@@ -29,6 +30,7 @@ interface AttendancePing {
 
 export default function LiveClassesView() {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [classes, setClasses] = useState<LiveClass[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedClass, setSelectedClass] = useState<LiveClass | null>(null);
@@ -314,7 +316,16 @@ export default function LiveClassesView() {
             <h1 className="text-3xl font-bold text-gray-900">Live Classes</h1>
             <p className="text-gray-600 mt-1">Join live sessions and interact with teachers</p>
           </div>
-          <PageCommentBox pageName="Live Classes" category="live-classes" />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/leaderboard')}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors font-medium"
+            >
+              <Trophy size={20} />
+              View Leaderboard
+            </button>
+            <PageCommentBox pageName="Live Classes" category="live-classes" />
+          </div>
         </div>
       </div>
 

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Play, Plus, Trash2, Edit2, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Play, Plus, Trash2, Edit2, X, Trophy } from 'lucide-react';
 
 interface VideoLesson {
   id: string;
@@ -17,6 +18,7 @@ interface VideoLesson {
 
 export default function VideoLessonUpload() {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [lessons, setLessons] = useState<VideoLesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -183,15 +185,24 @@ export default function VideoLessonUpload() {
     <div className="max-w-6xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Video Lessons</h1>
-        {!showForm && (
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            onClick={() => navigate('/leaderboard')}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors font-medium"
           >
-            <Plus size={20} />
-            Upload Course
+            <Trophy size={20} />
+            View Leaderboard
           </button>
-        )}
+          {!showForm && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Plus size={20} />
+              Upload Course
+            </button>
+          )}
+        </div>
       </div>
 
       {showForm && (

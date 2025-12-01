@@ -44,7 +44,7 @@ const menuItems: MenuItem[] = [
   { text: 'Users', icon: <People />, path: '/users', roles: ['admin'] },
   { text: 'Analytics', icon: <Analytics />, path: '/analytics', roles: ['admin'] },
   { text: 'System Config', icon: <Settings />, path: '/system-config', roles: ['admin'] },
-  { text: 'Leaderboard', icon: <Quiz />, path: '/student/quiz-rankings', roles: ['admin'] },
+  { text: 'Leaderboard', icon: <Quiz />, path: '/leaderboard', roles: ['admin'] },
   { text: 'Settings', icon: <Settings />, path: '/settings', roles: ['admin'] },
   
   // Teacher Menu
@@ -55,7 +55,7 @@ const menuItems: MenuItem[] = [
   { text: 'Create Quiz', icon: <Quiz />, path: '/teacher/quiz-creator', roles: ['teacher'] },
   { text: 'Study Materials', icon: <School />, path: '/lessons', roles: ['teacher'] },
   { text: 'Assignments', icon: <Assignment />, path: '/projects', roles: ['teacher'] },
-  { text: 'Leaderboard', icon: <Quiz />, path: '/teacher/quiz-rankings', roles: ['teacher'] },
+  { text: 'Leaderboard', icon: <Quiz />, path: '/leaderboard', roles: ['teacher'] },
   { text: 'Community', icon: <Message />, path: '/community/recorded-classes', roles: ['teacher'] },
   { text: 'Settings', icon: <Settings />, path: '/settings', roles: ['teacher'] },
   
@@ -67,21 +67,21 @@ const menuItems: MenuItem[] = [
   { text: 'Take Quiz', icon: <Quiz />, path: '/student/quizzes', roles: ['student'] },
   { text: 'Study Materials', icon: <School />, path: '/lessons', roles: ['student'] },
   { text: 'Assignments', icon: <Assignment />, path: '/projects', roles: ['student'] },
-  { text: 'Leaderboard', icon: <Quiz />, path: '/student/quiz-rankings', roles: ['student'] },
+  { text: 'Leaderboard', icon: <Quiz />, path: '/leaderboard', roles: ['student'] },
   { text: 'Community', icon: <Message />, path: '/community/recorded-classes', roles: ['student'] },
   { text: 'Settings', icon: <Settings />, path: '/settings', roles: ['student'] },
   
   // Parent Menu
   { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['parent'] },
   { text: 'My Children', icon: <Person />, path: '/children', roles: ['parent'] },
-  { text: 'Leaderboard', icon: <Quiz />, path: '/student/quiz-rankings', roles: ['parent'] },
+  { text: 'Leaderboard', icon: <Quiz />, path: '/leaderboard', roles: ['parent'] },
   { text: 'Community', icon: <Message />, path: '/community/recorded-classes', roles: ['parent'] },
   { text: 'Settings', icon: <Settings />, path: '/settings', roles: ['parent'] },
   
   // Mentor Menu
   { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['mentor'] },
   { text: 'Mentoring', icon: <People />, path: '/mentoring', roles: ['mentor'] },
-  { text: 'Leaderboard', icon: <Quiz />, path: '/student/quiz-rankings', roles: ['mentor'] },
+  { text: 'Leaderboard', icon: <Quiz />, path: '/leaderboard', roles: ['mentor'] },
   { text: 'Assignments', icon: <Assignment />, path: '/projects', roles: ['mentor'] },
   { text: 'Settings', icon: <Settings />, path: '/settings', roles: ['mentor'] },
 ];

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 import { 
   FileText, Calendar, Clock, CheckCircle, AlertCircle, 
-  Upload, X, Download, Send 
+  Upload, X, Download, Send, Trophy 
 } from 'lucide-react';
 
 interface Assignment {
@@ -29,6 +30,7 @@ interface Assignment {
 
 export default function AssignmentsView() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
@@ -156,9 +158,18 @@ export default function AssignmentsView() {
 
   return (
     <div className="max-w-7xl mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Assignments</h1>
-        <p className="text-gray-600 mt-1">View and submit your assignments</p>
+      <div className="mb-6 flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Assignments</h1>
+          <p className="text-gray-600 mt-1">View and submit your assignments</p>
+        </div>
+        <button
+          onClick={() => navigate('/leaderboard')}
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors font-medium"
+        >
+          <Trophy size={20} />
+          View Leaderboard
+        </button>
       </div>
 
       {loading && (

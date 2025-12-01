@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Video, Plus, Trash2, Edit2, X, Star } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Video, Plus, Trash2, Edit2, X, Star, Trophy } from 'lucide-react';
 
 interface RecordedVideo {
   id: string;
@@ -21,6 +22,7 @@ interface RecordedVideo {
 
 export default function RecordedVideosUpload() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [videos, setVideos] = useState<RecordedVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -294,15 +296,24 @@ export default function RecordedVideosUpload() {
           <h1 className="text-3xl font-bold text-gray-900">Recorded Videos</h1>
           <p className="text-gray-600 mt-1">Upload and manage your video library</p>
         </div>
-        {!showForm && (
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            onClick={() => navigate('/leaderboard')}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors font-medium"
           >
-            <Plus size={20} />
-            Upload Video
+            <Trophy size={20} />
+            View Leaderboard
           </button>
-        )}
+          {!showForm && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Plus size={20} />
+              Upload Video
+            </button>
+          )}
+        </div>
       </div>
 
       {showForm && (

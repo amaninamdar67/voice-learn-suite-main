@@ -40,6 +40,7 @@ import VideoLessonsView from "./pages/Student/VideoLessonsView";
 import LiveClassesView from "./pages/Student/LiveClassesView";
 import QuizzesView from "./pages/Student/QuizzesView";
 import QuizRankingsView from "./pages/Student/QuizRankingsView";
+import OverallRankings from "./pages/Student/OverallRankings";
 
 // Community Pages
 import RecordedClassesCommunity from "./pages/Community/RecordedClassesCommunity";
@@ -317,6 +318,16 @@ const App = () => (
                   <PrivateRoute>
                     <MainLayout>
                       <QuizRankingsView />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/leaderboard"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <OverallRankings />
                     </MainLayout>
                   </PrivateRoute>
                 }

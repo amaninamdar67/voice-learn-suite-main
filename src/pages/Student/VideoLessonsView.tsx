@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 import CustomVideoPlayer from '../../components/VideoPlayer/CustomVideoPlayer';
 import PageCommentBox from '../../components/CommentBox/PageCommentBox';
-import { BookOpen, Play, CheckCircle, X, Award } from 'lucide-react';
+import { BookOpen, Play, CheckCircle, X, Award, Trophy } from 'lucide-react';
 
 interface VideoLesson {
   id: string;
@@ -27,6 +28,7 @@ interface LessonAttendance {
 
 export default function VideoLessonsView() {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [lessons, setLessons] = useState<VideoLesson[]>([]);
   const [attendance, setAttendance] = useState<Record<string, LessonAttendance>>({});
   const [loading, setLoading] = useState(true);
@@ -220,7 +222,16 @@ export default function VideoLessonsView() {
             <h1 className="text-3xl font-bold text-gray-900">Course Library</h1>
             <p className="text-gray-600 mt-1">Browse curriculum courses and track your progress</p>
           </div>
-          <PageCommentBox pageName="Course Library" category="courses" />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/leaderboard')}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors font-medium"
+            >
+              <Trophy size={20} />
+              View Leaderboard
+            </button>
+            <PageCommentBox pageName="Course Library" category="courses" />
+          </div>
         </div>
       </div>
 
