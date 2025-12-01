@@ -30,6 +30,8 @@ export default function VideoLessonsView() {
   const [loading, setLoading] = useState(true);
   const [selectedLesson, setSelectedLesson] = useState<VideoLesson | null>(null);
   const [filterSubject, setFilterSubject] = useState('all');
+  const [filterDifficulty, setFilterDifficulty] = useState('all');
+  const [filterProgress, setFilterProgress] = useState('all');
 
   useEffect(() => {
     fetchLessons();
@@ -134,9 +136,24 @@ export default function VideoLessonsView() {
   };
 
   const subjects = ['all', ...new Set(lessons.map(l => l.subject).filter(Boolean))];
-  const filteredLessons = filterSubject === 'all' 
-    ? lessons 
-    : lessons.filter(l => l.subject === filterSubject);
+  
+  const filteredLessons = lessons.filter(lesson => {
+    // Filter by subject
+    if (filterSubject !== 'all' && lesson.subject !== filterSubject) return false;
+    
+    // Filter by difficulty
+    if (filterDifficulty !== 'all' && lesson.difficulty !== filterDifficulty) return false;
+    
+    // Filter by progress
+    if (filterProgress !== 'all') {
+      const progress = lessonProgress[lesson.id];
+      if (filterProgress === 'todo' && progress) return false;
+      if (filterProgress === 'in-progress' && (!progress || progress.is_completed)) return false;
+      if (filterProgress === 'completed' && (!progress || !progress.is_completed)) return false;
+    }
+    
+    return true;
+  });
 
   const completedCount = Object.values(attendance).filter(a => a.is_completed).length;
   const inProgressCount = Object.values(attendance).filter(a => !a.is_completed && a.watch_percentage > 0).length;
@@ -195,20 +212,52 @@ export default function VideoLessonsView() {
         </div>
       </div>
 
-      {/* Filter */}
+      {/* Filters */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Subject</label>
-        <select
-          value={filterSubject}
-          onChange={(e) => setFilterSubject(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-        >
-          {subjects.map(subject => (
-            <option key={subject} value={subject}>
-              {subject === 'all' ? 'All Subjects' : subject}
-            </option>
-          ))}
-        </select>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Subject</label>
+            <select
+              value={filterSubject}
+              onChange={(e) => setFilterSubject(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              {subjects.map(subject => (
+                <option key={subject} value={subject}>
+                  {subject === 'all' ? 'All Courses' : subject}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Difficulty</label>
+            <select
+              value={filterDifficulty}
+              onChange={(e) => setFilterDifficulty(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Levels</option>
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Progress</label>
+            <select
+              value={filterProgress}
+              onChange={(e) => setFilterProgress(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All</option>
+              <option value="todo">To-Do</option>
+              <option value="in-progress">In-Progress</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Lessons Grid */}

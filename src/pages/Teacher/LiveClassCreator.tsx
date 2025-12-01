@@ -256,7 +256,7 @@ export default function LiveClassCreator() {
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             <Plus size={20} />
-            Create Live Class
+            Go Live
           </button>
         )}
       </div>

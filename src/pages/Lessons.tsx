@@ -36,7 +36,6 @@ interface Lesson {
   document_type: string;
   file_size: number;
   teacher_id: string;
-  permission: 'view_only' | 'allow_download';
   created_at: string;
   profiles?: {
     full_name: string;
@@ -94,22 +93,9 @@ const Lessons: React.FC = () => {
       return;
     }
     
-    // Check permission
-    if (lesson.permission === 'view_only') {
-      // View only - open in new tab (no download)
-      window.open(lesson.document_url, '_blank');
-      speak(`Opening ${lesson.title} for viewing only`);
-    } else {
-      // Allow download
-      const link = document.createElement('a');
-      link.href = lesson.document_url;
-      link.download = lesson.document_name;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      speak(`Downloading ${lesson.title}`);
-    }
+    // Open document in new tab
+    window.open(lesson.document_url, '_blank');
+    speak(`Opening ${lesson.title}`);
   };
 
   const handleAnalyzeDocument = (lesson: Lesson) => {
@@ -255,19 +241,12 @@ const Lessons: React.FC = () => {
                 <Chip label={lesson.subject} size="small" color="primary" variant="outlined" />
                 {lesson.grade && <Chip label={lesson.grade} size="small" variant="outlined" />}
                 {lesson.section && <Chip label={`Section ${lesson.section}`} size="small" variant="outlined" />}
-                {lesson.document_url?.startsWith('temp_') ? (
+                {lesson.document_url?.startsWith('temp_') && (
                   <Chip 
                     label="File Not Available" 
                     size="small" 
                     color="error"
                     variant="filled" 
-                  />
-                ) : (
-                  <Chip 
-                    label={lesson.permission === 'allow_download' ? 'Downloadable' : 'View Only'} 
-                    size="small" 
-                    color={lesson.permission === 'allow_download' ? 'success' : 'default'}
-                    variant="outlined" 
                   />
                 )}
               </Box>

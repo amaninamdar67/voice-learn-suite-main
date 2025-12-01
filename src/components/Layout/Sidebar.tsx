@@ -38,33 +38,52 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
-  { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['admin', 'teacher', 'student', 'parent', 'mentor'] },
+  // Admin Menu
+  { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['admin'] },
   { text: 'Domains', icon: <Settings />, path: '/domains', roles: ['admin'] },
   { text: 'Users', icon: <People />, path: '/users', roles: ['admin'] },
   { text: 'Analytics', icon: <Analytics />, path: '/analytics', roles: ['admin'] },
   { text: 'System Config', icon: <Settings />, path: '/system-config', roles: ['admin'] },
+  { text: 'Leaderboard', icon: <Quiz />, path: '/student/quiz-rankings', roles: ['admin'] },
+  { text: 'Settings', icon: <Settings />, path: '/settings', roles: ['admin'] },
   
-  // Teacher LMS Menu
-  { text: 'Video Lessons', icon: <School />, path: '/teacher/video-lessons', roles: ['teacher'] },
-  { text: 'Recorded Videos', icon: <VideoLibrary />, path: '/teacher/recorded-videos', roles: ['teacher'] },
+  // Teacher Menu
+  { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['teacher'] },
+  { text: 'Recorded Classes', icon: <VideoLibrary />, path: '/teacher/recorded-videos', roles: ['teacher'] },
+  { text: 'Courses', icon: <School />, path: '/teacher/video-lessons', roles: ['teacher'] },
   { text: 'Live Classes', icon: <VideoLibrary />, path: '/teacher/live-classes', roles: ['teacher'] },
-  { text: 'Quiz Creator', icon: <Quiz />, path: '/teacher/quiz-creator', roles: ['teacher'] },
-  { text: 'Quiz Rankings', icon: <Quiz />, path: '/teacher/quiz-rankings', roles: ['teacher'] },
+  { text: 'Create Quiz', icon: <Quiz />, path: '/teacher/quiz-creator', roles: ['teacher'] },
+  { text: 'Leaderboard', icon: <Quiz />, path: '/teacher/quiz-rankings', roles: ['teacher'] },
+  { text: 'Study Materials', icon: <School />, path: '/lessons', roles: ['teacher'] },
+  { text: 'Assignments', icon: <Assignment />, path: '/projects', roles: ['teacher'] },
+  { text: 'Community', icon: <Message />, path: '/discussions', roles: ['teacher'] },
+  { text: 'Settings', icon: <Settings />, path: '/settings', roles: ['teacher'] },
   
-  // Student LMS Menu
-  { text: 'Video Lessons', icon: <School />, path: '/student/video-lessons', roles: ['student'] },
-  { text: 'Recorded Videos', icon: <VideoLibrary />, path: '/student/recorded-videos', roles: ['student'] },
+  // Student Menu
+  { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['student'] },
+  { text: 'Recorded Classes', icon: <VideoLibrary />, path: '/student/recorded-videos', roles: ['student'] },
+  { text: 'Courses', icon: <School />, path: '/student/video-lessons', roles: ['student'] },
   { text: 'Live Classes', icon: <VideoLibrary />, path: '/student/live-classes', roles: ['student'] },
-  { text: 'Quizzes', icon: <Quiz />, path: '/student/quizzes', roles: ['student'] },
-  { text: 'Quiz Rankings', icon: <Quiz />, path: '/student/quiz-rankings', roles: ['student'] },
+  { text: 'Take Quiz', icon: <Quiz />, path: '/student/quizzes', roles: ['student'] },
+  { text: 'Leaderboard', icon: <Quiz />, path: '/student/quiz-rankings', roles: ['student'] },
+  { text: 'Study Materials', icon: <School />, path: '/lessons', roles: ['student'] },
+  { text: 'Assignments', icon: <Assignment />, path: '/projects', roles: ['student'] },
+  { text: 'Community', icon: <Message />, path: '/discussions', roles: ['student'] },
+  { text: 'Settings', icon: <Settings />, path: '/settings', roles: ['student'] },
   
-  // Legacy/Other
-  { text: 'Lessons', icon: <School />, path: '/lessons', roles: ['teacher', 'student'] },
-  { text: 'Projects', icon: <Assignment />, path: '/projects', roles: ['teacher', 'student', 'mentor'] },
-  { text: 'Discussions', icon: <Message />, path: '/discussions', roles: ['teacher', 'student', 'parent'] },
+  // Parent Menu
+  { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['parent'] },
   { text: 'My Children', icon: <Person />, path: '/children', roles: ['parent'] },
+  { text: 'Leaderboard', icon: <Quiz />, path: '/student/quiz-rankings', roles: ['parent'] },
+  { text: 'Community', icon: <Message />, path: '/discussions', roles: ['parent'] },
+  { text: 'Settings', icon: <Settings />, path: '/settings', roles: ['parent'] },
+  
+  // Mentor Menu
+  { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['mentor'] },
   { text: 'Mentoring', icon: <People />, path: '/mentoring', roles: ['mentor'] },
-  { text: 'Settings', icon: <Settings />, path: '/settings', roles: ['admin', 'teacher', 'student', 'parent', 'mentor'] },
+  { text: 'Leaderboard', icon: <Quiz />, path: '/student/quiz-rankings', roles: ['mentor'] },
+  { text: 'Assignments', icon: <Assignment />, path: '/projects', roles: ['mentor'] },
+  { text: 'Settings', icon: <Settings />, path: '/settings', roles: ['mentor'] },
 ];
 
 export const Sidebar: React.FC = () => {

@@ -27,8 +27,7 @@ export default function VideoLessonUpload() {
     description: '',
     youtubeUrl: '',
     subject: '',
-    grade: '',
-    section: '',
+    difficulty: 'beginner',
   });
 
   useEffect(() => {
@@ -87,8 +86,7 @@ export default function VideoLessonUpload() {
             youtube_url: formData.youtubeUrl,
             youtube_video_id: videoId,
             subject: formData.subject,
-            grade: formData.grade,
-            section: formData.section,
+            difficulty: formData.difficulty,
             updated_at: new Date().toISOString(),
           })
           .eq('id', editingLesson.id);
@@ -106,8 +104,7 @@ export default function VideoLessonUpload() {
             youtube_url: formData.youtubeUrl,
             youtube_video_id: videoId,
             subject: formData.subject,
-            grade: formData.grade,
-            section: formData.section,
+            difficulty: formData.difficulty,
           }]);
 
         if (error) throw error;
@@ -120,8 +117,7 @@ export default function VideoLessonUpload() {
         description: '',
         youtubeUrl: '',
         subject: '',
-        grade: '',
-        section: '',
+        difficulty: 'beginner',
       });
       setShowForm(false);
       setEditingLesson(null);
@@ -139,8 +135,7 @@ export default function VideoLessonUpload() {
       description: lesson.description || '',
       youtubeUrl: lesson.youtube_url,
       subject: lesson.subject || '',
-      grade: lesson.grade || '',
-      section: lesson.section || '',
+      difficulty: lesson.difficulty || 'beginner',
     });
     setShowForm(true);
   };
@@ -194,7 +189,7 @@ export default function VideoLessonUpload() {
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             <Plus size={20} />
-            Create Lesson
+            Upload Course
           </button>
         )}
       </div>
@@ -255,7 +250,7 @@ export default function VideoLessonUpload() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Subject
@@ -271,28 +266,17 @@ export default function VideoLessonUpload() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Grade
+                  Difficulty Level
                 </label>
-                <input
-                  type="text"
-                  value={formData.grade}
-                  onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
+                <select
+                  value={formData.difficulty}
+                  onChange={(e) => setFormData({ ...formData, difficulty: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g., 10"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Section
-                </label>
-                <input
-                  type="text"
-                  value={formData.section}
-                  onChange={(e) => setFormData({ ...formData, section: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g., A"
-                />
+                >
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate">Intermediate</option>
+                  <option value="advanced">Advanced</option>
+                </select>
               </div>
             </div>
 
@@ -301,7 +285,7 @@ export default function VideoLessonUpload() {
                 type="submit"
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
-                {editingLesson ? 'Update Lesson' : 'Create Lesson'}
+                {editingLesson ? 'Update Course' : 'Upload Course'}
               </button>
               <button
                 type="button"

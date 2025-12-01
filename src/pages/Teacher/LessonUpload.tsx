@@ -37,7 +37,6 @@ interface UploadedLesson {
   size: string;
   uploadDate: string;
   views: number;
-  permission?: 'view_only' | 'allow_download';
 }
 
 const LessonUpload: React.FC = () => {
@@ -58,7 +57,6 @@ const LessonUpload: React.FC = () => {
     title: '',
     description: '',
     subject: '',
-    permission: 'view_only' as 'view_only' | 'allow_download',
   });
 
   // Teacher's profile data
@@ -102,7 +100,6 @@ const LessonUpload: React.FC = () => {
           size: lesson.file_size ? `${(lesson.file_size / 1024 / 1024).toFixed(2)} MB` : 'N/A',
           uploadDate: new Date(lesson.created_at).toLocaleDateString(),
           views: 0,
-          permission: lesson.permission || 'view_only',
         }));
         setLessons(formattedLessons);
       }
@@ -192,7 +189,6 @@ const LessonUpload: React.FC = () => {
           documentName: selectedFile.name,
           documentType: fileExt,
           fileSize: selectedFile.size,
-          permission: lessonData.permission,
           domain_id: teacherProfile.domain_id,
           sub_domain_id: teacherProfile.sub_domain_id,
           department_id: teacherProfile.department_id,
@@ -211,7 +207,7 @@ const LessonUpload: React.FC = () => {
       setTimeout(() => {
         setOpenUploadDialog(false);
         setSelectedFile(null);
-        setLessonData({ title: '', description: '', subject: '', permission: 'view_only' });
+        setLessonData({ title: '', description: '', subject: '' });
         setUploadProgress(0);
       }, 1000);
       
@@ -439,12 +435,6 @@ const LessonUpload: React.FC = () => {
                       size="small"
                       variant="outlined"
                     />
-                    <Chip
-                      label={lesson.permission === 'allow_download' ? 'Downloadable' : 'View Only'}
-                      size="small"
-                      color={lesson.permission === 'allow_download' ? 'success' : 'warning'}
-                      variant="outlined"
-                    />
                     <Typography variant="caption" color="text.secondary">
                       Size: {lesson.size}
                     </Typography>
@@ -511,19 +501,6 @@ const LessonUpload: React.FC = () => {
               required
               placeholder="e.g., Mathematics, Physics, Computer Science"
             />
-
-            <TextField
-              select
-              fullWidth
-              label="Permission"
-              value={lessonData.permission}
-              onChange={(e) => setLessonData({ ...lessonData, permission: e.target.value as 'view_only' | 'allow_download' })}
-              required
-              helperText="Choose how students can access this document"
-            >
-              <MenuItem value="view_only">View Only (Preview in new tab, no download)</MenuItem>
-              <MenuItem value="allow_download">Allow Download (Preview and download)</MenuItem>
-            </TextField>
 
             <Alert severity="info">
               Max file size: 15 MB | Document will remain until you delete it

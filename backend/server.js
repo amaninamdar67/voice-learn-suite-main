@@ -702,7 +702,7 @@ app.get('/api/lessons', async (req, res) => {
 app.post('/api/lessons/create', async (req, res) => {
   try {
     const { 
-      title, description, teacherId, subject, permission,
+      title, description, teacherId, subject,
       documentUrl, documentName, documentType, fileSize,
       domain_id, sub_domain_id, department_id, semester_id 
     } = req.body;
@@ -714,7 +714,6 @@ app.post('/api/lessons/create', async (req, res) => {
         description,
         teacher_id: teacherId,
         subject,
-        permission: permission || 'view_only',
         document_url: documentUrl,
         document_name: documentName,
         document_type: documentType,

@@ -60,7 +60,7 @@ export default function QuizRankingsDashboard() {
       if (error) throw error;
       setQuizzes(data || []);
       if (data && data.length > 0) {
-        setSelectedQuiz(data[0].id);
+        setSelectedQuiz('overall'); // Default to overall rankings
       }
     } catch (error) {
       console.error('Error fetching quizzes:', error);
@@ -69,23 +69,126 @@ export default function QuizRankingsDashboard() {
     }
   };
 
+  const fetchOverallRankings = async () => {
+    try {
+      // Get all quiz results for this teacher's quizzes
+      const quizIds = quizzes.map(q => q.id);
+      
+      const { data, error } = await supabase
+        .from('quiz_results')
+        .select('student_id, score, time_taken_seconds, quiz_id')
+        .in('quiz_id', quizIds)
+        .eq('is_completed', true);
+
+      if (error) throw error;
+
+      // Group by student and calculate totals
+      const studentTotals = new Map();
+      data?.forEach(result => {
+        const existing = studentTotals.get(result.student_id) || { 
+          totalScore: 0, 
+          totalTime: 0, 
+          quizCount: 0 
+        };
+        studentTotals.set(result.student_id, {
+          totalScore: existing.totalScore + result.score,
+          totalTime: existing.totalTime + result.time_taken_seconds,
+          quizCount: existing.quizCount + 1
+        });
+      });
+
+      // Convert to array and sort
+      const sortedStudents = Array.from(studentTotals.entries())
+        .sort((a, b) => {
+          // Sort by total score (descending)
+          if (b[1].totalScore !== a[1].totalScore) {
+            return b[1].totalScore - a[1].totalScore;
+          }
+          // If tied, sort by time (ascending - lowest time wins)
+          return a[1].totalTime - b[1].totalTime;
+        });
+
+      // Fetch student profiles
+      const studentIds = sortedStudents.map(([id]) => id);
+      const { data: students } = await supabase
+        .from('profiles')
+        .select('id, full_name, grade')
+        .in('id', studentIds);
+
+      const studentMap = new Map(students?.map(s => [s.id, { full_name: s.full_name, grade: s.grade }]) || []);
+
+      // Create rankings
+      const overallRankings = sortedStudents.map(([studentId, totals], index) => ({
+        id: studentId,
+        rank: index + 1,
+        student_id: studentId,
+        score: totals.totalScore,
+        percentage: 0, // Not applicable for overall
+        time_taken_seconds: totals.totalTime,
+        submitted_at: new Date().toISOString(),
+        profiles: studentMap.get(studentId) || { full_name: 'Unknown Student', grade: '' }
+      }));
+
+      setRankings(overallRankings);
+
+      // Calculate stats
+      if (overallRankings.length > 0) {
+        const totalMarks = quizzes.reduce((sum, q) => sum + q.total_marks, 0);
+        setStats({
+          totalParticipants: overallRankings.length,
+          averageScore: overallRankings.reduce((sum, r) => sum + r.score, 0) / overallRankings.length,
+          highestScore: overallRankings[0].score,
+          averageTime: overallRankings.reduce((sum, r) => sum + r.time_taken_seconds, 0) / overallRankings.length,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching overall rankings:', error);
+    } finally {
+      setLoadingRankings(false);
+    }
+  };
+
   const fetchRankings = async () => {
     if (!selectedQuiz) return;
 
     setLoadingRankings(true);
+    
+    // Check if "Overall" is selected
+    if (selectedQuiz === 'overall') {
+      await fetchOverallRankings();
+      return;
+    }
     try {
       const { data, error } = await supabase
         .from('quiz_rankings')
-        .select(`
-          *,
-          profiles:student_id (full_name, grade)
-        `)
+        .select('*')
         .eq('quiz_id', selectedQuiz)
-        .order('rank', { ascending: true });
+        .order('rank', { ascending: true});
 
       if (error) throw error;
 
-      setRankings(data || []);
+      // Fetch student names separately
+      let rankingsWithProfiles = data || [];
+      if (data && data.length > 0) {
+        const studentIds = [...new Set(data.map(r => r.student_id))];
+        console.log('Student IDs:', studentIds);
+        
+        const { data: students, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, full_name, grade')
+          .in('id', studentIds);
+        
+        console.log('Fetched students:', students);
+        if (profileError) console.error('Profile fetch error:', profileError);
+        
+        const studentMap = new Map(students?.map(s => [s.id, { full_name: s.full_name, grade: s.grade }]) || []);
+        rankingsWithProfiles = data.map(ranking => ({
+          ...ranking,
+          profiles: studentMap.get(ranking.student_id) || { full_name: 'Unknown Student', grade: '' }
+        }));
+      }
+
+      setRankings(rankingsWithProfiles);
 
       // Calculate stats
       if (data && data.length > 0) {
@@ -210,6 +313,7 @@ export default function QuizRankingsDashboard() {
               onChange={(e) => setSelectedQuiz(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             >
+              <option value="overall">📊 Overall Rankings (All Quizzes)</option>
               {quizzes.map((quiz) => (
                 <option key={quiz.id} value={quiz.id}>
                   {quiz.title} {quiz.subject && `- ${quiz.subject}`} {quiz.grade && `(Grade ${quiz.grade})`}
@@ -293,10 +397,13 @@ export default function QuizRankingsDashboard() {
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="p-6 border-b">
           <h2 className="text-xl font-semibold">
-            Leaderboard - {selectedQuizData?.title}
+            Leaderboard - {selectedQuiz === 'overall' ? 'Overall Rankings' : selectedQuizData?.title}
           </h2>
           <p className="text-sm text-gray-600 mt-1">
-            Total Marks: {selectedQuizData?.total_marks}
+            {selectedQuiz === 'overall' 
+              ? `Combined results from ${quizzes.length} quizzes`
+              : `Total Marks: ${selectedQuizData?.total_marks}`
+            }
           </p>
         </div>
 

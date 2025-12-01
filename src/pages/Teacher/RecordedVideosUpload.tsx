@@ -330,14 +330,14 @@ export default function RecordedVideosUpload() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Grade
+                  Grade/Sem (Optional)
                 </label>
                 <input
                   type="text"
                   value={formData.grade}
                   onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g., 10"
+                  placeholder="e.g., 10 or Sem 3"
                 />
               </div>
             </div>
@@ -377,7 +377,7 @@ export default function RecordedVideosUpload() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {videos.map((video) => (
-          <div key={video.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div key={video.id} className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col h-full">
             <div className="relative aspect-video bg-gray-900">
               <img
                 src={`https://img.youtube.com/vi/${video.youtube_video_id}/mqdefault.jpg`}
@@ -394,13 +394,13 @@ export default function RecordedVideosUpload() {
               </div>
             </div>
 
-            <div className="p-4">
+            <div className="p-4 flex flex-col flex-1">
               <h3 className="font-semibold text-lg mb-2 line-clamp-2">{video.title}</h3>
-              {video.description && (
-                <p className="text-sm text-gray-600 mb-3 line-clamp-2">{video.description}</p>
-              )}
+              <p className="text-sm text-gray-600 mb-3 line-clamp-2 min-h-[2.5rem]">
+                {video.description || '\u00A0'}
+              </p>
               
-              <div className="flex flex-wrap gap-2 mb-3">
+              <div className="flex flex-wrap gap-2 mb-3 min-h-[2rem]">
                 {video.category && (
                   <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded capitalize">
                     {video.category}
@@ -418,22 +418,22 @@ export default function RecordedVideosUpload() {
                 )}
                 {video.grade && (
                   <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
-                    Grade {video.grade}
+                    {video.grade}
                   </span>
                 )}
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 mt-auto">
                 <button
                   onClick={() => handleEdit(video)}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
                 >
                   <Edit2 size={16} />
                   Edit
                 </button>
                 <button
                   onClick={() => handleDelete(video.id)}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200"
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
                 >
                   <Trash2 size={16} />
                   Delete
