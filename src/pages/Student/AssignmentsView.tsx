@@ -5,7 +5,6 @@ import {
   FileText, Calendar, Clock, CheckCircle, AlertCircle, 
   Upload, X, Download, Send 
 } from 'lucide-react';
-import AssignmentLeaderboard from '../../components/Leaderboard/AssignmentLeaderboard';
 
 interface Assignment {
   id: string;
@@ -155,20 +154,55 @@ export default function AssignmentsView() {
   const submittedCount = assignments.filter(a => getStatus(a) === 'submitted').length;
   const gradedCount = assignments.filter(a => getStatus(a) === 'graded').length;
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-600">Loading assignments...</div>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Assignments</h1>
         <p className="text-gray-600 mt-1">View and submit your assignments</p>
       </div>
+
+      {loading && (
+        <>
+          {/* Skeleton Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white rounded-lg shadow-md p-6 animate-pulse">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
+                  <div className="flex-1">
+                    <div className="h-4 bg-gray-200 rounded w-16 mb-2"></div>
+                    <div className="h-8 bg-gray-200 rounded w-12"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Skeleton Filter */}
+          <div className="bg-white rounded-lg shadow-md p-4 mb-6 animate-pulse">
+            <div className="h-10 bg-gray-200 rounded w-64"></div>
+          </div>
+
+          {/* Skeleton Assignment Cards */}
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-lg shadow-md p-6 animate-pulse">
+                <div className="h-6 bg-gray-200 rounded w-3/4 mb-3"></div>
+                <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-2/3 mb-4"></div>
+                <div className="flex gap-4">
+                  <div className="h-4 bg-gray-200 rounded w-32"></div>
+                  <div className="h-4 bg-gray-200 rounded w-24"></div>
+                  <div className="h-4 bg-gray-200 rounded w-28"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {!loading && (
+        <>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -335,11 +369,8 @@ export default function AssignmentsView() {
           <p className="text-gray-600">Check back later for new assignments</p>
         </div>
       )}
-
-      {/* Assignment Leaderboard */}
-      <div className="mt-8">
-        <AssignmentLeaderboard />
-      </div>
+      </>
+      )}
 
       {/* Submission Modal */}
       {selectedAssignment && (

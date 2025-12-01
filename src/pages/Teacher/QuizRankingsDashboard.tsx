@@ -249,12 +249,12 @@ export default function QuizRankingsDashboard() {
 
     const selectedQuizData = quizzes.find(q => q.id === selectedQuiz);
     const csvContent = [
-      ['Rank', 'Student Name', 'Grade', 'Score', 'Percentage', 'Time Taken', 'Submitted At'],
+      ['Rank', 'Student Name', 'Marks Obtained', 'Total Marks', 'Percentage', 'Time Taken', 'Submitted At'],
       ...rankings.map(r => [
         r.rank,
         r.profiles.full_name,
-        r.profiles.grade,
         r.score,
+        selectedQuizData?.total_marks || 0,
         `${r.percentage}%`,
         formatTime(r.time_taken_seconds),
         formatDate(r.submitted_at),
@@ -426,10 +426,7 @@ export default function QuizRankingsDashboard() {
                     Student
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Grade
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Score
+                    Marks
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Percentage
@@ -460,13 +457,8 @@ export default function QuizRankingsDashboard() {
                         {ranking.profiles.full_name}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {ranking.profiles.grade}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="font-semibold text-gray-900">
-                        {ranking.score}/{selectedQuizData?.total_marks}
-                      </span>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {ranking.score}/{selectedQuizData?.total_marks || 0}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">

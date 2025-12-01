@@ -125,14 +125,32 @@ const LessonUpload: React.FC = () => {
     setDragActive(false);
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setSelectedFile(e.dataTransfer.files[0]);
+      const file = e.dataTransfer.files[0];
+      const maxSize = 15 * 1024 * 1024; // 15MB in bytes
+      
+      if (file.size > maxSize) {
+        setError(`File size exceeds 15MB limit. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+        setTimeout(() => setError(''), 5000);
+        return;
+      }
+      
+      setSelectedFile(file);
       setOpenUploadDialog(true);
     }
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      const maxSize = 15 * 1024 * 1024; // 15MB in bytes
+      
+      if (file.size > maxSize) {
+        setError(`File size exceeds 15MB limit. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+        setTimeout(() => setError(''), 5000);
+        return;
+      }
+      
+      setSelectedFile(file);
       setOpenUploadDialog(true);
     }
   };
@@ -321,8 +339,7 @@ const LessonUpload: React.FC = () => {
         <input
           id="file-input"
           type="file"
-          multiple
-          accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.avi,.mov"
+          accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.txt,.xlsx,.xls"
           style={{ display: 'none' }}
           onChange={handleFileInput}
         />
@@ -335,7 +352,10 @@ const LessonUpload: React.FC = () => {
           or click to browse
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          Supported formats: PDF, DOC, DOCX, PPT, PPTX, MP4, AVI, MOV
+          Supported formats: PDF, DOC, DOCX, PPT, PPTX, Images (JPG, PNG, GIF), TXT, Excel
+        </Typography>
+        <Typography variant="caption" color="error" display="block" sx={{ mt: 1 }}>
+          Maximum file size: 15 MB
         </Typography>
 
         {uploading && (

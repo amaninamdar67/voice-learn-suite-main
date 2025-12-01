@@ -26,6 +26,11 @@ export default function RecordedVideosUpload() {
   const [showForm, setShowForm] = useState(false);
   const [editingVideo, setEditingVideo] = useState<RecordedVideo | null>(null);
   
+  const [uploadType, setUploadType] = useState<'youtube' | 'file'>('youtube');
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -77,42 +82,109 @@ export default function RecordedVideosUpload() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const videoId = extractVideoId(formData.youtubeUrl);
-    if (!videoId) {
-      alert('Invalid YouTube URL. Please enter a valid YouTube video URL.');
-      return;
-    }
+    if (uploadType === 'youtube') {
+      const videoId = extractVideoId(formData.youtubeUrl);
+      if (!videoId) {
+        alert('Invalid YouTube URL. Please enter a valid YouTube video URL.');
+        return;
+      }
 
-    try {
-      if (editingVideo) {
-        const { error } = await supabase
-          .from('recorded_videos')
-          .update({
-            title: formData.title,
-            description: formData.description,
-            youtube_url: formData.youtubeUrl,
-            youtube_video_id: videoId,
-            category: formData.category,
-            subject: formData.subject,
-            topic: formData.topic,
-            difficulty_level: formData.difficultyLevel,
-            grade: formData.grade,
-            is_featured: formData.isFeatured,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', editingVideo.id);
+      try {
+        setUploading(true);
+        
+        if (editingVideo) {
+          const { error } = await supabase
+            .from('recorded_videos')
+            .update({
+              title: formData.title,
+              description: formData.description,
+              youtube_url: formData.youtubeUrl,
+              youtube_video_id: videoId,
+              category: formData.category,
+              subject: formData.subject,
+              topic: formData.topic,
+              difficulty_level: formData.difficultyLevel,
+              grade: formData.grade,
+              is_featured: formData.isFeatured,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', editingVideo.id);
 
-        if (error) throw error;
-        alert('Video updated successfully!');
-      } else {
+          if (error) throw error;
+          alert('Video updated successfully!');
+        } else {
+          const { error } = await supabase
+            .from('recorded_videos')
+            .insert([{
+              teacher_id: user?.id,
+              title: formData.title,
+              description: formData.description,
+              youtube_url: formData.youtubeUrl,
+              youtube_video_id: videoId,
+              category: formData.category,
+              subject: formData.subject,
+              topic: formData.topic,
+              difficulty_level: formData.difficultyLevel,
+              grade: formData.grade,
+              is_featured: formData.isFeatured,
+            }]);
+
+          if (error) throw error;
+          alert('Video uploaded successfully!');
+        }
+
+        resetForm();
+        fetchVideos();
+      } catch (error: any) {
+        console.error('Error saving video:', error);
+        alert('Error: ' + error.message);
+      } finally {
+        setUploading(false);
+      }
+    } else {
+      // Handle file upload
+      if (!videoFile) {
+        alert('Please select a video file');
+        return;
+      }
+
+      try {
+        setUploading(true);
+        setUploadProgress(10);
+
+        // Upload video to Supabase Storage
+        const fileExt = videoFile.name.split('.').pop();
+        const fileName = `${user?.id}/${Date.now()}_${videoFile.name}`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('recorded-videos')
+          .upload(fileName, videoFile, {
+            cacheControl: '3600',
+            upsert: false,
+          });
+
+        if (uploadError) throw uploadError;
+
+        setUploadProgress(60);
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from('recorded-videos')
+          .getPublicUrl(fileName);
+
+        if (!urlData?.publicUrl) throw new Error('Failed to get video URL');
+
+        setUploadProgress(80);
+
+        // Save to database
         const { error } = await supabase
           .from('recorded_videos')
           .insert([{
             teacher_id: user?.id,
             title: formData.title,
             description: formData.description,
-            youtube_url: formData.youtubeUrl,
-            youtube_video_id: videoId,
+            youtube_url: urlData.publicUrl,
+            youtube_video_id: 'uploaded_' + Date.now(),
             category: formData.category,
             subject: formData.subject,
             topic: formData.topic,
@@ -122,14 +194,21 @@ export default function RecordedVideosUpload() {
           }]);
 
         if (error) throw error;
-        alert('Video uploaded successfully!');
-      }
 
-      resetForm();
-      fetchVideos();
-    } catch (error: any) {
-      console.error('Error saving video:', error);
-      alert('Error: ' + error.message);
+        setUploadProgress(100);
+        alert('Video uploaded successfully!');
+        
+        setTimeout(() => {
+          resetForm();
+          fetchVideos();
+        }, 1000);
+      } catch (error: any) {
+        console.error('Error uploading video:', error);
+        alert('Error: ' + error.message);
+        setUploadProgress(0);
+      } finally {
+        setUploading(false);
+      }
     }
   };
 
@@ -167,9 +246,26 @@ export default function RecordedVideosUpload() {
     }
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const maxSize = 20 * 1024 * 1024; // 20MB in bytes
+      
+      if (file.size > maxSize) {
+        alert(`File size exceeds 20MB limit. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+        return;
+      }
+      
+      setVideoFile(file);
+    }
+  };
+
   const resetForm = () => {
     setShowForm(false);
     setEditingVideo(null);
+    setUploadType('youtube');
+    setVideoFile(null);
+    setUploadProgress(0);
     setFormData({
       title: '',
       description: '',
@@ -221,22 +317,86 @@ export default function RecordedVideosUpload() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                YouTube URL *
+            {/* Upload Type Selection */}
+            <div className="flex gap-4 p-4 bg-gray-50 rounded-lg">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="uploadType"
+                  value="youtube"
+                  checked={uploadType === 'youtube'}
+                  onChange={() => setUploadType('youtube')}
+                  className="w-4 h-4 text-blue-600"
+                />
+                <span className="text-sm font-medium">YouTube URL</span>
               </label>
-              <input
-                type="text"
-                required
-                value={formData.youtubeUrl}
-                onChange={(e) => setFormData({ ...formData, youtubeUrl: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="https://www.youtube.com/watch?v=..."
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Paste the YouTube video URL here
-              </p>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="uploadType"
+                  value="file"
+                  checked={uploadType === 'file'}
+                  onChange={() => setUploadType('file')}
+                  className="w-4 h-4 text-blue-600"
+                />
+                <span className="text-sm font-medium">Upload Video File (Max 20MB)</span>
+              </label>
             </div>
+
+            {uploadType === 'youtube' ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  YouTube URL *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.youtubeUrl}
+                  onChange={(e) => setFormData({ ...formData, youtubeUrl: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Paste the YouTube video URL here
+                </p>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Video File * (Max 20MB)
+                </label>
+                <input
+                  type="file"
+                  accept="video/mp4,video/webm,video/ogg"
+                  onChange={handleFileSelect}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+                {videoFile && (
+                  <p className="text-xs text-green-600 mt-1">
+                    Selected: {videoFile.name} ({(videoFile.size / 1024 / 1024).toFixed(2)} MB)
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  Supported formats: MP4, WebM, OGG
+                </p>
+              </div>
+            )}
+
+            {uploading && uploadProgress > 0 && (
+              <div className="p-4 bg-blue-50 rounded-lg">
+                <div className="flex justify-between text-sm mb-2">
+                  <span>Uploading...</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -359,14 +519,16 @@ export default function RecordedVideosUpload() {
             <div className="flex gap-3">
               <button
                 type="submit"
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                disabled={uploading}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                {editingVideo ? 'Update Video' : 'Upload Video'}
+                {uploading ? 'Uploading...' : editingVideo ? 'Update Video' : 'Upload Video'}
               </button>
               <button
                 type="button"
                 onClick={resetForm}
-                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                disabled={uploading}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
