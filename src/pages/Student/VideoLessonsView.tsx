@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import CustomVideoPlayer from '../../components/VideoPlayer/CustomVideoPlayer';
+import PageCommentBox from '../../components/CommentBox/PageCommentBox';
 import { BookOpen, Play, CheckCircle, X, Award } from 'lucide-react';
 
 interface VideoLesson {
@@ -21,6 +22,7 @@ interface LessonAttendance {
   watch_percentage: number;
   is_completed: boolean;
   last_watched_at: string;
+  manual_status?: 'todo' | 'in-progress' | 'completed' | null;
 }
 
 export default function VideoLessonsView() {
@@ -30,13 +32,12 @@ export default function VideoLessonsView() {
   const [loading, setLoading] = useState(true);
   const [selectedLesson, setSelectedLesson] = useState<VideoLesson | null>(null);
   const [filterSubject, setFilterSubject] = useState('all');
-  const [filterDifficulty, setFilterDifficulty] = useState('all');
   const [filterProgress, setFilterProgress] = useState('all');
 
   useEffect(() => {
     fetchLessons();
     fetchAttendance();
-  }, [user, profile]);
+  }, [user]);
 
   const fetchLessons = async () => {
     try {
@@ -86,7 +87,7 @@ export default function VideoLessonsView() {
     try {
       const { data, error } = await supabase
         .from('lesson_attendance')
-        .select('lesson_id, watch_percentage, is_completed, last_watched_at')
+        .select('lesson_id, watch_percentage, is_completed, last_watched_at, manual_status')
         .eq('student_id', user?.id);
 
       if (error) throw error;
@@ -97,6 +98,7 @@ export default function VideoLessonsView() {
           watch_percentage: item.watch_percentage,
           is_completed: item.is_completed,
           last_watched_at: item.last_watched_at,
+          manual_status: item.manual_status,
         };
       });
       setAttendance(attendanceMap);
@@ -125,6 +127,7 @@ export default function VideoLessonsView() {
       setAttendance(prev => ({
         ...prev,
         [lessonId]: {
+          ...prev[lessonId],
           watch_percentage: percentage,
           is_completed: percentage >= 80,
           last_watched_at: new Date().toISOString(),
@@ -135,21 +138,64 @@ export default function VideoLessonsView() {
     }
   };
 
+  const handleManualStatusChange = async (lessonId: string, status: 'todo' | 'in-progress' | 'completed') => {
+    try {
+      // Upsert the manual status
+      await supabase
+        .from('lesson_attendance')
+        .upsert({
+          student_id: user?.id,
+          lesson_id: lessonId,
+          manual_status: status,
+          watch_percentage: attendance[lessonId]?.watch_percentage || 0,
+          watch_duration_seconds: 0,
+          is_completed: status === 'completed',
+          last_watched_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'student_id,lesson_id'
+        });
+
+      // Update local state
+      setAttendance(prev => ({
+        ...prev,
+        [lessonId]: {
+          ...prev[lessonId],
+          manual_status: status,
+          is_completed: status === 'completed',
+          watch_percentage: prev[lessonId]?.watch_percentage || 0,
+          last_watched_at: new Date().toISOString(),
+        }
+      }));
+    } catch (error) {
+      console.error('Error updating manual status:', error);
+    }
+  };
+
   const subjects = ['all', ...new Set(lessons.map(l => l.subject).filter(Boolean))];
   
+  const getProgressStatus = (lessonId: string): 'todo' | 'in-progress' | 'completed' => {
+    const progress = attendance[lessonId];
+    
+    // Use manual status if set
+    if (progress?.manual_status) {
+      return progress.manual_status;
+    }
+    
+    // Otherwise use automatic tracking
+    if (progress?.is_completed) return 'completed';
+    if (progress?.watch_percentage > 0) return 'in-progress';
+    return 'todo';
+  };
+
   const filteredLessons = lessons.filter(lesson => {
     // Filter by subject
     if (filterSubject !== 'all' && lesson.subject !== filterSubject) return false;
     
-    // Filter by difficulty
-    if (filterDifficulty !== 'all' && lesson.difficulty !== filterDifficulty) return false;
-    
     // Filter by progress
     if (filterProgress !== 'all') {
-      const progress = lessonProgress[lesson.id];
-      if (filterProgress === 'todo' && progress) return false;
-      if (filterProgress === 'in-progress' && (!progress || progress.is_completed)) return false;
-      if (filterProgress === 'completed' && (!progress || !progress.is_completed)) return false;
+      const status = getProgressStatus(lesson.id);
+      if (filterProgress !== status) return false;
     }
     
     return true;
@@ -169,8 +215,13 @@ export default function VideoLessonsView() {
   return (
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Video Lessons</h1>
-        <p className="text-gray-600 mt-1">Watch curriculum lessons and track your progress</p>
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Course Library</h1>
+            <p className="text-gray-600 mt-1">Browse curriculum courses and track your progress</p>
+          </div>
+          <PageCommentBox pageName="Course Library" category="courses" />
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -214,7 +265,7 @@ export default function VideoLessonsView() {
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Subject</label>
             <select
@@ -231,20 +282,6 @@ export default function VideoLessonsView() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Difficulty</label>
-            <select
-              value={filterDifficulty}
-              onChange={(e) => setFilterDifficulty(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Levels</option>
-              <option value="beginner">Beginner</option>
-              <option value="intermediate">Intermediate</option>
-              <option value="advanced">Advanced</option>
-            </select>
-          </div>
-
-          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Progress</label>
             <select
               value={filterProgress}
@@ -252,9 +289,9 @@ export default function VideoLessonsView() {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All</option>
-              <option value="todo">To-Do</option>
-              <option value="in-progress">In-Progress</option>
-              <option value="completed">Completed</option>
+              <option value="todo">📋 To-Do</option>
+              <option value="in-progress">⏳ In-Progress</option>
+              <option value="completed">✓ Completed</option>
             </select>
           </div>
         </div>
@@ -315,7 +352,7 @@ export default function VideoLessonsView() {
                 </div>
               )}
 
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 mb-3">
                 {lesson.subject && (
                   <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
                     {lesson.subject}
@@ -333,7 +370,30 @@ export default function VideoLessonsView() {
                 )}
               </div>
 
-              <div className="mt-3 text-sm text-gray-600">
+              {/* Progress Dropdown */}
+              <div className="mb-3">
+                <select
+                  value={getProgressStatus(lesson.id)}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    handleManualStatusChange(lesson.id, e.target.value as 'todo' | 'in-progress' | 'completed');
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className={`w-full px-3 py-2 text-sm font-medium rounded-lg border-2 cursor-pointer transition-all ${
+                    getProgressStatus(lesson.id) === 'completed'
+                      ? 'bg-green-50 border-green-300 text-green-700 hover:bg-green-100'
+                      : getProgressStatus(lesson.id) === 'in-progress'
+                      ? 'bg-orange-50 border-orange-300 text-orange-700 hover:bg-orange-100'
+                      : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <option value="todo">📋 To-Do</option>
+                  <option value="in-progress">⏳ In Progress</option>
+                  <option value="completed">✓ Completed</option>
+                </select>
+              </div>
+
+              <div className="text-sm text-gray-600">
                 By {lesson.profiles.full_name}
               </div>
             </div>

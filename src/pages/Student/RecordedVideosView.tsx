@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import CustomVideoPlayer from '../../components/VideoPlayer/CustomVideoPlayer';
+import PageCommentBox from '../../components/CommentBox/PageCommentBox';
 import { Video, Play, Star, TrendingUp, Clock, CheckCircle, X } from 'lucide-react';
 
 interface RecordedVideo {
@@ -152,8 +153,13 @@ export default function RecordedVideosView() {
   return (
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Video Library</h1>
-        <p className="text-gray-600 mt-1">Browse and watch educational videos</p>
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Recorded Classes</h1>
+            <p className="text-gray-600 mt-1">Browse and watch recorded video classes</p>
+          </div>
+          <PageCommentBox pageName="Recorded Classes" category="recorded-classes" />
+        </div>
       </div>
 
       {/* Filters */}

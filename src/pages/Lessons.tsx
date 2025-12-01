@@ -148,7 +148,7 @@ const Lessons: React.FC = () => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography variant="h4" fontWeight={600} gutterBottom>
             {user?.role === 'teacher' ? 'Manage Lessons' : 'Study Materials'}

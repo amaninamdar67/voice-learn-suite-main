@@ -41,6 +41,11 @@ import LiveClassesView from "./pages/Student/LiveClassesView";
 import QuizzesView from "./pages/Student/QuizzesView";
 import QuizRankingsView from "./pages/Student/QuizRankingsView";
 
+// Community Pages
+import RecordedClassesCommunity from "./pages/Community/RecordedClassesCommunity";
+import CoursesCommunity from "./pages/Community/CoursesCommunity";
+import LiveClassesCommunity from "./pages/Community/LiveClassesCommunity";
+
 const queryClient = new QueryClient();
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -310,6 +315,38 @@ const App = () => (
                   <PrivateRoute>
                     <MainLayout>
                       <QuizRankingsView />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+
+              {/* Community Routes */}
+              <Route
+                path="/community/recorded-classes"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <RecordedClassesCommunity />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/community/courses"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <CoursesCommunity />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/community/live-classes"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <LiveClassesCommunity />
                     </MainLayout>
                   </PrivateRoute>
                 }

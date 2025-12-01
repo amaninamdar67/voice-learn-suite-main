@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import CustomVideoPlayer from '../../components/VideoPlayer/CustomVideoPlayer';
+import PageCommentBox from '../../components/CommentBox/PageCommentBox';
 import { Radio, Calendar, Clock, X, Bell, CheckCircle } from 'lucide-react';
 
 interface LiveClass {
@@ -308,8 +309,13 @@ export default function LiveClassesView() {
   return (
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Live Classes</h1>
-        <p className="text-gray-600 mt-1">Join live sessions and interact with teachers</p>
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Live Classes</h1>
+            <p className="text-gray-600 mt-1">Join live sessions and interact with teachers</p>
+          </div>
+          <PageCommentBox pageName="Live Classes" category="live-classes" />
+        </div>
       </div>
 
       {/* Live Now Section */}
