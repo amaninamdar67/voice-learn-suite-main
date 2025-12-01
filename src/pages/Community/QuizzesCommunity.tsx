@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { MessageCircle, ThumbsUp, Send, X, Eye, EyeOff, Radio, Edit2, Trash2 } from 'lucide-react';
+import { MessageCircle, ThumbsUp, Send, X, Eye, EyeOff, Brain, Edit2, Trash2 } from 'lucide-react';
 
 interface Post {
   id: string;
@@ -36,7 +36,7 @@ interface Reply {
   user_liked?: boolean;
 }
 
-export default function LiveClassesCommunity() {
+export default function QuizzesCommunity() {
   const { user } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [replies, setReplies] = useState<Record<string, Reply[]>>({});
@@ -156,10 +156,10 @@ export default function LiveClassesCommunity() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <Radio size={32} className="text-red-600" />
-            <h1 className="text-3xl font-bold text-gray-900">Live Classes Discussion</h1>
+            <Brain size={32} className="text-purple-600" />
+            <h1 className="text-3xl font-bold text-gray-900">Quizzes Discussion</h1>
           </div>
-          <p className="text-gray-600">Discuss live streaming classes and real-time learning</p>
+          <p className="text-gray-600">Discuss quizzes, questions, and test strategies</p>
         </div>
         {canComment && (
           <button
@@ -276,7 +276,7 @@ export default function LiveClassesCommunity() {
                     </span>
                   )}
                   {canSeeRealIdentity && (
-                    <span className="px-2 py-0.5 bg-blue-100 text-red-600 text-xs rounded">
+                    <span className="px-2 py-0.5 bg-blue-100 text-purple-600 text-xs rounded">
                       Real Identity Visible
                     </span>
                   )}
@@ -362,7 +362,7 @@ export default function LiveClassesCommunity() {
             {!editingPost && post.user_id === user?.id && (
               <button
                 onClick={() => handleEditPost(post)}
-                className="absolute bottom-4 right-4 text-gray-400 hover:text-red-600 transition-colors flex items-center gap-1 text-sm"
+                className="absolute bottom-4 right-4 text-gray-400 hover:text-purple-600 transition-colors flex items-center gap-1 text-sm"
               >
                 <Edit2 size={16} />
                 <span>Edit</span>
@@ -374,8 +374,8 @@ export default function LiveClassesCommunity() {
                 onClick={() => handleLikePost(post.id, post.user_liked || false)}
                 className={`flex items-center gap-2 transition-colors ${
                   post.user_liked 
-                    ? 'text-red-600' 
-                    : 'text-gray-600 hover:text-red-600'
+                    ? 'text-purple-600' 
+                    : 'text-gray-600 hover:text-purple-600'
                 }`}
               >
                 <ThumbsUp size={18} fill={post.user_liked ? 'currentColor' : 'none'} />
@@ -384,7 +384,7 @@ export default function LiveClassesCommunity() {
 
               <button
                 onClick={() => handleViewReplies(post.id)}
-                className="flex items-center gap-2 text-gray-600 hover:text-red-600 transition-colors"
+                className="flex items-center gap-2 text-gray-600 hover:text-purple-600 transition-colors"
               >
                 <MessageCircle size={18} />
                 <span className="font-medium">{post.replies_count}</span>
@@ -476,7 +476,7 @@ export default function LiveClassesCommunity() {
                           {reply.user_id === user?.id && (
                             <button
                               onClick={() => handleEditReply(reply)}
-                              className="mt-1 text-gray-400 hover:text-red-600 transition-colors flex items-center gap-1 text-xs"
+                              className="mt-1 text-gray-400 hover:text-purple-600 transition-colors flex items-center gap-1 text-xs"
                             >
                               <Edit2 size={12} />
                               <span>Edit</span>
@@ -501,7 +501,7 @@ export default function LiveClassesCommunity() {
 
       {filteredPosts.length === 0 && (
         <div className="text-center py-12 bg-white rounded-lg shadow-md">
-          <Radio size={64} className="mx-auto text-gray-400 mb-4" />
+          <Brain size={64} className="mx-auto text-gray-400 mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No discussions yet</h3>
           <p className="text-gray-600 mb-4">Start a discussion about recorded classes!</p>
           <button
@@ -520,7 +520,7 @@ export default function LiveClassesCommunity() {
             <div className="p-6 border-b flex justify-between items-start">
               <div>
                 <h2 className="text-2xl font-bold">Create Post</h2>
-                <p className="text-gray-600 mt-1">Share your thoughts about live classes</p>
+                <p className="text-gray-600 mt-1">Share your thoughts about quizzes</p>
               </div>
               <button
                 onClick={() => setShowCreateModal(false)}
@@ -573,7 +573,7 @@ export default function LiveClassesCommunity() {
                   onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
                   rows={6}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="Share your thoughts about live classes..."
+                  placeholder="Share your thoughts about quizzes..."
                 />
               </div>
 

@@ -36,6 +36,10 @@ import {
   recalculateRankings,
   getStudentAnalytics,
   getTeacherAnalytics,
+  updateCommunityPost,
+  deleteCommunityPost,
+  updateCommunityReply,
+  deleteCommunityReply,
 } from './lms-routes.js';
 
 dotenv.config();
@@ -997,6 +1001,12 @@ app.post('/api/lms/quizzes/:quizId/submit', submitQuiz);
 // Analytics
 app.get('/api/lms/analytics/student/:studentId', getStudentAnalytics);
 app.get('/api/lms/analytics/teacher/:teacherId', getTeacherAnalytics);
+
+// Community
+app.put('/api/community/posts/:id', updateCommunityPost);
+app.delete('/api/community/posts/:id', deleteCommunityPost);
+app.put('/api/community/replies/:id', updateCommunityReply);
+app.delete('/api/community/replies/:id', deleteCommunityReply);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

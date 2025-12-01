@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { MessageCircle, ThumbsUp, Send, X, Eye, EyeOff, Video } from 'lucide-react';
+import { MessageCircle, ThumbsUp, Send, X, Eye, EyeOff, Video, Edit2, Trash2 } from 'lucide-react';
 
 interface Post {
   id: string;
@@ -11,10 +11,13 @@ interface Post {
   title: string;
   content: string;
   subject: string;
+  page_source?: string;
   is_anonymous: boolean;
   likes_count: number;
   replies_count: number;
   created_at: string;
+  edited_at?: string;
+  is_edited?: boolean;
   user_liked?: boolean;
 }
 
@@ -28,6 +31,8 @@ interface Reply {
   is_anonymous: boolean;
   likes_count: number;
   created_at: string;
+  edited_at?: string;
+  is_edited?: boolean;
   user_liked?: boolean;
 }
 
@@ -44,8 +49,14 @@ export default function RecordedClassesCommunity() {
   const [filterChild, setFilterChild] = useState('all');
   const [children, setChildren] = useState<Array<{id: string, name: string}>>([]);
   const [myStudentIds, setMyStudentIds] = useState<string[]>([]);
+  const [editingPost, setEditingPost] = useState<string | null>(null);
+  const [editingReply, setEditingReply] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [editTitle, setEditTitle] = useState('');
+  const [editSubject, setEditSubject] = useState('');
 
   const canSeeRealIdentity = user?.role === 'mentor' || user?.role === 'parent';
+  const canComment = user?.role === 'student' || user?.role === 'teacher';
 
   const [newPost, setNewPost] = useState({
     title: '',
@@ -204,8 +215,6 @@ export default function RecordedClassesCommunity() {
     }
   };
 
-  const canComment = user?.role === 'student' || user?.role === 'teacher';
-
   const handleCreatePost = async () => {
     if (!canComment) {
       alert('Only students and teachers can post comments');
@@ -311,6 +320,99 @@ export default function RecordedClassesCommunity() {
       if (!replies[postId]) {
         fetchReplies(postId);
       }
+    }
+  };
+
+  const handleEditPost = (post: Post) => {
+    setEditingPost(post.id);
+    setEditContent(post.content);
+    setEditTitle(post.title || '');
+    setEditSubject(post.subject || '');
+  };
+
+  const handleSavePost = async (postId: string) => {
+    try {
+      const { error } = await supabase
+        .from('community_posts')
+        .update({
+          content: editContent,
+          title: editTitle,
+          subject: editSubject,
+        })
+        .eq('id', postId);
+
+      if (error) throw error;
+
+      setEditingPost(null);
+      await fetchPosts();
+      alert('Post updated successfully!');
+    } catch (error: any) {
+      console.error('Error updating post:', error);
+      alert(`Failed to update post: ${error.message}`);
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) return;
+
+    try {
+      const { error } = await supabase
+        .from('community_posts')
+        .delete()
+        .eq('id', postId);
+
+      if (error) throw error;
+
+      setEditingPost(null); // Close edit mode
+      await fetchPosts(); // Refresh the list
+      alert('Post deleted successfully!');
+    } catch (error: any) {
+      console.error('Error deleting post:', error);
+      alert(`Failed to delete post: ${error.message}`);
+    }
+  };
+
+  const handleEditReply = (reply: Reply) => {
+    setEditingReply(reply.id);
+    setEditContent(reply.content);
+  };
+
+  const handleSaveReply = async (replyId: string, postId: string) => {
+    try {
+      const { error } = await supabase
+        .from('community_replies')
+        .update({ content: editContent })
+        .eq('id', replyId);
+
+      if (error) throw error;
+
+      setEditingReply(null);
+      await fetchReplies(postId);
+      alert('Reply updated successfully!');
+    } catch (error: any) {
+      console.error('Error updating reply:', error);
+      alert(`Failed to update reply: ${error.message}`);
+    }
+  };
+
+  const handleDeleteReply = async (replyId: string, postId: string) => {
+    if (!confirm('Are you sure you want to delete this reply? This action cannot be undone.')) return;
+
+    try {
+      const { error } = await supabase
+        .from('community_replies')
+        .delete()
+        .eq('id', replyId);
+
+      if (error) throw error;
+
+      setEditingReply(null); // Close edit mode
+      await fetchReplies(postId);
+      await fetchPosts(); // Refresh to update reply count
+      alert('Reply deleted successfully!');
+    } catch (error: any) {
+      console.error('Error deleting reply:', error);
+      alert(`Failed to delete reply: ${error.message}`);
     }
   };
 
@@ -454,7 +556,7 @@ export default function RecordedClassesCommunity() {
       {/* Posts List */}
       <div className="space-y-4">
         {filteredPosts.map((post) => (
-          <div key={post.id} className="bg-white rounded-lg shadow-md p-6">
+          <div key={post.id} className="bg-white rounded-lg shadow-md p-6 relative">
             <div className="flex items-start gap-4 mb-4">
               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
                 {post.anonymous_nickname[0]}
@@ -477,6 +579,11 @@ export default function RecordedClassesCommunity() {
                   <span className="text-sm text-gray-500">
                     • {new Date(post.created_at).toLocaleDateString()}
                   </span>
+                  {post.is_edited && (
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded italic">
+                      edited
+                    </span>
+                  )}
                 </div>
                 {post.page_source && (
                   <span className="inline-block px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded mb-2 mr-2">
@@ -488,14 +595,77 @@ export default function RecordedClassesCommunity() {
                     {post.subject}
                   </span>
                 )}
-                {post.title && (
-                  <h3 className="font-semibold text-lg mb-2">{post.title}</h3>
+                
+                {editingPost === post.id ? (
+                  // Edit Mode
+                  <div className="space-y-3 mt-3">
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      placeholder="Title (optional)"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="text"
+                      value={editSubject}
+                      onChange={(e) => setEditSubject(e.target.value)}
+                      placeholder="Subject (optional)"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                    <textarea
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      rows={4}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="Edit your post..."
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleSavePost(post.id)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setEditingPost(null)}
+                        className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleDeletePost(post.id)}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors ml-auto flex items-center gap-2"
+                      >
+                        <Trash2 size={16} />
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  // View Mode
+                  <>
+                    {post.title && (
+                      <h3 className="font-semibold text-lg mb-2">{post.title}</h3>
+                    )}
+                    <p className="text-gray-700 whitespace-pre-wrap">{post.content}</p>
+                  </>
                 )}
-                <p className="text-gray-700 whitespace-pre-wrap">{post.content}</p>
               </div>
             </div>
+            
+            {/* Edit button in bottom right - only show if not editing and user owns post */}
+            {editingPost !== post.id && post.user_id === user?.id && (
+              <button
+                onClick={() => handleEditPost(post)}
+                className="absolute bottom-20 right-4 text-gray-400 hover:text-blue-600 transition-colors flex items-center gap-1 text-sm z-10"
+              >
+                <Edit2 size={16} />
+                <span>Edit</span>
+              </button>
+            )}
 
-            <div className="flex items-center gap-6 pt-4 border-t">
+            <div className="flex items-center gap-6 pt-4 border-t mt-4">
               <button
                 onClick={() => handleLikePost(post.id, post.user_liked || false)}
                 className={`flex items-center gap-2 transition-colors ${
@@ -544,7 +714,7 @@ export default function RecordedClassesCommunity() {
                 </div>
 
                 {replies[post.id]?.map((reply) => (
-                  <div key={reply.id} className="flex gap-3 pl-6 border-l-2 border-gray-200">
+                  <div key={reply.id} className="flex gap-3 pl-6 border-l-2 border-gray-200 relative">
                     <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-teal-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
                       {reply.anonymous_nickname[0]}
                     </div>
@@ -556,8 +726,60 @@ export default function RecordedClassesCommunity() {
                         <span className="text-xs text-gray-500">
                           • {new Date(reply.created_at).toLocaleDateString()}
                         </span>
+                        {reply.is_edited && (
+                          <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-xs rounded italic">
+                            edited
+                          </span>
+                        )}
                       </div>
-                      <p className="text-gray-700 text-sm">{reply.content}</p>
+                      
+                      {editingReply === reply.id ? (
+                        // Edit Mode
+                        <div className="space-y-2 mt-2">
+                          <textarea
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            rows={3}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                            placeholder="Edit your reply..."
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleSaveReply(reply.id, post.id)}
+                              className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setEditingReply(null)}
+                              className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm hover:bg-gray-400 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => handleDeleteReply(reply.id, post.id)}
+                              className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors ml-auto flex items-center gap-1"
+                            >
+                              <Trash2 size={12} />
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        // View Mode
+                        <>
+                          <p className="text-gray-700 text-sm">{reply.content}</p>
+                          {reply.user_id === user?.id && (
+                            <button
+                              onClick={() => handleEditReply(reply)}
+                              className="mt-1 text-gray-400 hover:text-blue-600 transition-colors flex items-center gap-1 text-xs"
+                            >
+                              <Edit2 size={12} />
+                              <span>Edit</span>
+                            </button>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}

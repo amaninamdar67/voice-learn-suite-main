@@ -1064,6 +1064,94 @@ export const recalculateRankings = async (req, res) => {
   }
 };
 
+// ==================== COMMUNITY ENDPOINTS ====================
+
+// Update community post
+export const updateCommunityPost = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { content, title, subject } = req.body;
+    
+    const { data, error } = await supabase
+      .from('community_posts')
+      .update({
+        content,
+        title,
+        subject,
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    res.json({ success: true, post: data });
+  } catch (error) {
+    console.error('Error updating post:', error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// Delete community post
+export const deleteCommunityPost = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { error } = await supabase
+      .from('community_posts')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    res.json({ success: true, message: 'Post deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting post:', error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// Update community reply
+export const updateCommunityReply = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+    
+    const { data, error } = await supabase
+      .from('community_replies')
+      .update({ content })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    res.json({ success: true, reply: data });
+  } catch (error) {
+    console.error('Error updating reply:', error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// Delete community reply
+export const deleteCommunityReply = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { error } = await supabase
+      .from('community_replies')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    res.json({ success: true, message: 'Reply deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting reply:', error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
 // ==================== HELPER FUNCTIONS ====================
 
 function extractYouTubeVideoId(url) {

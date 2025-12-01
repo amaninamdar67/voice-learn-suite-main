@@ -45,6 +45,8 @@ import QuizRankingsView from "./pages/Student/QuizRankingsView";
 import RecordedClassesCommunity from "./pages/Community/RecordedClassesCommunity";
 import CoursesCommunity from "./pages/Community/CoursesCommunity";
 import LiveClassesCommunity from "./pages/Community/LiveClassesCommunity";
+import QuizzesCommunity from "./pages/Community/QuizzesCommunity";
+import AssignmentsCommunity from "./pages/Community/AssignmentsCommunity";
 
 const queryClient = new QueryClient();
 
@@ -347,6 +349,26 @@ const App = () => (
                   <PrivateRoute>
                     <MainLayout>
                       <LiveClassesCommunity />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/community/quizzes"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <QuizzesCommunity />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/community/assignments"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <AssignmentsCommunity />
                     </MainLayout>
                   </PrivateRoute>
                 }

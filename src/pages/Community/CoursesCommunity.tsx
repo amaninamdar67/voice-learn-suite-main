@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { MessageCircle, ThumbsUp, Send, X, Eye, EyeOff, BookOpen } from 'lucide-react';
+import { MessageCircle, ThumbsUp, Send, X, Eye, EyeOff, BookOpen, Edit2, Trash2 } from 'lucide-react';
 
 interface Post {
   id: string;
@@ -11,10 +11,13 @@ interface Post {
   title: string;
   content: string;
   subject: string;
+  page_source?: string;
   is_anonymous: boolean;
   likes_count: number;
   replies_count: number;
   created_at: string;
+  edited_at?: string;
+  is_edited?: boolean;
   user_liked?: boolean;
 }
 
@@ -28,6 +31,8 @@ interface Reply {
   is_anonymous: boolean;
   likes_count: number;
   created_at: string;
+  edited_at?: string;
+  is_edited?: boolean;
   user_liked?: boolean;
 }
 
@@ -39,8 +44,19 @@ export default function CoursesCommunity() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedPost, setSelectedPost] = useState<string | null>(null);
   const [filterSubject, setFilterSubject] = useState('all');
+  const [filterPageSource, setFilterPageSource] = useState('all');
+  const [filterStudent, setFilterStudent] = useState('all');
+  const [filterChild, setFilterChild] = useState('all');
+  const [children, setChildren] = useState<Array<{id: string, name: string}>>([]);
+  const [myStudentIds, setMyStudentIds] = useState<string[]>([]);
+  const [editingPost, setEditingPost] = useState<string | null>(null);
+  const [editingReply, setEditingReply] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [editTitle, setEditTitle] = useState('');
+  const [editSubject, setEditSubject] = useState('');
 
   const canSeeRealIdentity = user?.role === 'mentor' || user?.role === 'parent';
+  const canComment = user?.role === 'student' || user?.role === 'teacher';
 
   const [newPost, setNewPost] = useState({
     title: '',
@@ -52,209 +68,80 @@ export default function CoursesCommunity() {
 
   useEffect(() => {
     fetchPosts();
+    if (user?.role === 'parent') {
+      fetchChildren();
+    }
+    if (user?.role === 'mentor') {
+      fetchMyStudents();
+    }
   }, [user]);
 
-  const generateNickname = () => {
-    const adjectives = ['Smart', 'Curious', 'Bright', 'Clever', 'Wise', 'Quick', 'Sharp'];
-    const nouns = ['Student', 'Learner', 'Scholar', 'Thinker', 'Mind', 'Brain'];
-    const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    const num = Math.floor(Math.random() * 1000);
-    return `${adj}${noun}${num}`;
-  };
-
-  const fetchPosts = async () => {
+  const fetchChildren = async () => {
     try {
-      setLoading(true);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('parent_id', user?.id);
       
-      // Fetch all posts to show comments from all pages
-      const { data: postsData, error } = await supabase
-        .from('community_posts')
-        .select('*')
-        .order('created_at', { ascending: false });
-
       if (error) throw error;
-
-      // Fetch real names if user is mentor/parent
-      let realNames = new Map();
-      if (canSeeRealIdentity) {
-        const userIds = [...new Set(postsData?.map(p => p.user_id) || [])];
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name')
-          .in('id', userIds);
-        
-        realNames = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
+      setChildren(data?.map(c => ({ id: c.id, name: c.full_name })) || []);
+      
+      // Default to first child if exists
+      if (data && data.length > 0) {
+        setFilterChild(data[0].id);
       }
-
-      // Fetch user likes
-      const { data: likes } = await supabase
-        .from('community_likes')
-        .select('post_id')
-        .eq('user_id', user?.id)
-        .not('post_id', 'is', null);
-
-      const likedPostIds = new Set(likes?.map(l => l.post_id) || []);
-
-      const formattedPosts = postsData?.map(post => ({
-        ...post,
-        real_name: realNames.get(post.user_id),
-        user_liked: likedPostIds.has(post.id),
-      })) || [];
-
-      setPosts(formattedPosts);
-    } catch (error) {
-      console.error('Error fetching posts:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchReplies = async (postId: string) => {
-    try {
-      const { data: repliesData, error } = await supabase
-        .from('community_replies')
-        .select('*')
-        .eq('post_id', postId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      // Fetch real names if user is mentor/parent
-      let realNames = new Map();
-      if (canSeeRealIdentity) {
-        const userIds = [...new Set(repliesData?.map(r => r.user_id) || [])];
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name')
-          .in('id', userIds);
-        
-        realNames = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
-      }
-
-      // Fetch user likes for replies
-      const { data: likes } = await supabase
-        .from('community_likes')
-        .select('reply_id')
-        .eq('user_id', user?.id)
-        .not('reply_id', 'is', null);
-
-      const likedReplyIds = new Set(likes?.map(l => l.reply_id) || []);
-
-      const formattedReplies = repliesData?.map(reply => ({
-        ...reply,
-        real_name: realNames.get(reply.user_id),
-        user_liked: likedReplyIds.has(reply.id),
-      })) || [];
-
-      setReplies(prev => ({ ...prev, [postId]: formattedReplies }));
-    } catch (error) {
-      console.error('Error fetching replies:', error);
-    }
-  };
-
-  const handleCreatePost = async () => {
-    if (!newPost.content) {
-      alert('Please write something');
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('community_posts')
-        .insert({
-          user_id: user?.id,
-          anonymous_nickname: generateNickname(),
-          title: newPost.title,
-          content: newPost.content,
-          subject: newPost.subject,
-          category: 'courses',
-          is_anonymous: true,
-        });
-
-      if (error) throw error;
-
-      alert('Post created successfully!');
-      setShowCreateModal(false);
-      setNewPost({ title: '', content: '', subject: '' });
-      fetchPosts();
     } catch (error: any) {
-      console.error('Error creating post:', error);
-      alert('Failed to create post: ' + error.message);
+      console.error('Error deleting post:', error);
+      alert(`Failed to delete post: ${error.message}`);
     }
   };
 
-  const handleLikePost = async (postId: string, currentlyLiked: boolean) => {
-    try {
-      if (currentlyLiked) {
-        await supabase
-          .from('community_likes')
-          .delete()
-          .eq('post_id', postId)
-          .eq('user_id', user?.id);
-      } else {
-        await supabase
-          .from('community_likes')
-          .insert({
-            post_id: postId,
-            user_id: user?.id,
-          });
-      }
-
-      setPosts(posts.map(post => 
-        post.id === postId 
-          ? { 
-              ...post, 
-              likes_count: post.likes_count + (currentlyLiked ? -1 : 1),
-              user_liked: !currentlyLiked 
-            }
-          : post
-      ));
-    } catch (error) {
-      console.error('Error liking post:', error);
-    }
+  const handleEditReply = (reply: Reply) => {
+    setEditingReply(reply.id);
+    setEditContent(reply.content);
   };
 
-  const handleReply = async (postId: string) => {
-    if (!replyContent.trim()) return;
-
+  const handleSaveReply = async (replyId: string, postId: string) => {
     try {
-      const { error } = await supabase
-        .from('community_replies')
-        .insert({
-          post_id: postId,
-          user_id: user?.id,
-          anonymous_nickname: generateNickname(),
-          content: replyContent,
-          is_anonymous: true,
-        });
+      const response = await fetch(`http://localhost:3001/api/community/replies/${replyId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: editContent }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) throw new Error('Failed to update reply');
 
-      setReplyContent('');
+      setEditingReply(null);
       fetchReplies(postId);
-      fetchPosts();
+      alert('Reply updated successfully!');
     } catch (error: any) {
-      console.error('Error posting reply:', error);
-      alert('Failed to post reply: ' + error.message);
-    }
-  };
-
-  const handleViewReplies = (postId: string) => {
-    if (selectedPost === postId) {
-      setSelectedPost(null);
-    } else {
-      setSelectedPost(postId);
-      if (!replies[postId]) {
-        fetchReplies(postId);
-      }
+      console.error('Error deleting reply:', error);
+      alert(`Failed to delete reply: ${error.message}`);
     }
   };
 
   const subjects = ['all', ...new Set(posts.map(p => p.subject).filter(Boolean))];
-  const filteredPosts = filterSubject === 'all' 
-    ? posts 
-    : posts.filter(p => p.subject === filterSubject);
+  const pageSources = ['all', ...new Set(posts.map(p => p.page_source).filter(Boolean))];
+  
+  const filteredPosts = posts.filter(post => {
+    // Filter by subject
+    if (filterSubject !== 'all' && post.subject !== filterSubject) return false;
+    
+    // Filter by page source
+    if (filterPageSource !== 'all' && post.page_source !== filterPageSource) return false;
+    
+    // Filter for mentors - show only their students
+    if (user?.role === 'mentor' && filterStudent === 'my-students') {
+      if (!myStudentIds.includes(post.user_id)) return false;
+    }
+    
+    // Filter for parents - show only selected child
+    if (user?.role === 'parent') {
+      if (filterChild !== 'all' && post.user_id !== filterChild) return false;
+    }
+    
+    return true;
+  });
 
   if (loading) {
     return (
@@ -274,13 +161,15 @@ export default function CoursesCommunity() {
           </div>
           <p className="text-gray-600">Discuss course content and learning materials</p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <MessageCircle size={20} />
-          New Post
-        </button>
+        {canComment && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <MessageCircle size={20} />
+            New Post
+          </button>
+        )}
       </div>
 
       {canSeeRealIdentity && (
@@ -294,24 +183,84 @@ export default function CoursesCommunity() {
         </div>
       )}
 
-      {/* Filter */}
+      {!canComment && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center gap-2 text-blue-800">
+            <Eye size={20} />
+            <span className="font-medium">
+              You can view all discussions. Only students and teachers can post and reply.
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Filters */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <select
-          value={filterSubject}
-          onChange={(e) => setFilterSubject(e.target.value)}
-          className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="all">All Subjects</option>
-          {subjects.filter(s => s !== 'all').map(subject => (
-            <option key={subject} value={subject}>{subject}</option>
-          ))}
-        </select>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Page</label>
+            <select
+              value={filterPageSource}
+              onChange={(e) => setFilterPageSource(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Pages</option>
+              {pageSources.filter(p => p !== 'all').map(pageSource => (
+                <option key={pageSource} value={pageSource}>📍 {pageSource}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Subject</label>
+            <select
+              value={filterSubject}
+              onChange={(e) => setFilterSubject(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Subjects</option>
+              {subjects.filter(s => s !== 'all').map(subject => (
+                <option key={subject} value={subject}>{subject}</option>
+              ))}
+            </select>
+          </div>
+
+          {user?.role === 'mentor' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Student</label>
+              <select
+                value={filterStudent}
+                onChange={(e) => setFilterStudent(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Students</option>
+                <option value="my-students">My Students Only</option>
+              </select>
+            </div>
+          )}
+
+          {user?.role === 'parent' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Child</label>
+              <select
+                value={filterChild}
+                onChange={(e) => setFilterChild(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Children</option>
+                {children.map(child => (
+                  <option key={child.id} value={child.id}>{child.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Posts List */}
       <div className="space-y-4">
         {filteredPosts.map((post) => (
-          <div key={post.id} className="bg-white rounded-lg shadow-md p-6">
+          <div key={post.id} className="bg-white rounded-lg shadow-md p-6 relative">
             <div className="flex items-start gap-4 mb-4">
               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
                 {post.anonymous_nickname[0]}
@@ -327,33 +276,106 @@ export default function CoursesCommunity() {
                     </span>
                   )}
                   {canSeeRealIdentity && (
-                    <span className="px-2 py-0.5 bg-blue-100 text-blue-600 text-xs rounded">
+                    <span className="px-2 py-0.5 bg-blue-100 text-green-600 text-xs rounded">
                       Real Identity Visible
                     </span>
                   )}
                   <span className="text-sm text-gray-500">
                     • {new Date(post.created_at).toLocaleDateString()}
                   </span>
+                  {post.is_edited && (
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded italic">
+                      edited
+                    </span>
+                  )}
                 </div>
+                {post.page_source && (
+                  <span className="inline-block px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded mb-2 mr-2">
+                    📍 from {post.page_source}
+                  </span>
+                )}
                 {post.subject && (
                   <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded mb-2">
                     {post.subject}
                   </span>
                 )}
-                {post.title && (
-                  <h3 className="font-semibold text-lg mb-2">{post.title}</h3>
+                
+                {editingPost === post.id ? (
+                  // Edit Mode
+                  <div className="space-y-3 mt-3">
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      placeholder="Title (optional)"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="text"
+                      value={editSubject}
+                      onChange={(e) => setEditSubject(e.target.value)}
+                      placeholder="Subject (optional)"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                    <textarea
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      rows={4}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="Edit your post..."
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleSavePost(post.id)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setEditingPost(null)}
+                        className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleDeletePost(post.id)}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors ml-auto flex items-center gap-2"
+                      >
+                        <Trash2 size={16} />
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  // View Mode
+                  <>
+                    {post.title && (
+                      <h3 className="font-semibold text-lg mb-2">{post.title}</h3>
+                    )}
+                    <p className="text-gray-700 whitespace-pre-wrap">{post.content}</p>
+                  </>
                 )}
-                <p className="text-gray-700 whitespace-pre-wrap">{post.content}</p>
               </div>
             </div>
+            
+            {/* Edit button in bottom right - only show if not editing and user owns post */}
+            {!editingPost && post.user_id === user?.id && (
+              <button
+                onClick={() => handleEditPost(post)}
+                className="absolute bottom-4 right-4 text-gray-400 hover:text-green-600 transition-colors flex items-center gap-1 text-sm"
+              >
+                <Edit2 size={16} />
+                <span>Edit</span>
+              </button>
+            )}
 
             <div className="flex items-center gap-6 pt-4 border-t">
               <button
                 onClick={() => handleLikePost(post.id, post.user_liked || false)}
                 className={`flex items-center gap-2 transition-colors ${
                   post.user_liked 
-                    ? 'text-blue-600' 
-                    : 'text-gray-600 hover:text-blue-600'
+                    ? 'text-green-600' 
+                    : 'text-gray-600 hover:text-green-600'
                 }`}
               >
                 <ThumbsUp size={18} fill={post.user_liked ? 'currentColor' : 'none'} />
@@ -362,7 +384,7 @@ export default function CoursesCommunity() {
 
               <button
                 onClick={() => handleViewReplies(post.id)}
-                className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors"
+                className="flex items-center gap-2 text-gray-600 hover:text-green-600 transition-colors"
               >
                 <MessageCircle size={18} />
                 <span className="font-medium">{post.replies_count}</span>
@@ -396,7 +418,7 @@ export default function CoursesCommunity() {
                 </div>
 
                 {replies[post.id]?.map((reply) => (
-                  <div key={reply.id} className="flex gap-3 pl-6 border-l-2 border-gray-200">
+                  <div key={reply.id} className="flex gap-3 pl-6 border-l-2 border-gray-200 relative">
                     <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-teal-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
                       {reply.anonymous_nickname[0]}
                     </div>
@@ -408,8 +430,60 @@ export default function CoursesCommunity() {
                         <span className="text-xs text-gray-500">
                           • {new Date(reply.created_at).toLocaleDateString()}
                         </span>
+                        {reply.is_edited && (
+                          <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-xs rounded italic">
+                            edited
+                          </span>
+                        )}
                       </div>
-                      <p className="text-gray-700 text-sm">{reply.content}</p>
+                      
+                      {editingReply === reply.id ? (
+                        // Edit Mode
+                        <div className="space-y-2 mt-2">
+                          <textarea
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            rows={3}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                            placeholder="Edit your reply..."
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleSaveReply(reply.id, post.id)}
+                              className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setEditingReply(null)}
+                              className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm hover:bg-gray-400 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => handleDeleteReply(reply.id, post.id)}
+                              className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors ml-auto flex items-center gap-1"
+                            >
+                              <Trash2 size={12} />
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        // View Mode
+                        <>
+                          <p className="text-gray-700 text-sm">{reply.content}</p>
+                          {reply.user_id === user?.id && (
+                            <button
+                              onClick={() => handleEditReply(reply)}
+                              className="mt-1 text-gray-400 hover:text-green-600 transition-colors flex items-center gap-1 text-xs"
+                            >
+                              <Edit2 size={12} />
+                              <span>Edit</span>
+                            </button>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -429,7 +503,7 @@ export default function CoursesCommunity() {
         <div className="text-center py-12 bg-white rounded-lg shadow-md">
           <BookOpen size={64} className="mx-auto text-gray-400 mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No discussions yet</h3>
-          <p className="text-gray-600 mb-4">Start a discussion about courses!</p>
+          <p className="text-gray-600 mb-4">Start a discussion about recorded classes!</p>
           <button
             onClick={() => setShowCreateModal(true)}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -525,3 +599,6 @@ export default function CoursesCommunity() {
     </div>
   );
 }
+
+
+
