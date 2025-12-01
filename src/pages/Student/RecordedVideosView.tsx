@@ -9,6 +9,7 @@ interface RecordedVideo {
   id: string;
   title: string;
   description: string;
+  youtube_url: string;
   youtube_video_id: string;
   category: string;
   subject: string;
@@ -265,8 +266,8 @@ export default function RecordedVideosView() {
 
       {/* Video Player Modal */}
       {selectedVideo && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 pt-16">
+          <div className="bg-white rounded-lg max-w-5xl w-full max-h-[85vh] overflow-y-auto">
             <div className="p-4 border-b flex justify-between items-start">
               <div>
                 <h2 className="text-2xl font-bold">{selectedVideo.title}</h2>
@@ -281,13 +282,31 @@ export default function RecordedVideosView() {
             </div>
 
             <div className="p-6">
-              <CustomVideoPlayer
-                videoId={selectedVideo.youtube_video_id}
-                title={selectedVideo.title}
-                onProgress={(seconds, percentage) => handleProgress(selectedVideo.id, seconds, percentage)}
-                onComplete={() => handleProgress(selectedVideo.id, 0, 100)}
-                isLive={false}
-              />
+              {selectedVideo.youtube_video_id.startsWith('uploaded_') ? (
+                // Direct video file upload
+                <video
+                  controls
+                  className="w-full rounded-lg"
+                  style={{ maxHeight: '70vh' }}
+                  onTimeUpdate={(e) => {
+                    const video = e.currentTarget;
+                    const percentage = (video.currentTime / video.duration) * 100;
+                    handleProgress(selectedVideo.id, video.currentTime, percentage);
+                  }}
+                >
+                  <source src={selectedVideo.youtube_url} type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              ) : (
+                // YouTube video
+                <CustomVideoPlayer
+                  videoId={selectedVideo.youtube_video_id}
+                  title={selectedVideo.title}
+                  onProgress={(seconds, percentage) => handleProgress(selectedVideo.id, seconds, percentage)}
+                  onComplete={() => handleProgress(selectedVideo.id, 0, 100)}
+                  isLive={false}
+                />
+              )}
 
               {watchHistory[selectedVideo.id] && (
                 <div className="mt-4 p-4 bg-blue-50 rounded-lg">
@@ -361,11 +380,17 @@ function VideoCard({ video, watchHistory, onClick }: {
       className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
     >
       <div className="relative aspect-video bg-gray-900">
-        <img
-          src={`https://img.youtube.com/vi/${video.youtube_video_id}/mqdefault.jpg`}
-          alt={video.title}
-          className="w-full h-full object-cover"
-        />
+        {video.youtube_video_id.startsWith('uploaded_') ? (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-900 to-purple-900">
+            <Video size={64} className="text-white opacity-50" />
+          </div>
+        ) : (
+          <img
+            src={`https://img.youtube.com/vi/${video.youtube_video_id}/mqdefault.jpg`}
+            alt={video.title}
+            className="w-full h-full object-cover"
+          />
+        )}
         <div className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/50 transition-colors">
           <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center">
             <Play size={32} className="text-blue-600 ml-1" fill="currentColor" />

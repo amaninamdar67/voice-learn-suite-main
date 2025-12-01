@@ -162,10 +162,10 @@ export default function QuizzesView() {
 
       const percentage = (score / selectedQuiz.total_marks) * 100;
 
-      // Submit to database
+      // Submit to database (allow retakes by using upsert)
       const { data, error } = await supabase
         .from('quiz_results')
-        .insert([{
+        .upsert({
           student_id: user?.id,
           quiz_id: selectedQuiz.id,
           score,
@@ -175,7 +175,9 @@ export default function QuizzesView() {
           answers,
           is_completed: true,
           completed_at: endTime.toISOString(),
-        }])
+        }, {
+          onConflict: 'student_id,quiz_id'
+        })
         .select()
         .single();
 

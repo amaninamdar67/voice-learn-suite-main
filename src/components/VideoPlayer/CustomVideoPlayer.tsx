@@ -190,14 +190,14 @@ export default function CustomVideoPlayer({
   return (
     <div
       ref={containerRef}
-      className={`relative bg-black ${className}`}
-      style={{ width: '100%', height: '100%' }}
+      className={`relative bg-black rounded-lg overflow-hidden ${className}`}
+      style={{ width: '100%', paddingBottom: '56.25%' }}
     >
       {/* YouTube IFrame - Full Container */}
       <iframe
         ref={iframeRef}
         src={getYouTubeUrl()}
-        className="absolute inset-0 w-full h-full"
+        className="absolute top-0 left-0 w-full h-full"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowFullScreen
         title={title || 'Video Player'}

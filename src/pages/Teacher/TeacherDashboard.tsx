@@ -1,145 +1,259 @@
-import React from 'react';
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Paper,
-  LinearProgress,
-} from '@mui/material';
-import {
-  Upload,
-  VideoLibrary,
-  Quiz,
-  Assignment,
-} from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { 
+  Users, Video, FileText, BookOpen, Clock, CheckCircle, 
+  TrendingUp, AlertCircle, Award 
+} from 'lucide-react';
 
-const TeacherDashboard: React.FC = () => {
+interface TeacherStats {
+  totalVideos: number;
+  totalQuizzes: number;
+  totalAssignments: number;
+  pendingSubmissions: number;
+  totalStudents: number;
+  recentSubmissions: number;
+}
+
+export default function TeacherDashboard() {
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const [stats, setStats] = useState<TeacherStats>({
+    totalVideos: 0,
+    totalQuizzes: 0,
+    totalAssignments: 0,
+    pendingSubmissions: 0,
+    totalStudents: 0,
+    recentSubmissions: 0,
+  });
+  const [loading, setLoading] = useState(true);
 
-  const quickActions = [
-    { title: 'Upload Lesson', icon: <Upload />, path: '/lessons/upload', color: '#2196F3' },
-    { title: 'Create Quiz', icon: <Quiz />, path: '/quizzes/create', color: '#4CAF50' },
-    { title: 'Add Video', icon: <VideoLibrary />, path: '/videos/add', color: '#FF9800' },
-    { title: 'Manage Projects', icon: <Assignment />, path: '/projects', color: '#9C27B0' },
-  ];
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
 
-  const recentLessons = [
-    { title: 'Introduction to React', progress: 75, students: 32 },
-    { title: 'TypeScript Basics', progress: 60, students: 28 },
-    { title: 'Web Design Principles', progress: 90, students: 35 },
-  ];
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+
+      // Count uploaded videos
+      const { count: videosCount } = await supabase
+        .from('recorded_videos')
+        .select('*', { count: 'exact', head: true })
+        .eq('teacher_id', user?.id);
+
+      // Count created quizzes
+      const { count: quizzesCount } = await supabase
+        .from('quizzes')
+        .select('*', { count: 'exact', head: true })
+        .eq('teacher_id', user?.id);
+
+      // Count assignments
+      const { count: assignmentsCount } = await supabase
+        .from('assignments')
+        .select('*', { count: 'exact', head: true })
+        .eq('teacher_id', user?.id);
+
+      // Count pending submissions (not graded)
+      const { data: assignmentIds } = await supabase
+        .from('assignments')
+        .select('id')
+        .eq('teacher_id', user?.id);
+
+      const ids = assignmentIds?.map(a => a.id) || [];
+      
+      const { count: pendingCount } = await supabase
+        .from('assignment_submissions')
+        .select('*', { count: 'exact', head: true })
+        .in('assignment_id', ids)
+        .neq('status', 'graded');
+
+      // Count total students (approximate)
+      const { count: studentsCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'student');
+
+      // Recent submissions (last 7 days)
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+      const { count: recentCount } = await supabase
+        .from('assignment_submissions')
+        .select('*', { count: 'exact', head: true })
+        .in('assignment_id', ids)
+        .gte('submitted_at', oneWeekAgo.toISOString());
+
+      setStats({
+        totalVideos: videosCount || 0,
+        totalQuizzes: quizzesCount || 0,
+        totalAssignments: assignmentsCount || 0,
+        pendingSubmissions: pendingCount || 0,
+        totalStudents: studentsCount || 0,
+        recentSubmissions: recentCount || 0,
+      });
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-gray-600">Loading dashboard...</div>
+      </div>
+    );
+  }
 
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom fontWeight={600}>
-        Teacher Dashboard
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Manage your lessons, quizzes, and student progress
-      </Typography>
+    <div className="max-w-7xl mx-auto p-6">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900">Teacher Dashboard</h1>
+        <p className="text-gray-600 mt-1">Manage your content and track student progress</p>
+      </div>
 
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom fontWeight={600}>
-          Quick Actions
-        </Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 2, mt: 2 }}>
-          {quickActions.map((action) => (
-            <Card
-              key={action.title}
-              sx={{
-                cursor: 'pointer',
-                transition: 'transform 0.2s',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                },
-              }}
-              onClick={() => navigate(action.path)}
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div 
+          className="bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate('/teacher/recorded-videos')}
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <Video size={24} className="text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Videos Uploaded</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.totalVideos}</p>
+            </div>
+          </div>
+        </div>
+
+        <div 
+          className="bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate('/teacher/quiz-creator')}
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-green-100 rounded-lg">
+              <FileText size={24} className="text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Quizzes Created</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.totalQuizzes}</p>
+            </div>
+          </div>
+        </div>
+
+        <div 
+          className="bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate('/projects')}
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-orange-100 rounded-lg">
+              <BookOpen size={24} className="text-orange-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Assignments</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.totalAssignments}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Pending Actions */}
+        <div className="lg:col-span-2 bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Pending Actions</h2>
+          
+          <div className="space-y-4">
+            <div 
+              className="flex items-center justify-between p-4 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors"
+              onClick={() => navigate('/projects')}
             >
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Box
-                  sx={{
-                    bgcolor: action.color,
-                    color: 'white',
-                    p: 2,
-                    borderRadius: 2,
-                    display: 'inline-flex',
-                    mb: 2,
-                  }}
-                >
-                  {action.icon}
-                </Box>
-                <Typography variant="body1" fontWeight={600}>
-                  {action.title}
-                </Typography>
-              </CardContent>
-            </Card>
-          ))}
-        </Box>
-      </Paper>
+              <div className="flex items-center gap-3">
+                <AlertCircle size={24} className="text-orange-600" />
+                <div>
+                  <p className="font-medium text-gray-900">Submissions to Grade</p>
+                  <p className="text-sm text-gray-600">Review and provide feedback</p>
+                </div>
+              </div>
+              <span className="px-4 py-2 bg-orange-600 text-white rounded-full font-bold">
+                {stats.pendingSubmissions}
+              </span>
+            </div>
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 3 }}>
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom fontWeight={600}>
-            Recent Lessons
-          </Typography>
-          <Box sx={{ mt: 2 }}>
-            {recentLessons.map((lesson, index) => (
-              <Box key={index} sx={{ mb: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body1" fontWeight={500}>
-                    {lesson.title}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {lesson.students} students
-                  </Typography>
-                </Box>
-                <LinearProgress
-                  variant="determinate"
-                  value={lesson.progress}
-                  sx={{ height: 8, borderRadius: 4 }}
-                />
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-                  {lesson.progress}% completion rate
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-        </Paper>
+            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <Clock size={24} className="text-blue-600" />
+                <div>
+                  <p className="font-medium text-gray-900">Recent Submissions</p>
+                  <p className="text-sm text-gray-600">Last 7 days</p>
+                </div>
+              </div>
+              <span className="px-4 py-2 bg-blue-600 text-white rounded-full font-bold">
+                {stats.recentSubmissions}
+              </span>
+            </div>
 
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom fontWeight={600}>
-            Upcoming
-          </Typography>
-          <Box sx={{ mt: 2 }}>
-            {[
-              { title: 'Quiz Deadline', date: 'Tomorrow' },
-              { title: 'Parent Meeting', date: 'Friday' },
-              { title: 'Project Review', date: 'Next Week' },
-            ].map((event, index) => (
-              <Box
-                key={index}
-                sx={{
-                  p: 2,
-                  mb: 1,
-                  bgcolor: 'background.default',
-                  borderRadius: 1,
-                }}
-              >
-                <Typography variant="body2" fontWeight={500}>
-                  {event.title}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {event.date}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-        </Paper>
-      </Box>
-    </Box>
+            <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <Users size={24} className="text-green-600" />
+                <div>
+                  <p className="font-medium text-gray-900">Total Students</p>
+                  <p className="text-sm text-gray-600">In the system</p>
+                </div>
+              </div>
+              <span className="px-4 py-2 bg-green-600 text-white rounded-full font-bold">
+                {stats.totalStudents}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
+          
+          <div className="space-y-3">
+            <button
+              onClick={() => navigate('/teacher/recorded-videos')}
+              className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-left flex items-center gap-3"
+            >
+              <Video size={20} />
+              Upload Video
+            </button>
+
+            <button
+              onClick={() => navigate('/teacher/quiz-creator')}
+              className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-left flex items-center gap-3"
+            >
+              <FileText size={20} />
+              Create Quiz
+            </button>
+
+            <button
+              onClick={() => navigate('/projects')}
+              className="w-full px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-left flex items-center gap-3"
+            >
+              <BookOpen size={20} />
+              Create Assignment
+            </button>
+
+            <button
+              onClick={() => navigate('/teacher/quiz-rankings')}
+              className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-left flex items-center gap-3"
+            >
+              <Award size={20} />
+              View Rankings
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
-};
-
-export default TeacherDashboard;
+}

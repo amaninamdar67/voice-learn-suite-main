@@ -392,7 +392,7 @@ export default function LiveClassesView() {
 
       {/* Live Class Player Modal */}
       {selectedClass && (
-        <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4 pt-16 overflow-y-auto">
           <div className="w-full max-w-6xl mx-auto flex flex-col gap-4 my-auto">
             <div className="bg-gradient-to-r from-red-600 to-pink-600 px-6 py-4 rounded-lg flex justify-between items-center shadow-lg">
               <div className="flex items-center gap-3">
