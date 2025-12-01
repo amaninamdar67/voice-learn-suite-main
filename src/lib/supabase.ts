@@ -17,7 +17,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // Types for our database
-export type UserRole = 'admin' | 'teacher' | 'student' | 'parent' | 'mentor';
+export type UserRole = 'super_admin' | 'admin' | 'teacher' | 'student' | 'parent' | 'mentor';
 
 export interface Profile {
   id: string;
@@ -36,6 +36,7 @@ export interface Profile {
   subjects?: string[];
   qualifications?: string;
   expertise_area?: string;
+  is_super_admin?: boolean;
   created_at: string;
   updated_at: string;
 }

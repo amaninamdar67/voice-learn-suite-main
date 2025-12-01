@@ -248,6 +248,23 @@ app.put('/api/users/:id', async (req, res) => {
   }
 });
 
+// Delete user
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Delete user from auth (this will cascade delete the profile due to foreign key)
+    const { error: authError } = await supabase.auth.admin.deleteUser(id);
+
+    if (authError) throw authError;
+
+    res.json({ success: true, message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // ==================== DOMAINS ENDPOINTS ====================
 
 // Get all domains

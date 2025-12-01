@@ -82,14 +82,13 @@ const menuItems: MenuItem[] = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['mentor'] },
   { text: 'Mentoring', icon: <People />, path: '/mentoring', roles: ['mentor'] },
   { text: 'Leaderboard', icon: <Quiz />, path: '/leaderboard', roles: ['mentor'] },
-  { text: 'Assignments', icon: <Assignment />, path: '/projects', roles: ['mentor'] },
   { text: 'Settings', icon: <Settings />, path: '/settings', roles: ['mentor'] },
 ];
 
 export const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   const filteredMenuItems = menuItems.filter(item => 
     user && item.roles.includes(user.role)
@@ -132,7 +131,7 @@ export const Sidebar: React.FC = () => {
                   {user.name}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>
-                  {user.role}
+                  {profile?.is_super_admin ? 'Super Admin' : user.role.replace('_', ' ')}
                 </Typography>
               </Box>
             </Box>

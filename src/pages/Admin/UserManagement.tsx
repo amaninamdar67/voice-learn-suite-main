@@ -38,6 +38,7 @@ import {
 } from '@mui/icons-material';
 import { UserRole } from '../../types';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface User {
   id: string;
@@ -51,6 +52,7 @@ interface User {
 }
 
 const UserManagement: React.FC = () => {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([
     {
       id: '1',
@@ -199,6 +201,7 @@ const UserManagement: React.FC = () => {
             domain_id: profile.domain_id,
             semester_id: profile.semester_id,
             subjects: profile.subjects || [],
+            is_super_admin: profile.is_super_admin || false,
           } as any;
         });
         setUsers(formattedUsers);
@@ -319,11 +322,64 @@ const UserManagement: React.FC = () => {
     handleMenuClose();
   };
 
-  const handleDeleteUser = (userId: string) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      setUsers(users.filter(u => u.id !== userId));
+  const handleDeleteUser = async (userId: string) => {
+    const userToDelete = users.find(u => u.id === userId);
+    
+    if (!userToDelete) {
+      handleMenuClose();
+      return;
     }
-    handleMenuClose();
+
+    // Prevent deleting yourself
+    if (userId === currentUser?.id) {
+      setError('You cannot delete your own account!');
+      handleMenuClose();
+      return;
+    }
+
+    // Check if trying to delete an admin
+    if (userToDelete.role === 'admin' || userToDelete.role === 'super_admin' || (userToDelete as any).is_super_admin) {
+      // Check if current user is super admin
+      const currentUserData = users.find(u => u.id === currentUser?.id);
+      const isSuperAdmin = currentUserData?.role === 'super_admin' || (currentUserData as any)?.is_super_admin;
+      
+      if (!isSuperAdmin) {
+        setError('Only Super Admins can delete admin users!');
+        handleMenuClose();
+        return;
+      }
+    }
+
+    if (!window.confirm(`Are you sure you want to delete ${userToDelete.name}? This action cannot be undone.`)) {
+      handleMenuClose();
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    
+    try {
+      const response = await fetch(`http://localhost:3001/api/users/${userId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete user');
+      }
+
+      setSuccess(`User ${userToDelete.name} deleted successfully!`);
+      
+      // Reload users from database
+      await loadUsers();
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete user');
+      console.error('Error deleting user:', err);
+    } finally {
+      setLoading(false);
+      handleMenuClose();
+    }
   };
 
   const handleClearForm = () => {
@@ -571,6 +627,7 @@ const UserManagement: React.FC = () => {
 
   const getRoleColor = (role: UserRole) => {
     const colors = {
+      super_admin: 'secondary',
       admin: 'error',
       teacher: 'primary',
       student: 'success',
@@ -582,6 +639,18 @@ const UserManagement: React.FC = () => {
 
   return (
     <Box>
+      {/* Global Success/Error Messages */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
+          {error}
+        </Alert>
+      )}
+      {success && (
+        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess('')}>
+          {success}
+        </Alert>
+      )}
+
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Box>
           <Typography variant="h4" fontWeight={600} gutterBottom>
@@ -625,6 +694,7 @@ const UserManagement: React.FC = () => {
             sx={{ minWidth: 150 }}
           >
             <MenuItem value="all">All Roles</MenuItem>
+            <MenuItem value="super_admin">Super Admin</MenuItem>
             <MenuItem value="admin">Admin</MenuItem>
             <MenuItem value="teacher">Teacher</MenuItem>
             <MenuItem value="student">Student</MenuItem>
@@ -825,12 +895,38 @@ const UserManagement: React.FC = () => {
           </ListItemIcon>
           <ListItemText>Reset Password</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => menuUser && handleDeleteUser(menuUser.id)}>
-          <ListItemIcon>
-            <Delete fontSize="small" color="error" />
-          </ListItemIcon>
-          <ListItemText>Delete User</ListItemText>
-        </MenuItem>
+        {/* Only show delete if: not yourself AND (not admin OR you're super admin) */}
+        {menuUser && menuUser.id !== currentUser?.id && (
+          (menuUser.role !== 'admin' && menuUser.role !== 'super_admin' && !(menuUser as any).is_super_admin) ||
+          (users.find(u => u.id === currentUser?.id)?.role === 'super_admin' || (users.find(u => u.id === currentUser?.id) as any)?.is_super_admin)
+        ) && (
+          <MenuItem onClick={() => menuUser && handleDeleteUser(menuUser.id)}>
+            <ListItemIcon>
+              <Delete fontSize="small" color="error" />
+            </ListItemIcon>
+            <ListItemText>Delete User</ListItemText>
+          </MenuItem>
+        )}
+        {/* Show warning if trying to delete admin but not super admin */}
+        {menuUser && menuUser.id !== currentUser?.id && 
+         (menuUser.role === 'admin' || menuUser.role === 'super_admin' || (menuUser as any).is_super_admin) &&
+         !(users.find(u => u.id === currentUser?.id)?.role === 'super_admin' || (users.find(u => u.id === currentUser?.id) as any)?.is_super_admin) && (
+          <MenuItem disabled>
+            <ListItemIcon>
+              <Delete fontSize="small" color="disabled" />
+            </ListItemIcon>
+            <ListItemText secondary="Only Super Admins can delete admins">Delete User</ListItemText>
+          </MenuItem>
+        )}
+        {/* Show warning if trying to delete yourself */}
+        {menuUser && menuUser.id === currentUser?.id && (
+          <MenuItem disabled>
+            <ListItemIcon>
+              <Delete fontSize="small" color="disabled" />
+            </ListItemIcon>
+            <ListItemText secondary="Cannot delete your own account">Delete User</ListItemText>
+          </MenuItem>
+        )}
       </Menu>
 
       {/* Add User Dialog */}
@@ -888,6 +984,7 @@ const UserManagement: React.FC = () => {
                 onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })}
                 required
               >
+                <MenuItem value="super_admin">Super Admin</MenuItem>
                 <MenuItem value="admin">Admin</MenuItem>
                 <MenuItem value="teacher">Teacher</MenuItem>
                 <MenuItem value="student">Student</MenuItem>
@@ -1239,6 +1336,7 @@ const UserManagement: React.FC = () => {
               onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })}
               required
             >
+              <MenuItem value="super_admin">Super Admin</MenuItem>
               <MenuItem value="admin">Admin</MenuItem>
               <MenuItem value="teacher">Teacher</MenuItem>
               <MenuItem value="student">Student</MenuItem>

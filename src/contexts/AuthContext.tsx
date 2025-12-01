@@ -4,6 +4,7 @@ import { supabase, Profile } from '../lib/supabase';
 
 interface AuthContextType {
   user: User | null;
+  profile: Profile | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (email: string, password: string, profile: Partial<Profile>) => Promise<void>;
@@ -15,6 +16,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,7 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loadUserProfile = async (userId: string) => {
     try {
-      const { data: profile, error } = await supabase
+      const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
@@ -50,13 +52,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) throw error;
 
-      if (profile) {
+      if (profileData) {
         // Check if user's domain is active
-        if (profile.domain_id) {
+        if (profileData.domain_id) {
           const { data: domain } = await supabase
             .from('domains')
             .select('is_active')
-            .eq('id', profile.domain_id)
+            .eq('id', profileData.domain_id)
             .single();
 
           if (domain && !domain.is_active) {
@@ -67,17 +69,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         const { data: authUser } = await supabase.auth.getUser();
+        
+        // Set profile state
+        setProfile(profileData);
+        
+        // Set user state
         setUser({
-          id: profile.id,
-          name: profile.full_name,
+          id: profileData.id,
+          name: profileData.full_name,
           email: authUser.user?.email || '',
-          role: profile.role as UserRole,
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.full_name}`,
+          role: profileData.role as UserRole,
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileData.full_name}`,
         });
       }
     } catch (error) {
       console.error('Error loading profile:', error);
-      throw error; // Re-throw to show error message
+      // Don't throw error on page load - just log it
+      setUser(null);
+      setProfile(null);
     } finally {
       setLoading(false);
     }
@@ -136,11 +145,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    setProfile(null);
   };
 
   return (
     <AuthContext.Provider value={{
       user,
+      profile,
       login,
       logout,
       register,
