@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { 
   FileText, Plus, Edit, Trash2, Users, CheckCircle, Clock, X 
 } from 'lucide-react';
+import AssignmentLeaderboard from '../../components/Leaderboard/AssignmentLeaderboard';
 
 interface Assignment {
   id: string;
@@ -311,6 +312,11 @@ export default function AssignmentCreator() {
           </button>
         </div>
       )}
+
+      {/* Assignment Leaderboard */}
+      <div className="mt-8">
+        <AssignmentLeaderboard isTeacherView={true} />
+      </div>
 
       {/* Create Modal */}
       {showCreateModal && (

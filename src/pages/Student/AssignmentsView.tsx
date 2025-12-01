@@ -5,6 +5,7 @@ import {
   FileText, Calendar, Clock, CheckCircle, AlertCircle, 
   Upload, X, Download, Send 
 } from 'lucide-react';
+import AssignmentLeaderboard from '../../components/Leaderboard/AssignmentLeaderboard';
 
 interface Assignment {
   id: string;
@@ -334,6 +335,11 @@ export default function AssignmentsView() {
           <p className="text-gray-600">Check back later for new assignments</p>
         </div>
       )}
+
+      {/* Assignment Leaderboard */}
+      <div className="mt-8">
+        <AssignmentLeaderboard />
+      </div>
 
       {/* Submission Modal */}
       {selectedAssignment && (

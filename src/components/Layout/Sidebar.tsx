@@ -53,9 +53,9 @@ const menuItems: MenuItem[] = [
   { text: 'Courses', icon: <School />, path: '/teacher/video-lessons', roles: ['teacher'] },
   { text: 'Live Classes', icon: <VideoLibrary />, path: '/teacher/live-classes', roles: ['teacher'] },
   { text: 'Create Quiz', icon: <Quiz />, path: '/teacher/quiz-creator', roles: ['teacher'] },
-  { text: 'Leaderboard', icon: <Quiz />, path: '/teacher/quiz-rankings', roles: ['teacher'] },
   { text: 'Study Materials', icon: <School />, path: '/lessons', roles: ['teacher'] },
   { text: 'Assignments', icon: <Assignment />, path: '/projects', roles: ['teacher'] },
+  { text: 'Leaderboard', icon: <Quiz />, path: '/teacher/quiz-rankings', roles: ['teacher'] },
   { text: 'Community', icon: <Message />, path: '/community/recorded-classes', roles: ['teacher'] },
   { text: 'Settings', icon: <Settings />, path: '/settings', roles: ['teacher'] },
   
@@ -65,9 +65,9 @@ const menuItems: MenuItem[] = [
   { text: 'Courses', icon: <School />, path: '/student/video-lessons', roles: ['student'] },
   { text: 'Live Classes', icon: <VideoLibrary />, path: '/student/live-classes', roles: ['student'] },
   { text: 'Take Quiz', icon: <Quiz />, path: '/student/quizzes', roles: ['student'] },
-  { text: 'Leaderboard', icon: <Quiz />, path: '/student/quiz-rankings', roles: ['student'] },
   { text: 'Study Materials', icon: <School />, path: '/lessons', roles: ['student'] },
   { text: 'Assignments', icon: <Assignment />, path: '/projects', roles: ['student'] },
+  { text: 'Leaderboard', icon: <Quiz />, path: '/student/quiz-rankings', roles: ['student'] },
   { text: 'Community', icon: <Message />, path: '/community/recorded-classes', roles: ['student'] },
   { text: 'Settings', icon: <Settings />, path: '/settings', roles: ['student'] },
   
