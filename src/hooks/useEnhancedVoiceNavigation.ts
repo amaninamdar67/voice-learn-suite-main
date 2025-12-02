@@ -57,82 +57,53 @@ export const useEnhancedVoiceNavigation = () => {
   const [lastCommand, setLastCommand] = useState('');
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
-  // Initialize default voice settings for new users
-  const initializeDefaultVoice = useCallback(() => {
-    const savedSettings = localStorage.getItem('voiceSettings');
-    if (!savedSettings) {
-      const voices = window.speechSynthesis.getVoices();
-      const hindiVoice = voices.find(v => v.lang === 'hi-IN' && v.name.includes('Google'));
-      
-      if (hindiVoice) {
-        const defaultSettings = {
-          voiceName: hindiVoice.name,
-          rate: 0.85,
-          pitch: 1.0,
-          volume: 1.0
-        };
-        localStorage.setItem('voiceSettings', JSON.stringify(defaultSettings));
-      }
-    }
-  }, []);
-
-  // Voice feedback with enhanced quality
+  // Simple voice feedback - ONE voice for everything (US English Female)
   const speak = useCallback((text: string) => {
-    // Ensure voices are loaded
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length === 0) {
-      // Voices not loaded yet, wait and retry
-      window.speechSynthesis.onvoiceschanged = () => {
-        speak(text);
-      };
-      return;
-    }
-
-    const savedSettings = localStorage.getItem('voiceSettings');
-    let settings: {
-      voiceName: string;
-      rate: number;
-      pitch: number;
-      volume: number;
-    };
+    // Cancel any ongoing speech first to prevent overlap
+    window.speechSynthesis.cancel();
     
-    if (savedSettings) {
-      settings = JSON.parse(savedSettings);
-    } else {
-      // Initialize default for new users
-      const hindiVoice = voices.find(v => v.lang === 'hi-IN' && v.name.includes('Google'));
-      settings = {
-        voiceName: hindiVoice?.name || '',
-        rate: 0.85,
-        pitch: 1.0,
-        volume: 1.0
-      };
-      // Save default settings
-      localStorage.setItem('voiceSettings', JSON.stringify(settings));
-    }
-    
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    // Apply voice
-    if (settings.voiceName) {
-      const selectedVoice = voices.find(v => v.name === settings.voiceName);
-      if (selectedVoice) {
-        utterance.voice = selectedVoice;
+    // Small delay to ensure cancellation completes
+    setTimeout(() => {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length === 0) {
+        // Voices not loaded yet, wait and retry
+        window.speechSynthesis.onvoiceschanged = () => {
+          speak(text);
+        };
+        return;
       }
-    }
-    
-    utterance.rate = settings.rate;
-    utterance.pitch = settings.pitch;
-    utterance.volume = settings.volume;
-    
-    window.speechSynthesis.speak(utterance);
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      // Use US English Female voice for EVERYTHING (consistency)
+      const usVoice = voices.find(v => 
+        v.lang === 'en-US' && 
+        (v.name.includes('Female') || 
+         v.name.includes('Zira') ||
+         v.name.includes('Google US English'))
+      ) || voices.find(v => v.lang.startsWith('en-US')) || voices[0];
+      
+      if (usVoice) {
+        utterance.voice = usVoice;
+      }
+      
+      // Consistent settings
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+      
+      window.speechSynthesis.speak(utterance);
+    }, 100);
   }, []);
 
   // Command definitions
   const commands: VoiceCommand[] = [
     // === NAVIGATION COMMANDS (Sidebar Pages) ===
     {
-      patterns: ['go to dashboard', 'open dashboard', 'dashboard', 'home'],
+      patterns: [
+        'go to dashboard', 'open dashboard', 'dashboard', 'home',
+        'dash board', 'dash', 'dashbord', 'dasboard'
+      ],
       action: () => {
         navigate('/dashboard');
         speak('Opening dashboard');
@@ -140,7 +111,10 @@ export const useEnhancedVoiceNavigation = () => {
       description: 'Navigate to dashboard'
     },
     {
-      patterns: ['go to settings', 'open settings', 'settings'],
+      patterns: [
+        'go to settings', 'open settings', 'settings', 'setting',
+        'setings', 'seting', 'settins'
+      ],
       action: () => {
         navigate('/settings');
         speak('Opening settings');
@@ -148,7 +122,10 @@ export const useEnhancedVoiceNavigation = () => {
       description: 'Navigate to settings'
     },
     {
-      patterns: ['go to leaderboard', 'open leaderboard', 'leaderboard', 'rankings'],
+      patterns: [
+        'go to leaderboard', 'open leaderboard', 'leaderboard', 'leader board',
+        'rankings', 'ranking', 'rank', 'leaderboards', 'leader'
+      ],
       action: () => {
         navigate('/leaderboard');
         speak('Opening leaderboard');
@@ -156,39 +133,56 @@ export const useEnhancedVoiceNavigation = () => {
       description: 'Navigate to leaderboard'
     },
     {
-      patterns: ['go to lessons', 'open lessons', 'lessons', 'my lessons'],
+      patterns: [
+        'go to study materials', 'open study materials', 'study materials',
+        'study material', 'study', 'materials', 'recourses', 'resources',
+        'lessons', 'my lessons', 'lesson', 'study matriels', 'study meterial'
+      ],
       action: () => {
         navigate('/lessons');
-        speak('Opening lessons');
+        speak('Opening study materials');
       },
-      description: 'Navigate to lessons'
+      description: 'Navigate to study materials'
     },
     {
-      patterns: ['go to videos', 'open videos', 'videos', 'video lessons'],
+      patterns: [
+        'go to courses', 'open courses', 'courses', 'course',
+        'video lessons', 'video lesson', 'videos', 'video',
+        'corses', 'cources', 'coarses'
+      ],
       action: () => {
-        navigate('/videos');
-        speak('Opening videos');
+        navigate('/student/video-lessons');
+        speak('Opening courses');
       },
-      description: 'Navigate to videos'
+      description: 'Navigate to courses'
     },
     {
-      patterns: ['go to quizzes', 'open quizzes', 'quizzes', 'my quizzes'],
+      patterns: [
+        'go to take quiz', 'open take quiz', 'take quiz', 'quiz',
+        'quizzes', 'my quizzes', 'quizes', 'quis', 'quizz'
+      ],
       action: () => {
-        navigate('/quizzes');
-        speak('Opening quizzes');
+        navigate('/student/quizzes');
+        speak('Opening take quiz');
       },
-      description: 'Navigate to quizzes'
+      description: 'Navigate to take quiz'
     },
     {
-      patterns: ['go to assignments', 'open assignments', 'assignments', 'my assignments'],
+      patterns: [
+        'go to assignments', 'open assignments', 'assignments', 'assignment',
+        'my assignments', 'projects', 'project', 'asignments', 'assigments'
+      ],
       action: () => {
-        navigate('/assignments');
+        navigate('/projects');
         speak('Opening assignments');
       },
       description: 'Navigate to assignments'
     },
     {
-      patterns: ['go to community', 'open community', 'community', 'discussions'],
+      patterns: [
+        'go to community', 'open community', 'community', 'comunity',
+        'discussions', 'discussion', 'comuniti', 'communitty'
+      ],
       action: () => {
         navigate('/community');
         speak('Opening community');
@@ -210,6 +204,145 @@ export const useEnhancedVoiceNavigation = () => {
         speak('Going back');
       },
       description: 'Go to previous page'
+    },
+
+    // === STUDENT MODULE OPTIMIZED COMMANDS ===
+    {
+      patterns: [
+        'open recorded videos', 'recorded videos', 'recorded classes', 
+        'open recorded classes', 'recorded videos page', 'recorded classes page',
+        'go to recorded videos', 'go to recorded classes', 'recorded', 'record',
+        'recorded class', 'record class', 'recoded', 'recoreded'
+      ],
+      action: () => {
+        navigate('/student/recorded-videos');
+        speak('Opening recorded classes');
+      },
+      description: 'Navigate to recorded videos (Student)'
+    },
+    {
+      patterns: [
+        'open courses', 'courses', 'courses page', 'course',
+        'go to courses', 'video lessons', 'open video lessons',
+        'corses', 'cources', 'coarses'
+      ],
+      action: () => {
+        navigate('/student/video-lessons');
+        speak('Opening courses');
+      },
+      description: 'Navigate to courses (Student)'
+    },
+    {
+      patterns: [
+        'open live classes', 'live classes', 'live classes page', 'live class',
+        'go to live classes', 'join live class', 'live sessions', 'live',
+        'life classes', 'live clas', 'life class'
+      ],
+      action: () => {
+        navigate('/student/live-classes');
+        speak('Opening live classes');
+      },
+      description: 'Navigate to live classes (Student)'
+    },
+    {
+      patterns: [
+        'open student quizzes', 'student quizzes', 'my quizzes page',
+        'go to student quizzes', 'take quiz', 'quiz page', 'quiz',
+        'quizes', 'quis', 'quizz'
+      ],
+      action: () => {
+        navigate('/student/quizzes');
+        speak('Opening take quiz');
+      },
+      description: 'Navigate to quizzes (Student)'
+    },
+    {
+      patterns: [
+        'open quiz rankings', 'quiz rankings', 'quiz leaderboard', 'quiz ranking',
+        'go to quiz rankings', 'quiz rankings page', 'quiz scores', 'quiz rank',
+        'quis rankings', 'quizz rankings'
+      ],
+      action: () => {
+        navigate('/student/quiz-rankings');
+        speak('Opening quiz rankings');
+      },
+      description: 'Navigate to quiz rankings (Student)'
+    },
+    {
+      patterns: [
+        'open overall rankings', 'overall rankings', 'overall leaderboard', 'overall ranking',
+        'go to overall rankings', 'overall rankings page', 'my rank', 'overall',
+        'over all rankings', 'overall rank'
+      ],
+      action: () => {
+        navigate('/student/overall-rankings');
+        speak('Opening overall rankings');
+      },
+      description: 'Navigate to overall rankings (Student)'
+    },
+    {
+      patterns: [
+        'open student assignments', 'student assignments', 'my assignments page',
+        'go to student assignments', 'view assignments', 'assignments page',
+        'assignment', 'asignments', 'assigments'
+      ],
+      action: () => {
+        navigate('/student/assignments');
+        speak('Opening assignments');
+      },
+      description: 'Navigate to assignments (Student)'
+    },
+    {
+      patterns: [
+        'continue watching', 'resume watching', 'continue learning',
+        'open continue watching', 'read continue watching'
+      ],
+      action: () => {
+        speak('Reading continue watching section');
+        window.dispatchEvent(new CustomEvent('readComponent', { 
+          detail: { name: 'continue watching' } 
+        }));
+      },
+      description: 'Read continue watching section'
+    },
+    {
+      patterns: [
+        'my progress', 'show progress', 'read progress',
+        'open progress', 'check progress', 'progress section'
+      ],
+      action: () => {
+        speak('Reading your progress');
+        window.dispatchEvent(new CustomEvent('readComponent', { 
+          detail: { name: 'progress' } 
+        }));
+      },
+      description: 'Read progress section'
+    },
+    {
+      patterns: [
+        'recent activity', 'show activity', 'read activity',
+        'my activity', 'recent activity section'
+      ],
+      action: () => {
+        speak('Reading recent activity');
+        window.dispatchEvent(new CustomEvent('readComponent', { 
+          detail: { name: 'recent activity' } 
+        }));
+      },
+      description: 'Read recent activity section'
+    },
+    {
+      patterns: [
+        'statistics', 'my statistics', 'show statistics',
+        'read statistics', 'stats', 'my stats'
+      ],
+      action: () => {
+        speak('Reading statistics');
+        window.dispatchEvent(new CustomEvent('readComponent', { 
+          detail: { name: 'statistics' } 
+        }));
+      },
+      description: 'Read statistics section'
     },
 
     // === DOCUMENT COMMANDS ===
@@ -574,23 +707,8 @@ export const useEnhancedVoiceNavigation = () => {
     }
   }, [isWakeWordMode, commands, speak]);
 
-  // Initialize speech recognition and default voice
+  // Initialize speech recognition
   useEffect(() => {
-    // Initialize default voice settings for new users
-    const initVoices = () => {
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length > 0) {
-        initializeDefaultVoice();
-      }
-    };
-
-    // Load voices
-    if (window.speechSynthesis.getVoices().length > 0) {
-      initVoices();
-    } else {
-      window.speechSynthesis.onvoiceschanged = initVoices;
-    }
-
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       console.error('Speech recognition not supported');
       return;
@@ -633,26 +751,40 @@ export const useEnhancedVoiceNavigation = () => {
     recognitionRef.current = recognition;
 
     return () => {
-      recognition.stop();
+      if (recognition) {
+        try {
+          recognition.stop();
+        } catch (e) {
+          // Ignore errors on cleanup
+        }
+      }
     };
-  }, [isListening, isWakeWordMode, processCommand, initializeDefaultVoice]);
+  }, [isListening, isWakeWordMode, processCommand]);
 
-  // Start/stop listening
+  // Start/stop listening - SIMPLIFIED (no double "Stopped")
   const toggleListening = useCallback(() => {
-    if (!recognitionRef.current) return;
+    if (!recognitionRef.current) {
+      console.error('Recognition not initialized');
+      return;
+    }
 
-    if (isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-      speak('Voice navigation stopped');
-    } else {
-      try {
+    try {
+      if (isListening) {
+        // Stop listening - NO SPEAK HERE (TopBar will handle it)
+        recognitionRef.current.stop();
+        setIsListening(false);
+        window.speechSynthesis.cancel(); // Stop any ongoing speech
+      } else {
+        // Start listening
+        window.speechSynthesis.cancel(); // Clear any previous speech
         recognitionRef.current.start();
         setIsListening(true);
-        speak('Voice navigation active');
-      } catch (e) {
-        console.error('Failed to start recognition:', e);
+        speak('Listening');
       }
+    } catch (e) {
+      console.error('Toggle error:', e);
+      // Reset state on error
+      setIsListening(false);
     }
   }, [isListening, speak]);
 

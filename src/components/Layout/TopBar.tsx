@@ -25,7 +25,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { useVoiceNavigation } from '../../hooks/useVoiceNavigation';
+import { useEnhancedVoiceNavigation } from '../../hooks/useEnhancedVoiceNavigation';
 import { useDocumentReader } from '../../hooks/useDocumentReader';
 
 export const TopBar: React.FC = () => {
@@ -33,7 +33,7 @@ export const TopBar: React.FC = () => {
   const [notificationAnchor, setNotificationAnchor] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { isListening, toggleListening } = useVoiceNavigation();
+  const { isListening, toggleListening } = useEnhancedVoiceNavigation();
   const { isReading, isPaused, readHeadings, readComponent, stopReading, pauseReading, resumeReading } = useDocumentReader();
   
   // Voice nav enabled state (stored in localStorage)
@@ -60,16 +60,28 @@ export const TopBar: React.FC = () => {
     setVoiceNavEnabled(newValue);
     localStorage.setItem('voiceNavEnabled', String(newValue));
     
+    // If turning off, also stop listening
+    if (!newValue && isListening) {
+      toggleListening();
+    }
+    
     // Dispatch custom event to notify all listeners
     window.dispatchEvent(new Event('voiceNavToggled'));
     
-    // Announce the change
-    if (window.speechSynthesis) {
+    // Simple announcement - only when turning ON
+    if (newValue && window.speechSynthesis) {
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(
-        newValue ? 'Voice navigation enabled' : 'Voice navigation disabled'
+      const utterance = new SpeechSynthesisUtterance('On');
+      utterance.rate = 1.0;
+      
+      // Use US English Female voice
+      const voices = window.speechSynthesis.getVoices();
+      const usVoice = voices.find(v => 
+        v.lang === 'en-US' && 
+        (v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Google US English'))
       );
-      utterance.rate = 1.2;
+      if (usVoice) utterance.voice = usVoice;
+      
       window.speechSynthesis.speak(utterance);
     }
   };

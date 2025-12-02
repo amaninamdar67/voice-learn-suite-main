@@ -18,26 +18,24 @@ export const useDocumentReader = () => {
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const chunksRef = useRef<string[]>([]);
 
-  // Get voice settings from localStorage
+  // Get voice settings - SIMPLIFIED to use US English Female
   const getVoiceSettings = () => {
-    const saved = localStorage.getItem('voiceSettings');
-    if (saved) return JSON.parse(saved);
-    
-    // Default to Hindi female voice for new users
     const voices = window.speechSynthesis.getVoices();
-    const hindiVoice = voices.find(v => v.lang === 'hi-IN' && v.name.includes('Google'));
     
-    const defaultSettings = {
-      voiceName: hindiVoice?.name || '',
-      rate: 0.85,
+    // Always use US English Female voice for consistency
+    const usVoice = voices.find(v => 
+      v.lang === 'en-US' && 
+      (v.name.includes('Female') || 
+       v.name.includes('Zira') ||
+       v.name.includes('Google US English'))
+    ) || voices.find(v => v.lang.startsWith('en-US')) || voices[0];
+    
+    return {
+      voiceName: usVoice?.name || '',
+      rate: 0.9,
       pitch: 1.0,
       volume: 1.0
     };
-    
-    // Save default settings for consistency
-    localStorage.setItem('voiceSettings', JSON.stringify(defaultSettings));
-    
-    return defaultSettings;
   };
 
   // Stop any ongoing speech before starting new one
