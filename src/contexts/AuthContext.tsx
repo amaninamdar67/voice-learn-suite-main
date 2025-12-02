@@ -19,29 +19,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Check active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        loadUserProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        loadUserProfile(session.user.id);
-      } else {
-        setUser(null);
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
   const loadUserProfile = async (userId: string) => {
     try {
       const { data: profileData, error } = await supabase
@@ -62,7 +39,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .single();
 
           if (domain && !domain.is_active) {
-            // Domain is inactive - logout and throw error
             await supabase.auth.signOut();
             throw new Error('Your organization/domain is currently inactive. Please contact your administrator.');
           }
@@ -70,10 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const { data: authUser } = await supabase.auth.getUser();
         
-        // Set profile state
         setProfile(profileData);
-        
-        // Set user state
         setUser({
           id: profileData.id,
           name: profileData.full_name,
@@ -84,13 +57,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Error loading profile:', error);
-      // Don't throw error on page load - just log it
+      // Don't throw on page load - just clear state
       setUser(null);
       setProfile(null);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        loadUserProfile(session.user.id);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        loadUserProfile(session.user.id);
+      } else {
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const login = async (email: string, password: string) => {
     console.log('AuthContext.login called with email:', email);

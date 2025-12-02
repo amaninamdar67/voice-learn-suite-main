@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Fab, Tooltip, Box, Typography, Paper, IconButton } from '@mui/material';
 import { Mic, MicOff, Close, Keyboard } from '@mui/icons-material';
-import { useVoiceNavigation } from '../../hooks/useVoiceNavigation';
+import { useEnhancedVoiceNavigation } from '../../hooks/useEnhancedVoiceNavigation';
 
 export const VoiceNavigator: React.FC = () => {
-  const { isListening, toggleListening, transcript } = useVoiceNavigation();
+  const { isListening, toggleListening, lastCommand } = useEnhancedVoiceNavigation();
   const [showHelp, setShowHelp] = useState(false);
 
   return (
@@ -63,7 +63,7 @@ export const VoiceNavigator: React.FC = () => {
       )}
 
       {/* Transcript Display */}
-      {isListening && transcript && (
+      {isListening && lastCommand && (
         <Paper
           sx={{
             p: 2,
@@ -75,10 +75,10 @@ export const VoiceNavigator: React.FC = () => {
           }}
         >
           <Typography variant="caption" display="block" sx={{ opacity: 0.9 }}>
-            Listening...
+            Last Command:
           </Typography>
           <Typography variant="body2" fontWeight={600}>
-            "{transcript}"
+            "{lastCommand}"
           </Typography>
         </Paper>
       )}

@@ -76,12 +76,6 @@ export const Login: React.FC = () => {
               variant="contained"
               size="large"
               disabled={loading}
-              onClick={(e) => {
-                console.log('Button clicked');
-                if (!loading) {
-                  handleSubmit(e as any);
-                }
-              }}
               sx={{ mt: 3 }}
             >
               {loading ? 'Logging in...' : 'Log In'}

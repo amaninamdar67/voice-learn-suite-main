@@ -6,8 +6,9 @@ import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { AITutorChat } from '../AITutor/AITutorChat';
 import { VoiceNavigator } from '../VoiceNavigator/VoiceNavigator';
+import { VoiceCommandsHelper } from '../VoiceNavigator/VoiceCommandsHelper';
 import { usePageAnnouncement } from '../../hooks/usePageAnnouncement';
-import { useVoiceNavigation } from '../../hooks/useVoiceNavigation';
+import { useEnhancedVoiceNavigation } from '../../hooks/useEnhancedVoiceNavigation';
 import { useSystemConfig } from '../../contexts/SystemConfigContext';
 
 interface MainLayoutProps {
@@ -16,7 +17,7 @@ interface MainLayoutProps {
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const location = useLocation();
-  const { isListening } = useVoiceNavigation();
+  const { isListening } = useEnhancedVoiceNavigation();
   const { isFeatureEnabled } = useSystemConfig();
   usePageAnnouncement(isListening); // Only announce when voice nav is active
   
@@ -108,7 +109,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         {children}
       </Box>
       {isFeatureEnabled('aiTutor') && <AITutorChat />}
-      {isFeatureEnabled('voiceNavigation') && <VoiceNavigator />}
+      {isFeatureEnabled('voiceNavigation') && (
+        <>
+          <VoiceNavigator />
+          <VoiceCommandsHelper />
+        </>
+      )}
     </Box>
   );
 };

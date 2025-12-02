@@ -24,6 +24,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { VoiceSettings } from '../types';
+import { VoiceSettingsPanel } from '../components/VoiceSettings/VoiceSettingsPanel';
 
 const PasswordResetForm: React.FC<{ userId?: string }> = ({ userId }) => {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -241,80 +242,7 @@ const Settings: React.FC = () => {
         </Paper>
 
         {/* Voice & Accessibility */}
-        <Paper sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-            <VolumeUp color="primary" />
-            <Typography variant="h6" fontWeight={600}>
-              Voice & Accessibility
-            </Typography>
-          </Box>
-
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <Box>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={voiceSettings.enabled}
-                    onChange={(e) =>
-                      setVoiceSettings({ ...voiceSettings, enabled: e.target.checked })
-                    }
-                  />
-                }
-                label="Enable Voice Features"
-              />
-              <Box sx={{ mt: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
-                <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                  🎤 Voice Navigation Shortcut
-                </Typography>
-                <Typography variant="body2" gutterBottom>
-                  <strong>Long press SPACEBAR</strong> (0.5 seconds) to activate voice navigation
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Perfect for blind students and hands-free navigation!
-                </Typography>
-              </Box>
-            </Box>
-
-            <FormControl fullWidth disabled={!voiceSettings.enabled}>
-              <InputLabel>Voice Type</InputLabel>
-              <Select
-                value={voiceSettings.voiceType}
-                label="Voice Type"
-                onChange={(e) =>
-                  setVoiceSettings({
-                    ...voiceSettings,
-                    voiceType: e.target.value as 'female' | 'male' | 'other',
-                  })
-                }
-              >
-                <MenuItem value="female">Female</MenuItem>
-                <MenuItem value="male">Male</MenuItem>
-                <MenuItem value="other">Other</MenuItem>
-              </Select>
-            </FormControl>
-
-            <Box>
-              <Typography gutterBottom>
-                Speech Speed: {voiceSettings.speed.toFixed(1)}x
-              </Typography>
-              <Slider
-                value={voiceSettings.speed}
-                onChange={(_, value) =>
-                  setVoiceSettings({ ...voiceSettings, speed: value as number })
-                }
-                min={0.5}
-                max={2.0}
-                step={0.1}
-                disabled={!voiceSettings.enabled}
-                marks={[
-                  { value: 0.5, label: '0.5x' },
-                  { value: 1.0, label: '1x' },
-                  { value: 2.0, label: '2x' },
-                ]}
-              />
-            </Box>
-          </Box>
-        </Paper>
+        <VoiceSettingsPanel />
 
         {/* Notification Preferences */}
         <Paper sx={{ p: 3 }}>
