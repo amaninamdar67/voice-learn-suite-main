@@ -20,6 +20,8 @@ import {
   SmartToy,
   Mic,
   MicOff,
+  VolumeUp,
+  VolumeOff,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -37,6 +39,10 @@ export const TopBar: React.FC = () => {
     const saved = localStorage.getItem('voiceNavEnabled');
     return saved !== 'false'; // Default to true
   });
+
+  // Read page state
+  const [isReading, setIsReading] = useState(false);
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
 
   // Listen for spacebar press event
   React.useEffect(() => {
@@ -97,6 +103,50 @@ export const TopBar: React.FC = () => {
 
   const handleAITutorOpen = () => {
     window.dispatchEvent(new Event('open-ai-tutor'));
+  };
+
+  const handleReadPage = async () => {
+    if (isReading && audio) {
+      // Stop reading
+      audio.pause();
+      setAudio(null);
+      setIsReading(false);
+      return;
+    }
+
+    try {
+      setIsReading(true);
+
+      // Get all text content from the main content area
+      const mainContent = document.querySelector('main') || document.body;
+      const textContent = mainContent.innerText;
+
+      // Send to voice server
+      const response = await fetch('http://localhost:3003/api/voice/speak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textContent })
+      });
+
+      if (!response.ok) throw new Error('Failed to generate speech');
+
+      // Play the audio
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audioElement = new Audio(audioUrl);
+      
+      audioElement.onended = () => {
+        setIsReading(false);
+        setAudio(null);
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      audioElement.play();
+      setAudio(audioElement);
+    } catch (error) {
+      console.error('Read page error:', error);
+      setIsReading(false);
+    }
   };
 
   const mockNotifications = [
@@ -173,6 +223,26 @@ export const TopBar: React.FC = () => {
                 {isListening ? 'Listening...' : 'Voice Nav'}
               </Button>
             </span>
+          </Tooltip>
+
+          {/* Read Page Button */}
+          <Tooltip title={isReading ? 'Stop reading page' : 'Read page content aloud'}>
+            <Button
+              variant={isReading ? 'contained' : 'outlined'}
+              color={isReading ? 'error' : 'info'}
+              startIcon={isReading ? <VolumeOff /> : <VolumeUp />}
+              onClick={handleReadPage}
+              sx={{
+                height: 36,
+                animation: isReading ? 'pulse 1.5s infinite' : 'none',
+                '@keyframes pulse': {
+                  '0%, 100%': { transform: 'scale(1)' },
+                  '50%': { transform: 'scale(1.05)' },
+                },
+              }}
+            >
+              {isReading ? 'Stop' : 'Read Page'}
+            </Button>
           </Tooltip>
 
           <Tooltip title="AI Tutor">

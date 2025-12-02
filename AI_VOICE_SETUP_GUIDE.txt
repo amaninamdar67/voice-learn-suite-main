@@ -1,0 +1,158 @@
+===========================================
+WHISPER + PIPER + QWEN SETUP GUIDE
+Complete AI Voice & Tutor Integration
+===========================================
+
+PART 1: DOWNLOAD & INSTALL
+===========================================
+
+STEP 1: Install Ollama (AI Tutor)
+-------------------------------------------
+1. Go to: https://ollama.com/download
+2. Download "Ollama for Windows"
+3. Run the installer
+4. Open Command Prompt and test:
+   ollama --version
+
+5. Pull the AI model:
+   ollama pull qwen2.5:7b
+
+   (This downloads ~4GB, takes 5-10 minutes)
+
+STEP 2: Install Whisper.cpp (Speech-to-Text)
+-------------------------------------------
+1. Go to: https://github.com/ggerganov/whisper.cpp/releases
+2. Download: "whisper-bin-x64.zip"
+3. Extract to: C:\whisper
+4. Download tiny model:
+   - Go to: https://huggingface.co/ggerganov/whisper.cpp/tree/main
+   - Download: ggml-tiny.bin
+   - Save to: C:\whisper\models\ggml-tiny.bin
+
+5. Test it:
+   cd C:\whisper
+   main.exe -m models\ggml-tiny.bin -f samples\jfk.wav
+
+STEP 3: Install Piper TTS (Text-to-Speech)
+-------------------------------------------
+1. Go to: https://github.com/rhasspy/piper/releases
+2. Download: "piper_windows_amd64.zip"
+3. Extract to: C:\piper
+4. Download voice model:
+   - Go to: https://huggingface.co/rhasspy/piper-voices/tree/main/en/en_US/lessac/medium
+   - Download both files:
+     * en_US-lessac-medium.onnx
+     * en_US-lessac-medium.onnx.json
+   - Save to: C:\piper\
+
+5. Test it:
+   cd C:\piper
+   echo Hello world | piper.exe --model en_US-lessac-medium.onnx --output_file test.wav
+   (Play test.wav to hear the voice)
+
+
+PART 2: INSTALL NODE DEPENDENCIES
+===========================================
+
+Open terminal in your project folder and run:
+
+npm install multer cors
+
+
+PART 3: VERIFY INSTALLATION
+===========================================
+
+Check all three are working:
+
+1. Ollama:
+   ollama list
+   (Should show qwen2.5:7b)
+
+2. Whisper:
+   C:\whisper\main.exe --help
+   (Should show help text)
+
+3. Piper:
+   C:\piper\piper.exe --help
+   (Should show help text)
+
+
+PART 4: START THE SERVERS
+===========================================
+
+You'll need 3 terminals:
+
+Terminal 1 - Backend Server:
+   cd backend
+   node server.js
+
+Terminal 2 - Voice Server:
+   cd backend
+   node voice-server.js
+
+Terminal 3 - Frontend:
+   npm run dev
+
+
+PART 5: TEST THE SYSTEM
+===========================================
+
+1. Open browser: http://localhost:8083
+2. Press SPACEBAR to activate voice
+3. Say: "Go to dashboard"
+4. Should navigate and speak response
+
+5. Test AI Tutor:
+   - Go to any page
+   - Click "Ask AI" button
+   - Type or speak a question
+   - AI responds with voice
+
+
+TROUBLESHOOTING
+===========================================
+
+Problem: Ollama not found
+Solution: Restart terminal after installing Ollama
+
+Problem: Whisper model not found
+Solution: Check C:\whisper\models\ggml-tiny.bin exists
+
+Problem: Piper voice robotic
+Solution: Download larger model (medium or high quality)
+
+Problem: Voice server not starting
+Solution: Check ports 3003 is not in use
+
+Problem: No microphone access
+Solution: Allow microphone in browser settings
+
+
+LINKS SUMMARY
+===========================================
+Ollama: https://ollama.com/download
+Whisper.cpp: https://github.com/ggerganov/whisper.cpp/releases
+Piper TTS: https://github.com/rhasspy/piper/releases
+Whisper Models: https://huggingface.co/ggerganov/whisper.cpp
+Piper Voices: https://huggingface.co/rhasspy/piper-voices
+
+
+WHAT YOU GET
+===========================================
+✓ Offline voice navigation (works without internet)
+✓ AI tutor that can answer questions
+✓ Natural text-to-speech voices
+✓ Better speech recognition
+✓ Works in all browsers
+✓ Faster response times
+✓ Privacy (all runs locally)
+
+
+NEXT STEPS
+===========================================
+After setup is complete:
+1. Test voice navigation
+2. Test AI tutor
+3. Customize voice commands
+4. Add more AI features
+5. Train on your own data (optional)
