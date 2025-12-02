@@ -57,32 +57,67 @@ export const useEnhancedVoiceNavigation = () => {
   const [lastCommand, setLastCommand] = useState('');
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
+  // Initialize default voice settings for new users
+  const initializeDefaultVoice = useCallback(() => {
+    const savedSettings = localStorage.getItem('voiceSettings');
+    if (!savedSettings) {
+      const voices = window.speechSynthesis.getVoices();
+      const hindiVoice = voices.find(v => v.lang === 'hi-IN' && v.name.includes('Google'));
+      
+      if (hindiVoice) {
+        const defaultSettings = {
+          voiceName: hindiVoice.name,
+          rate: 0.85,
+          pitch: 1.0,
+          volume: 1.0
+        };
+        localStorage.setItem('voiceSettings', JSON.stringify(defaultSettings));
+      }
+    }
+  }, []);
+
   // Voice feedback with enhanced quality
   const speak = useCallback((text: string) => {
+    // Ensure voices are loaded
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length === 0) {
+      // Voices not loaded yet, wait and retry
+      window.speechSynthesis.onvoiceschanged = () => {
+        speak(text);
+      };
+      return;
+    }
+
     const savedSettings = localStorage.getItem('voiceSettings');
-    const settings = savedSettings ? JSON.parse(savedSettings) : {
-      voiceName: '',
-      rate: 0.85,
-      pitch: 1.0,
-      volume: 1.0
+    let settings: {
+      voiceName: string;
+      rate: number;
+      pitch: number;
+      volume: number;
     };
+    
+    if (savedSettings) {
+      settings = JSON.parse(savedSettings);
+    } else {
+      // Initialize default for new users
+      const hindiVoice = voices.find(v => v.lang === 'hi-IN' && v.name.includes('Google'));
+      settings = {
+        voiceName: hindiVoice?.name || '',
+        rate: 0.85,
+        pitch: 1.0,
+        volume: 1.0
+      };
+      // Save default settings
+      localStorage.setItem('voiceSettings', JSON.stringify(settings));
+    }
     
     const utterance = new SpeechSynthesisUtterance(text);
     
-    // Get available voices
-    const voices = window.speechSynthesis.getVoices();
-    
-    // Use saved voice or default to Hindi female
+    // Apply voice
     if (settings.voiceName) {
       const selectedVoice = voices.find(v => v.name === settings.voiceName);
       if (selectedVoice) {
         utterance.voice = selectedVoice;
-      }
-    } else {
-      // Default to Google Hindi (female voice)
-      const hindiVoice = voices.find(v => v.lang === 'hi-IN' && v.name.includes('Google'));
-      if (hindiVoice) {
-        utterance.voice = hindiVoice;
       }
     }
     
@@ -317,12 +352,36 @@ export const useEnhancedVoiceNavigation = () => {
 
     // === READING COMMANDS ===
     {
-      patterns: ['read page', 'read this page', 'start reading', 'read full page'],
+      patterns: ['read page', 'read this page', 'read headings'],
       action: () => {
-        speak('Starting to read page');
-        window.dispatchEvent(new Event('startReading'));
+        speak('Reading page headings');
+        window.dispatchEvent(new Event('readHeadings'));
       },
-      description: 'Start reading current page'
+      description: 'Read only headings on current page'
+    },
+    {
+      patterns: ['read', 'read section', 'read component'],
+      action: (transcript) => {
+        // Extract component name after "read"
+        const match = transcript.match(/read\s+(.+)/i);
+        if (match) {
+          const componentName = match[1]
+            .replace(/section|component|area|part/gi, '')
+            .trim();
+          
+          // Avoid triggering on "read page" or similar
+          if (componentName && 
+              componentName !== 'page' && 
+              componentName !== 'this page' &&
+              componentName !== 'headings') {
+            speak(`Reading ${componentName}`);
+            window.dispatchEvent(new CustomEvent('readComponent', { 
+              detail: { name: componentName } 
+            }));
+          }
+        }
+      },
+      description: 'Read specific component by name'
     },
     {
       patterns: ['stop reading', 'stop'],
@@ -515,8 +574,23 @@ export const useEnhancedVoiceNavigation = () => {
     }
   }, [isWakeWordMode, commands, speak]);
 
-  // Initialize speech recognition
+  // Initialize speech recognition and default voice
   useEffect(() => {
+    // Initialize default voice settings for new users
+    const initVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        initializeDefaultVoice();
+      }
+    };
+
+    // Load voices
+    if (window.speechSynthesis.getVoices().length > 0) {
+      initVoices();
+    } else {
+      window.speechSynthesis.onvoiceschanged = initVoices;
+    }
+
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       console.error('Speech recognition not supported');
       return;
@@ -561,7 +635,7 @@ export const useEnhancedVoiceNavigation = () => {
     return () => {
       recognition.stop();
     };
-  }, [isListening, isWakeWordMode, processCommand]);
+  }, [isListening, isWakeWordMode, processCommand, initializeDefaultVoice]);
 
   // Start/stop listening
   const toggleListening = useCallback(() => {

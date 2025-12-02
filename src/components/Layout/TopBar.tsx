@@ -34,7 +34,7 @@ export const TopBar: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { isListening, toggleListening } = useVoiceNavigation();
-  const { isReading, isPaused, startReading, stopReading, pauseReading, resumeReading } = useDocumentReader();
+  const { isReading, isPaused, readHeadings, readComponent, stopReading, pauseReading, resumeReading } = useDocumentReader();
   
   // Voice nav enabled state (stored in localStorage)
   const [voiceNavEnabled, setVoiceNavEnabled] = useState(() => {
@@ -113,9 +113,38 @@ export const TopBar: React.FC = () => {
         stopReading();
       }
     } else {
-      startReading();
+      readHeadings(); // Read only headings, not full page
     }
   };
+
+  // Listen for voice command events
+  React.useEffect(() => {
+    const handleReadHeadings = () => {
+      readHeadings();
+    };
+
+    const handleReadComponent = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const componentName = customEvent.detail?.name;
+      if (componentName) {
+        readComponent(componentName);
+      }
+    };
+
+    const handleStopReading = () => {
+      stopReading();
+    };
+
+    window.addEventListener('readHeadings', handleReadHeadings);
+    window.addEventListener('readComponent', handleReadComponent as EventListener);
+    window.addEventListener('stopReading', handleStopReading);
+
+    return () => {
+      window.removeEventListener('readHeadings', handleReadHeadings);
+      window.removeEventListener('readComponent', handleReadComponent as EventListener);
+      window.removeEventListener('stopReading', handleStopReading);
+    };
+  }, [readHeadings, readComponent, stopReading]);
 
   const mockNotifications = [
     { id: 1, message: 'New lesson available', time: '5 min ago' },

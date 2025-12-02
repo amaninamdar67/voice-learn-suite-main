@@ -27,7 +27,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Profile fetch error:', error);
+        setLoading(false);
+        return; // Keep session, just stop loading
+      }
 
       if (profileData) {
         // Check if user's domain is active
@@ -40,7 +44,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           if (domain && !domain.is_active) {
             await supabase.auth.signOut();
-            throw new Error('Your organization/domain is currently inactive. Please contact your administrator.');
+            setUser(null);
+            setProfile(null);
+            setLoading(false);
+            return;
           }
         }
 
@@ -57,9 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Error loading profile:', error);
-      // Don't throw on page load - just clear state
-      setUser(null);
-      setProfile(null);
+      // Keep session even on error
     } finally {
       setLoading(false);
     }
