@@ -10,7 +10,6 @@ import {
   Box,
   Tooltip,
   Divider,
-  Button,
 } from '@mui/material';
 import {
   Notifications,
@@ -18,15 +17,14 @@ import {
   Logout,
   Settings as SettingsIcon,
   SmartToy,
-  Mic,
-  MicOff,
-  VolumeUp,
-  VolumeOff,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { Mic, MicOff } from '@mui/icons-material';
+import { Button } from '@mui/material';
+// Using Web Speech API for now (works immediately, no server needed)
+// Switch to Whisper later: import { useWhisperVoiceNavigation as useEnhancedVoiceNavigation } from '../../hooks/useWhisperVoiceNavigation';
 import { useEnhancedVoiceNavigation } from '../../hooks/useEnhancedVoiceNavigation';
-import { useDocumentReader } from '../../hooks/useDocumentReader';
 
 export const TopBar: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -34,57 +32,27 @@ export const TopBar: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { isListening, toggleListening } = useEnhancedVoiceNavigation();
-  const { isReading, isPaused, readHeadings, readComponent, stopReading, pauseReading, resumeReading } = useDocumentReader();
   
-  // Voice nav enabled state (stored in localStorage)
+  // Voice nav enabled state
   const [voiceNavEnabled, setVoiceNavEnabled] = useState(() => {
     const saved = localStorage.getItem('voiceNavEnabled');
     return saved !== 'false'; // Default to true
   });
-
-
-
-  // Listen for spacebar press event
-  React.useEffect(() => {
-    const handleSpacebarPress = () => {
-      // Trigger the same toggle function as the button
-      toggleListening();
-    };
-
-    window.addEventListener('voiceNavSpacebarPressed', handleSpacebarPress);
-    return () => window.removeEventListener('voiceNavSpacebarPressed', handleSpacebarPress);
-  }, [toggleListening]);
 
   const handleToggleVoiceNav = () => {
     const newValue = !voiceNavEnabled;
     setVoiceNavEnabled(newValue);
     localStorage.setItem('voiceNavEnabled', String(newValue));
     
-    // If turning off, also stop listening
+    // If turning off and currently listening, stop
     if (!newValue && isListening) {
       toggleListening();
     }
     
-    // Dispatch custom event to notify all listeners
     window.dispatchEvent(new Event('voiceNavToggled'));
-    
-    // Simple announcement - only when turning ON
-    if (newValue && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance('On');
-      utterance.rate = 1.0;
-      
-      // Use US English Female voice
-      const voices = window.speechSynthesis.getVoices();
-      const usVoice = voices.find(v => 
-        v.lang === 'en-US' && 
-        (v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Google US English'))
-      );
-      if (usVoice) utterance.voice = usVoice;
-      
-      window.speechSynthesis.speak(utterance);
-    }
   };
+
+  // Spacebar is handled in the hook itself
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -117,47 +85,6 @@ export const TopBar: React.FC = () => {
     window.dispatchEvent(new Event('open-ai-tutor'));
   };
 
-  const handleReadPage = () => {
-    if (isReading) {
-      if (isPaused) {
-        resumeReading();
-      } else {
-        stopReading();
-      }
-    } else {
-      readHeadings(); // Read only headings, not full page
-    }
-  };
-
-  // Listen for voice command events
-  React.useEffect(() => {
-    const handleReadHeadings = () => {
-      readHeadings();
-    };
-
-    const handleReadComponent = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      const componentName = customEvent.detail?.name;
-      if (componentName) {
-        readComponent(componentName);
-      }
-    };
-
-    const handleStopReading = () => {
-      stopReading();
-    };
-
-    window.addEventListener('readHeadings', handleReadHeadings);
-    window.addEventListener('readComponent', handleReadComponent as EventListener);
-    window.addEventListener('stopReading', handleStopReading);
-
-    return () => {
-      window.removeEventListener('readHeadings', handleReadHeadings);
-      window.removeEventListener('readComponent', handleReadComponent as EventListener);
-      window.removeEventListener('stopReading', handleStopReading);
-    };
-  }, [readHeadings, readComponent, stopReading]);
-
   const mockNotifications = [
     { id: 1, message: 'New lesson available', time: '5 min ago' },
     { id: 2, message: 'Quiz deadline approaching', time: '1 hour ago' },
@@ -180,7 +107,7 @@ export const TopBar: React.FC = () => {
         <Box sx={{ flexGrow: 1 }} />
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {/* Voice Navigation Toggle - Wide Rectangular Button */}
+          {/* Voice Navigation ON/OFF Toggle */}
           <Tooltip title={voiceNavEnabled ? 'Click to disable Voice Navigation' : 'Click to enable Voice Navigation'}>
             <Button
               variant={voiceNavEnabled ? 'contained' : 'outlined'}
@@ -232,26 +159,6 @@ export const TopBar: React.FC = () => {
                 {isListening ? 'Listening...' : 'Voice Nav'}
               </Button>
             </span>
-          </Tooltip>
-
-          {/* Read Page Button */}
-          <Tooltip title={isReading ? 'Stop reading page' : 'Read page content aloud'}>
-            <Button
-              variant={isReading ? 'contained' : 'outlined'}
-              color={isReading ? 'error' : 'info'}
-              startIcon={isReading ? <VolumeOff /> : <VolumeUp />}
-              onClick={handleReadPage}
-              sx={{
-                height: 36,
-                animation: isReading ? 'pulse 1.5s infinite' : 'none',
-                '@keyframes pulse': {
-                  '0%, 100%': { transform: 'scale(1)' },
-                  '50%': { transform: 'scale(1.05)' },
-                },
-              }}
-            >
-              {isReading ? 'Stop' : 'Read Page'}
-            </Button>
           </Tooltip>
 
           <Tooltip title="AI Tutor">

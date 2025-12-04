@@ -1,50 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-// TypeScript declarations for Web Speech API
-interface SpeechRecognition extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  maxAlternatives: number;
-  onresult: (event: SpeechRecognitionEvent) => void;
-  onerror: (event: SpeechRecognitionErrorEvent) => void;
-  onend: () => void;
-  onstart: () => void;
-  start: () => void;
-  stop: () => void;
-}
-
-interface SpeechRecognitionEvent {
-  results: SpeechRecognitionResultList;
-}
-
-interface SpeechRecognitionResultList {
-  length: number;
-  item(index: number): SpeechRecognitionResult;
-  [index: number]: SpeechRecognitionResult;
-}
-
-interface SpeechRecognitionResult {
-  [index: number]: SpeechRecognitionAlternative;
-  length: number;
-}
-
-interface SpeechRecognitionAlternative {
-  transcript: string;
-  confidence: number;
-}
-
-interface SpeechRecognitionErrorEvent extends Event {
-  error: string;
-}
-
-declare global {
-  interface Window {
-    SpeechRecognition: new () => SpeechRecognition;
-    webkitSpeechRecognition: new () => SpeechRecognition;
-  }
-}
 
 interface VoiceCommand {
   patterns: string[];
@@ -52,23 +7,27 @@ interface VoiceCommand {
   description: string;
 }
 
-export const useEnhancedVoiceNavigation = () => {
+export const useWhisperVoiceNavigation = () => {
   const navigate = useNavigate();
   const [isListening, setIsListening] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [lastCommand, setLastCommand] = useState('');
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const isRecognitionActiveRef = useRef(false);
-  const isListeningRef = useRef(false);
+  const [error, setError] = useState<string | null>(null);
   
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const isListeningRef = useRef(false);
+
   const voiceFeedbackEnabled = localStorage.getItem('voiceFeedbackEnabled') !== 'false';
 
+  // Voice feedback
   const speak = useCallback((text: string) => {
     if (!voiceFeedbackEnabled) return;
-    window.speechSynthesis.cancel();
     
-    const voices = window.speechSynthesis.getVoices();
+    window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     
+    const voices = window.speechSynthesis.getVoices();
     const selectedVoiceName = localStorage.getItem('selectedVoice');
     let selectedVoice = voices.find(v => v.name === selectedVoiceName);
     
@@ -86,6 +45,7 @@ export const useEnhancedVoiceNavigation = () => {
     window.speechSynthesis.speak(utterance);
   }, [voiceFeedbackEnabled]);
 
+  // Helper: Convert word numbers to digits
   const parseNumber = (word: string): number => {
     const numbers: { [key: string]: number } = {
       'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
@@ -94,6 +54,7 @@ export const useEnhancedVoiceNavigation = () => {
     return numbers[word.toLowerCase()] || parseInt(word);
   };
 
+  // Command definitions (same as before)
   const commands: VoiceCommand[] = [
     {
       patterns: ['dashboard', 'home', 'go to dashboard'],
@@ -112,7 +73,7 @@ export const useEnhancedVoiceNavigation = () => {
       description: 'Navigate to settings'
     },
     {
-      patterns: ['leaderboard', 'rankings'],
+      patterns: ['leaderboard', 'rankings', 'go to leaderboard'],
       action: () => {
         navigate('/leaderboard');
         speak('Opening leaderboard');
@@ -120,7 +81,7 @@ export const useEnhancedVoiceNavigation = () => {
       description: 'Navigate to leaderboard'
     },
     {
-      patterns: ['lessons', 'study materials'],
+      patterns: ['lessons', 'study materials', 'go to lessons'],
       action: () => {
         navigate('/lessons');
         speak('Opening study materials');
@@ -128,7 +89,7 @@ export const useEnhancedVoiceNavigation = () => {
       description: 'Navigate to study materials'
     },
     {
-      patterns: ['courses', 'videos', 'video lessons'],
+      patterns: ['courses', 'video lessons', 'videos'],
       action: () => {
         navigate('/student/video-lessons');
         speak('Opening courses');
@@ -160,6 +121,22 @@ export const useEnhancedVoiceNavigation = () => {
       description: 'Navigate to community'
     },
     {
+      patterns: ['recorded videos', 'recorded classes'],
+      action: () => {
+        navigate('/student/recorded-videos');
+        speak('Opening recorded classes');
+      },
+      description: 'Navigate to recorded videos'
+    },
+    {
+      patterns: ['live classes', 'live'],
+      action: () => {
+        navigate('/student/live-classes');
+        speak('Opening live classes');
+      },
+      description: 'Navigate to live classes'
+    },
+    {
       patterns: ['back', 'go back'],
       action: () => {
         window.history.back();
@@ -184,14 +161,31 @@ export const useEnhancedVoiceNavigation = () => {
       description: 'Scroll down'
     },
     {
+      patterns: ['read page', 'read headings'],
+      action: () => {
+        speak('Reading page headings');
+        window.dispatchEvent(new Event('readHeadings'));
+      },
+      description: 'Read page headings'
+    },
+    {
+      patterns: ['stop reading', 'stop'],
+      action: () => {
+        window.speechSynthesis.cancel();
+        speak('Stopped');
+      },
+      description: 'Stop reading'
+    },
+    {
       patterns: ['help', 'commands'],
       action: () => {
-        speak('Available commands: Dashboard, Settings, Courses, Quiz, Assignments, Community, Back, Scroll up, Scroll down, and more');
+        speak('Available commands: Dashboard, Settings, Courses, Quiz, Assignments, Community, Back, Scroll up, Scroll down, Read page, and more');
       },
       description: 'Show help'
     }
   ];
 
+  // Process command
   const processCommand = useCallback((transcript: string) => {
     const lowerTranscript = transcript.toLowerCase().trim();
     setLastCommand(transcript);
@@ -210,97 +204,106 @@ export const useEnhancedVoiceNavigation = () => {
     }
   }, [commands, speak]);
 
-  useEffect(() => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      console.error('Speech recognition not supported');
-      return;
+  // Send audio to Whisper server
+  const transcribeAudio = useCallback(async (audioBlob: Blob) => {
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'audio.webm');
+
+      const response = await fetch('http://localhost:3002/transcribe', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Transcription failed');
+      }
+
+      const data = await response.json();
+      if (data.transcript) {
+        processCommand(data.transcript);
+      }
+    } catch (err) {
+      console.error('Transcription error:', err);
+      setError('Failed to transcribe audio');
+      speak('Transcription failed');
     }
+  }, [processCommand, speak]);
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    
-    recognition.continuous = true;
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
-    recognition.maxAlternatives = 1;
-
-    recognition.onresult = (event) => {
-      const last = event.results.length - 1;
-      const transcript = event.results[last][0].transcript;
-      processCommand(transcript);
-    };
-
-    recognition.onstart = () => {
-      isRecognitionActiveRef.current = true;
-    };
-
-    recognition.onerror = (event) => {
-      console.error('Speech recognition error:', event.error);
-      isRecognitionActiveRef.current = false;
-    };
-
-    recognition.onend = () => {
-      isRecognitionActiveRef.current = false;
+  // Start recording
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
       
-      if (isListeningRef.current) {
-        setTimeout(() => {
-          if (isListeningRef.current && !isRecognitionActiveRef.current) {
-            try {
-              recognition.start();
-            } catch (e) {
-              console.log('Could not restart:', e);
-            }
-          }
-        }, 500);
-      }
-    };
-
-    recognitionRef.current = recognition;
-
-    return () => {
-      if (recognition) {
-        try {
-          recognition.stop();
-        } catch (e) {
-          // Ignore
+      audioChunksRef.current = [];
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
         }
-      }
-    };
-  }, [processCommand]);
+      };
 
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        transcribeAudio(audioBlob);
+        
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      mediaRecorderRef.current = mediaRecorder;
+      setIsRecording(true);
+      setError(null);
+    } catch (err) {
+      console.error('Recording error:', err);
+      setError('Failed to start recording');
+      speak('Microphone access denied');
+    }
+  }, [transcribeAudio, speak]);
+
+  // Stop recording
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  }, []);
+
+  // Toggle listening (continuous mode)
   const toggleListening = useCallback(() => {
-    if (!recognitionRef.current) return;
-
     if (isListeningRef.current) {
+      // Turn OFF
       isListeningRef.current = false;
       setIsListening(false);
-      isRecognitionActiveRef.current = false;
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {
-        console.log('Stop error:', e);
-      }
-      window.speechSynthesis.cancel();
+      stopRecording();
       speak('Mic off');
     } else {
+      // Turn ON
       isListeningRef.current = true;
       setIsListening(true);
-      window.speechSynthesis.cancel();
-      
-      if (!isRecognitionActiveRef.current) {
-        try {
-          recognitionRef.current.start();
-          speak('Listening');
-        } catch (e) {
-          console.log('Start error:', e);
-          isListeningRef.current = false;
-          setIsListening(false);
-          isRecognitionActiveRef.current = false;
-        }
-      }
+      speak('Listening');
+      startContinuousListening();
     }
-  }, [speak]);
+  }, [speak, stopRecording]);
 
+  // Continuous listening loop
+  const startContinuousListening = useCallback(async () => {
+    while (isListeningRef.current) {
+      await startRecording();
+      
+      // Record for 3 seconds
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      stopRecording();
+      
+      // Wait 500ms before next recording
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  }, [startRecording, stopRecording]);
+
+  // Spacebar toggle
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
@@ -318,7 +321,9 @@ export const useEnhancedVoiceNavigation = () => {
 
   return {
     isListening,
+    isRecording,
     lastCommand,
+    error,
     toggleListening,
     commands
   };
