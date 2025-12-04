@@ -9,6 +9,7 @@ interface SpeechRecognition extends EventTarget {
   onresult: (event: SpeechRecognitionEvent) => void;
   onerror: (event: SpeechRecognitionErrorEvent) => void;
   onend: () => void;
+  onstart: () => void;
   start: () => void;
   stop: () => void;
 }
@@ -56,8 +57,9 @@ export const useEnhancedVoiceNavigation = () => {
   const [isWakeWordMode, setIsWakeWordMode] = useState(false);
   const [lastCommand, setLastCommand] = useState('');
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const isRecognitionActiveRef = useRef(false); // Track if recognition is actually running
 
-  // Simple voice feedback - ONE voice for everything (US English Female)
+  // Voice feedback with Hindi as default
   const speak = useCallback((text: string) => {
     // Cancel any ongoing speech first to prevent overlap
     window.speechSynthesis.cancel();
@@ -75,16 +77,24 @@ export const useEnhancedVoiceNavigation = () => {
 
       const utterance = new SpeechSynthesisUtterance(text);
       
-      // Use US English Female voice for EVERYTHING (consistency)
-      const usVoice = voices.find(v => 
-        v.lang === 'en-US' && 
-        (v.name.includes('Female') || 
-         v.name.includes('Zira') ||
-         v.name.includes('Google US English'))
-      ) || voices.find(v => v.lang.startsWith('en-US')) || voices[0];
+      // Get selected voice from localStorage or use Hindi as default
+      const selectedVoiceName = localStorage.getItem('selectedVoice');
       
-      if (usVoice) {
-        utterance.voice = usVoice;
+      let selectedVoice;
+      if (selectedVoiceName) {
+        selectedVoice = voices.find(v => v.name === selectedVoiceName);
+      }
+      
+      // Default to Google Hindi if no selection or voice not found
+      if (!selectedVoice) {
+        selectedVoice = voices.find(v => 
+          v.name.includes('Google हिन्दी') || 
+          v.name.includes('Google Hindi')
+        ) || voices.find(v => v.lang.startsWith('hi')) || voices[0];
+      }
+      
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
       }
       
       // Consistent settings
@@ -717,6 +727,7 @@ export const useEnhancedVoiceNavigation = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     
+    // Keep listening continuously - don't stop after each command
     recognition.continuous = true;
     recognition.interimResults = false;
     recognition.lang = 'en-US';
@@ -727,25 +738,19 @@ export const useEnhancedVoiceNavigation = () => {
       processCommand(transcript);
     };
 
+    recognition.onstart = () => {
+      isRecognitionActiveRef.current = true;
+    };
+
     recognition.onerror = (event) => {
       console.error('Speech recognition error:', event.error);
-      if (event.error === 'no-speech') {
-        // Restart recognition
-        if (isListening || isWakeWordMode) {
-          recognition.start();
-        }
-      }
+      isRecognitionActiveRef.current = false;
+      // NO AUTO-RESTART - User controls mic manually
     };
 
     recognition.onend = () => {
-      // Auto-restart if still listening or in wake-word mode
-      if (isListening || isWakeWordMode) {
-        try {
-          recognition.start();
-        } catch (e) {
-          console.error('Failed to restart recognition:', e);
-        }
-      }
+      isRecognitionActiveRef.current = false;
+      // NO AUTO-RESTART - User controls mic manually
     };
 
     recognitionRef.current = recognition;
@@ -761,30 +766,36 @@ export const useEnhancedVoiceNavigation = () => {
     };
   }, [isListening, isWakeWordMode, processCommand]);
 
-  // Start/stop listening - SIMPLIFIED (no double "Stopped")
+  // SIMPLE toggle - just ON or OFF, no auto-restart
   const toggleListening = useCallback(() => {
-    if (!recognitionRef.current) {
-      console.error('Recognition not initialized');
-      return;
-    }
+    if (!recognitionRef.current) return;
 
-    try {
-      if (isListening) {
-        // Stop listening - NO SPEAK HERE (TopBar will handle it)
-        recognitionRef.current.stop();
-        setIsListening(false);
-        window.speechSynthesis.cancel(); // Stop any ongoing speech
-      } else {
-        // Start listening
-        window.speechSynthesis.cancel(); // Clear any previous speech
-        recognitionRef.current.start();
-        setIsListening(true);
-        speak('Listening');
-      }
-    } catch (e) {
-      console.error('Toggle error:', e);
-      // Reset state on error
+    if (isListening) {
+      // Turn OFF
       setIsListening(false);
+      isRecognitionActiveRef.current = false;
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        console.log('Stop error:', e);
+      }
+      window.speechSynthesis.cancel();
+      speak('Mic off');
+    } else {
+      // Turn ON
+      setIsListening(true);
+      window.speechSynthesis.cancel();
+      
+      if (!isRecognitionActiveRef.current) {
+        try {
+          recognitionRef.current.start();
+          speak('Listening');
+        } catch (e) {
+          console.log('Start error:', e);
+          setIsListening(false);
+          isRecognitionActiveRef.current = false;
+        }
+      }
     }
   }, [isListening, speak]);
 

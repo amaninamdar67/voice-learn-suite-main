@@ -30,24 +30,24 @@ export const VoiceSettingsPanel = () => {
     const loadVoices = () => {
       const availableVoices = window.speechSynthesis.getVoices();
       
-      // Filter to only show the 4 allowed voices
+      // Filter to only show the 4 specific voices
       const allowedVoices = availableVoices.filter(v => 
-        (v.name.includes('Google') && v.lang === 'hi-IN') ||  // Google Hindi
-        (v.name.includes('Google US English') && v.lang === 'en-US') ||  // Google US English
-        (v.name.includes('Google UK English Female') && v.lang === 'en-GB') ||  // Google UK Female
-        (v.name.includes('Google UK English Male') && v.lang === 'en-GB')  // Google UK Male
+        v.name === 'Google हिन्दी' ||  // Google Hindi (default)
+        v.name === 'Google US English' ||  // Google US English
+        v.name === 'Google UK English Female' ||  // Google UK Female
+        v.name === 'Google UK English Male'  // Google UK Male
       );
       
       setVoices(allowedVoices);
       
-      // Set Hindi female as default if not set
+      // Set Google Hindi as default if not set
       if (!settings.voiceName && allowedVoices.length > 0) {
-        // Find Hindi voice (should be female by default from Google)
-        const hindiVoice = allowedVoices.find(v => v.lang === 'hi-IN');
+        const hindiVoice = allowedVoices.find(v => v.name === 'Google हिन्दी');
         if (hindiVoice) {
           const newSettings = { ...settings, voiceName: hindiVoice.name };
           setSettings(newSettings);
           localStorage.setItem('voiceSettings', JSON.stringify(newSettings));
+          localStorage.setItem('selectedVoice', hindiVoice.name);
         }
       }
     };
@@ -60,6 +60,11 @@ export const VoiceSettingsPanel = () => {
     const newSettings = { ...settings, [key]: value };
     setSettings(newSettings);
     localStorage.setItem('voiceSettings', JSON.stringify(newSettings));
+    
+    // Also save voice name separately for easy access
+    if (key === 'voiceName') {
+      localStorage.setItem('selectedVoice', value);
+    }
     
     // Dispatch event to notify other components
     window.dispatchEvent(new CustomEvent('voiceSettingsChanged', { detail: newSettings }));
