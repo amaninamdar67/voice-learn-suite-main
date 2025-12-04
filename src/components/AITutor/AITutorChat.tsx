@@ -1,216 +1,251 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
   Box,
+  Paper,
   TextField,
   IconButton,
   Typography,
-  Paper,
-  Fab,
-  Avatar,
   CircularProgress,
+  Avatar,
+  Chip,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import {
-  Close,
   Send,
-  SmartToy,
   Mic,
-  VolumeUp,
-  Stop,
+  MicOff,
+  SmartToy,
+  Person,
+  Clear,
 } from '@mui/icons-material';
-import { useSpeech } from '../../hooks/useSpeech';
-
-interface Message {
-  id: string;
-  text: string;
-  sender: 'user' | 'ai';
-  timestamp: Date;
-}
+import { useOllamaChat } from '../../hooks/useOllamaChat';
 
 export const AITutorChat: React.FC = () => {
-  const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: 'Hello! I\'m your AI Tutor. How can I help you today?',
-      sender: 'ai',
-      timestamp: new Date(),
-    },
-  ]);
   const [input, setInput] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('qwen2.5:7b');
+  const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { speak, stop, isSpeaking } = useSpeech();
+  const recognitionRef = useRef<any>(null);
 
+  const { messages, isLoading, error, sendMessage, clearMessages } = useOllamaChat();
+
+  // Initialize speech recognition
   useEffect(() => {
-    const handleOpen = () => setOpen(true);
-    window.addEventListener('open-ai-tutor', handleOpen);
-    return () => window.removeEventListener('open-ai-tutor', handleOpen);
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'en-US';
+
+      recognitionRef.current.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setInput(transcript);
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onerror = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+    }
   }, []);
 
+  // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || isLoading) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: input,
-      sender: 'user',
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    const message = input;
     setInput('');
-    setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: `I understand you're asking about "${input}". Let me help you with that...`,
-        sender: 'ai',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, aiMessage]);
-      setIsLoading(false);
-    }, 1000);
+    try {
+      const response = await sendMessage(message, selectedModel);
+      
+      // Speak the response
+      if (window.speechSynthesis) {
+        const utterance = new SpeechSynthesisUtterance(response);
+        utterance.rate = 1.0;
+        utterance.volume = 0.8;
+        window.speechSynthesis.speak(utterance);
+      }
+    } catch (err) {
+      console.error('Failed to send message:', err);
+    }
   };
 
-  const handleVoiceInput = () => {
-    setIsRecording(!isRecording);
-    // Implement speech recognition here
-  };
+  const toggleVoiceInput = () => {
+    if (!recognitionRef.current) {
+      alert('Speech recognition not supported in this browser');
+      return;
+    }
 
-  const handleSpeak = (text: string) => {
-    if (isSpeaking) {
-      stop();
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
     } else {
-      speak(text);
+      recognitionRef.current.start();
+      setIsListening(true);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
     }
   };
 
   return (
-    <>
-      {/* Floating button hidden - AI Tutor accessible via top bar and voice commands */}
-      <Fab
-        color="primary"
-        sx={{
-          position: 'fixed',
-          bottom: 24,
-          right: 24,
-          zIndex: 1000,
-          display: 'none', // Hidden but component still works
-        }}
-        onClick={() => setOpen(true)}
-      >
-        <SmartToy />
-      </Fab>
-
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            height: '80vh',
-            display: 'flex',
-            flexDirection: 'column',
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Avatar sx={{ bgcolor: 'primary.main' }}>
-              <SmartToy />
-            </Avatar>
-            <Typography variant="h6">AI Tutor</Typography>
-          </Box>
-          <IconButton onClick={() => setOpen(false)}>
-            <Close />
-          </IconButton>
-        </DialogTitle>
-
-        <DialogContent sx={{ flex: 1, overflow: 'auto', p: 2 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {messages.map((message) => (
-              <Box
-                key={message.id}
-                sx={{
-                  display: 'flex',
-                  justifyContent: message.sender === 'user' ? 'flex-end' : 'flex-start',
-                }}
-              >
-                <Paper
-                  elevation={1}
-                  sx={{
-                    p: 2,
-                    maxWidth: '70%',
-                    bgcolor: message.sender === 'user' ? 'primary.main' : 'background.paper',
-                    color: message.sender === 'user' ? 'primary.contrastText' : 'text.primary',
-                    borderRadius: 2,
-                  }}
-                >
-                  <Typography variant="body2">{message.text}</Typography>
-                  {message.sender === 'ai' && (
-                    <IconButton
-                      size="small"
-                      sx={{ mt: 1 }}
-                      onClick={() => handleSpeak(message.text)}
-                    >
-                      {isSpeaking ? <Stop fontSize="small" /> : <VolumeUp fontSize="small" />}
-                    </IconButton>
-                  )}
-                </Paper>
-              </Box>
-            ))}
-            {isLoading && (
-              <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
-                <Paper elevation={1} sx={{ p: 2 }}>
-                  <CircularProgress size={20} />
-                </Paper>
-              </Box>
-            )}
-            <div ref={messagesEndRef} />
-          </Box>
-        </DialogContent>
-
-        <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <IconButton
-              color={isRecording ? 'error' : 'default'}
-              onClick={handleVoiceInput}
+    <Paper sx={{ height: '600px', display: 'flex', flexDirection: 'column', p: 2 }}>
+      {/* Header */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <SmartToy color="primary" />
+          <Typography variant="h6">AI Tutor</Typography>
+        </Box>
+        
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel>Model</InputLabel>
+            <Select
+              value={selectedModel}
+              label="Model"
+              onChange={(e) => setSelectedModel(e.target.value)}
             >
-              <Mic />
-            </IconButton>
-            <TextField
-              fullWidth
+              <MenuItem value="qwen2.5:7b">Qwen 2.5 (7B)</MenuItem>
+              <MenuItem value="qwen3:30b">Qwen 3 (30B)</MenuItem>
+              <MenuItem value="qwen3:8b">Qwen 3 (8B)</MenuItem>
+              <MenuItem value="qwen3:4b">Qwen 3 (4B)</MenuItem>
+              <MenuItem value="qwen3-vl:30b">Qwen 3 Vision (30B)</MenuItem>
+              <MenuItem value="qwen3-vl:8b">Qwen 3 Vision (8B)</MenuItem>
+              <MenuItem value="qwen3-vl:4b">Qwen 3 Vision (4B)</MenuItem>
+            </Select>
+          </FormControl>
+          
+          <IconButton onClick={clearMessages} size="small" title="Clear chat">
+            <Clear />
+          </IconButton>
+        </Box>
+      </Box>
+
+      {/* Suggested Questions */}
+      {messages.length === 0 && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            Try asking:
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            <Chip
+              label="Explain this topic"
               size="small"
-              placeholder="Ask me anything..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+              onClick={() => setInput('Can you explain this topic in simple terms?')}
             />
-            <IconButton color="primary" onClick={handleSend} disabled={!input.trim()}>
-              <Send />
-            </IconButton>
+            <Chip
+              label="Quiz me"
+              size="small"
+              onClick={() => setInput('Can you create a quiz to test my understanding?')}
+            />
+            <Chip
+              label="Summarize"
+              size="small"
+              onClick={() => setInput('Can you summarize the key points?')}
+            />
+            <Chip
+              label="Give examples"
+              size="small"
+              onClick={() => setInput('Can you give me some examples?')}
+            />
           </Box>
         </Box>
-      </Dialog>
-    </>
+      )}
+
+      {/* Messages */}
+      <Box sx={{ flex: 1, overflowY: 'auto', mb: 2 }}>
+        {messages.map((msg, index) => (
+          <Box
+            key={index}
+            sx={{
+              display: 'flex',
+              gap: 1,
+              mb: 2,
+              alignItems: 'flex-start',
+            }}
+          >
+            <Avatar sx={{ bgcolor: msg.role === 'user' ? 'primary.main' : 'secondary.main' }}>
+              {msg.role === 'user' ? <Person /> : <SmartToy />}
+            </Avatar>
+            <Paper
+              sx={{
+                p: 2,
+                flex: 1,
+                bgcolor: msg.role === 'user' ? 'primary.light' : 'background.paper',
+              }}
+            >
+              <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                {msg.content}
+              </Typography>
+            </Paper>
+          </Box>
+        ))}
+        
+        {isLoading && (
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Avatar sx={{ bgcolor: 'secondary.main' }}>
+              <SmartToy />
+            </Avatar>
+            <CircularProgress size={24} />
+            <Typography variant="body2" color="text.secondary">
+              AI is thinking...
+            </Typography>
+          </Box>
+        )}
+        
+        {error && (
+          <Typography color="error" variant="body2">
+            Error: {error}
+          </Typography>
+        )}
+        
+        <div ref={messagesEndRef} />
+      </Box>
+
+      {/* Input */}
+      <Box sx={{ display: 'flex', gap: 1 }}>
+        <TextField
+          fullWidth
+          multiline
+          maxRows={3}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder="Ask me anything... (or use voice)"
+          disabled={isLoading}
+        />
+        <IconButton
+          color={isListening ? 'error' : 'default'}
+          onClick={toggleVoiceInput}
+          disabled={isLoading}
+        >
+          {isListening ? <MicOff /> : <Mic />}
+        </IconButton>
+        <IconButton
+          color="primary"
+          onClick={handleSend}
+          disabled={!input.trim() || isLoading}
+        >
+          <Send />
+        </IconButton>
+      </Box>
+    </Paper>
   );
 };

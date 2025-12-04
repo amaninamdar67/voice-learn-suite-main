@@ -144,6 +144,14 @@ export const useEnhancedVoiceNavigation = () => {
       description: 'Navigate to quizzes'
     },
     {
+      patterns: ['ai tutor', 'tutor', 'ask ai', 'ai assistant'],
+      action: () => {
+        navigate('/student/ai-tutor');
+        speak('Opening AI Tutor');
+      },
+      description: 'Navigate to AI Tutor'
+    },
+    {
       patterns: ['assignments', 'projects'],
       action: () => {
         navigate('/projects');
@@ -323,3 +331,4 @@ export const useEnhancedVoiceNavigation = () => {
     commands
   };
 };
+

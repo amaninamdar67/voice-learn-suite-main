@@ -4,8 +4,9 @@ import { NavigateNext, Home } from '@mui/icons-material';
 import { useLocation, Link as RouterLink } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
-import { AITutorChat } from '../AITutor/AITutorChat';
+import { AITutorFab } from '../AITutor/AITutorFab';
 import { useSystemConfig } from '../../contexts/SystemConfigContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -102,7 +103,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         
         {children}
       </Box>
-      {isFeatureEnabled('aiTutor') && <AITutorChat />}
+      
+      {/* AI Tutor Floating Button - Always available for students */}
+      <AITutorFab />
     </Box>
   );
 };
