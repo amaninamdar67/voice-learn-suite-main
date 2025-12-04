@@ -96,15 +96,19 @@ export const VoiceSettingsPanel = () => {
         <FormControl fullWidth>
           <InputLabel>Voice</InputLabel>
           <Select
-            value={settings.voiceName}
+            value={voices.length > 0 ? settings.voiceName : ''}
             label="Voice"
             onChange={(e) => handleSettingChange('voiceName', e.target.value)}
           >
-            {voices.map((voice) => (
-              <MenuItem key={voice.name} value={voice.name}>
-                {voice.name}
-              </MenuItem>
-            ))}
+            {voices.length === 0 ? (
+              <MenuItem value="">Loading voices...</MenuItem>
+            ) : (
+              voices.map((voice) => (
+                <MenuItem key={voice.name} value={voice.name}>
+                  {voice.name}
+                </MenuItem>
+              ))
+            )}
           </Select>
         </FormControl>
 

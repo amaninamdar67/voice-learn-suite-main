@@ -5,26 +5,55 @@ export const usePageAnnouncement = (isVoiceNavActive: boolean) => {
   const location = useLocation();
 
   useEffect(() => {
-    // Only announce if voice navigation is active
-    if (!isVoiceNavActive) return;
+    // DISABLED: Commands already announce page changes
+    // This was causing double announcements
+    return;
     
     // Announce page changes for blind users
     const pageName = location.pathname.split('/').pop() || 'home';
     const announcement = `${pageName.replace('-', ' ')} page`;
     
-    // Use speech synthesis to announce
+    // Use speech synthesis to announce with Hindi voice
     if (window.speechSynthesis) {
       // Cancel any ongoing speech
       window.speechSynthesis.cancel();
       
-      // Create and speak announcement
-      const utterance = new SpeechSynthesisUtterance(announcement);
-      utterance.rate = 1.3;
-      utterance.volume = 0.7;
+      // Wait for voices to load
+      const speak = () => {
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length === 0) return;
+        
+        const utterance = new SpeechSynthesisUtterance(announcement);
+        
+        // Use selected voice from localStorage or Hindi default
+        const selectedVoiceName = localStorage.getItem('selectedVoice');
+        let selectedVoice = voices.find(v => v.name === selectedVoiceName);
+        
+        // Default to Google Hindi if no selection
+        if (!selectedVoice) {
+          selectedVoice = voices.find(v => 
+            v.name.includes('Google हिन्दी') || 
+            v.name.includes('Google Hindi')
+          ) || voices.find(v => v.lang.startsWith('hi')) || voices[0];
+        }
+        
+        if (selectedVoice) {
+          utterance.voice = selectedVoice;
+        }
+        
+        utterance.rate = 1.0;
+        utterance.volume = 1.0;
+        
+        window.speechSynthesis.speak(utterance);
+      };
       
       // Small delay to ensure page is ready
       setTimeout(() => {
-        window.speechSynthesis.speak(utterance);
+        if (window.speechSynthesis.getVoices().length > 0) {
+          speak();
+        } else {
+          window.speechSynthesis.onvoiceschanged = speak;
+        }
       }, 300);
     }
   }, [location, isVoiceNavActive]);

@@ -6,6 +6,7 @@ interface SpeechRecognition extends EventTarget {
   continuous: boolean;
   interimResults: boolean;
   lang: string;
+  maxAlternatives: number;
   onresult: (event: SpeechRecognitionEvent) => void;
   onerror: (event: SpeechRecognitionErrorEvent) => void;
   onend: () => void;
@@ -57,7 +58,8 @@ export const useEnhancedVoiceNavigation = () => {
   const [isWakeWordMode, setIsWakeWordMode] = useState(false);
   const [lastCommand, setLastCommand] = useState('');
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const isRecognitionActiveRef = useRef(false); // Track if recognition is actually running
+  const isRecognitionActiveRef = useRef(false);
+  const isListeningRef = useRef(false); // Track listening state without causing re-renders
 
   // Voice feedback with Hindi as default
   const speak = useCallback((text: string) => {
@@ -727,10 +729,11 @@ export const useEnhancedVoiceNavigation = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     
-    // Keep listening continuously - don't stop after each command
+    // IMPORTANT: continuous must be true AND we need proper restart logic
     recognition.continuous = true;
     recognition.interimResults = false;
     recognition.lang = 'en-US';
+    recognition.maxAlternatives = 1;
 
     recognition.onresult = (event) => {
       const last = event.results.length - 1;
@@ -740,17 +743,51 @@ export const useEnhancedVoiceNavigation = () => {
 
     recognition.onstart = () => {
       isRecognitionActiveRef.current = true;
+      console.log('🎤 Recognition started');
     };
 
     recognition.onerror = (event) => {
       console.error('Speech recognition error:', event.error);
       isRecognitionActiveRef.current = false;
-      // NO AUTO-RESTART - User controls mic manually
+      
+      // Handle specific errors
+      if (event.error === 'aborted') {
+        console.log('Recognition aborted - will not restart');
+        return;
+      }
+      
+      // For other errors, if user wants mic on, restart after delay (use ref)
+      if (isListeningRef.current && event.error === 'no-speech') {
+        setTimeout(() => {
+          if (isListeningRef.current && !isRecognitionActiveRef.current) {
+            try {
+              recognition.start();
+              console.log('🔄 Restarted after no-speech');
+            } catch (e) {
+              console.log('Could not restart');
+            }
+          }
+        }, 1000);
+      }
     };
 
     recognition.onend = () => {
+      console.log('🛑 Recognition ended');
       isRecognitionActiveRef.current = false;
-      // NO AUTO-RESTART - User controls mic manually
+      
+      // CRITICAL: Restart if user still wants mic on (use ref, not state)
+      if (isListeningRef.current) {
+        setTimeout(() => {
+          if (isListeningRef.current && !isRecognitionActiveRef.current) {
+            try {
+              recognition.start();
+              console.log('🔄 Restarted recognition');
+            } catch (e) {
+              console.log('Could not restart:', e);
+            }
+          }
+        }, 500);
+      }
     };
 
     recognitionRef.current = recognition;
@@ -764,14 +801,15 @@ export const useEnhancedVoiceNavigation = () => {
         }
       }
     };
-  }, [isListening, isWakeWordMode, processCommand]);
+  }, [processCommand]); // Removed isListening dependency to prevent recreation
 
-  // SIMPLE toggle - just ON or OFF, no auto-restart
+  // SIMPLE toggle - just ON or OFF
   const toggleListening = useCallback(() => {
     if (!recognitionRef.current) return;
 
-    if (isListening) {
+    if (isListeningRef.current) {
       // Turn OFF
+      isListeningRef.current = false;
       setIsListening(false);
       isRecognitionActiveRef.current = false;
       try {
@@ -783,6 +821,7 @@ export const useEnhancedVoiceNavigation = () => {
       speak('Mic off');
     } else {
       // Turn ON
+      isListeningRef.current = true;
       setIsListening(true);
       window.speechSynthesis.cancel();
       
@@ -792,12 +831,13 @@ export const useEnhancedVoiceNavigation = () => {
           speak('Listening');
         } catch (e) {
           console.log('Start error:', e);
+          isListeningRef.current = false;
           setIsListening(false);
           isRecognitionActiveRef.current = false;
         }
       }
     }
-  }, [isListening, speak]);
+  }, [speak]);
 
   // Spacebar toggle (only when not in input fields)
   useEffect(() => {
