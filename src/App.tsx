@@ -41,6 +41,7 @@ import LiveClassesView from "./pages/Student/LiveClassesView";
 import QuizzesView from "./pages/Student/QuizzesView";
 import QuizRankingsView from "./pages/Student/QuizRankingsView";
 import OverallRankings from "./pages/Student/OverallRankings";
+import { AITutor } from "./pages/Student/AITutor";
 
 // Community Pages
 import RecordedClassesCommunity from "./pages/Community/RecordedClassesCommunity";
@@ -322,6 +323,7 @@ const App = () => (
                   </PrivateRoute>
                 }
               />
+
               <Route
                 path="/leaderboard"
                 element={

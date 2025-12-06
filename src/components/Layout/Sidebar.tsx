@@ -23,6 +23,7 @@ import {
   People,
   Analytics,
   VideoLibrary,
+  SmartToy,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -65,6 +66,7 @@ const menuItems: MenuItem[] = [
   { text: 'Courses', icon: <School />, path: '/student/video-lessons', roles: ['student'] },
   { text: 'Live Classes', icon: <VideoLibrary />, path: '/student/live-classes', roles: ['student'] },
   { text: 'Take Quiz', icon: <Quiz />, path: '/student/quizzes', roles: ['student'] },
+  { text: 'AI Tutor', icon: <SmartToy />, path: '#ai-tutor', roles: ['student'] },
   { text: 'Study Materials', icon: <School />, path: '/lessons', roles: ['student'] },
   { text: 'Assignments', icon: <Assignment />, path: '/projects', roles: ['student'] },
   { text: 'Leaderboard', icon: <Quiz />, path: '/leaderboard', roles: ['student'] },
