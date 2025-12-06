@@ -78,8 +78,6 @@ app.post('/api/users/create', async (req, res) => {
         id: authData.user.id,
         ...profile,
         // Ensure domain fields are included
-        domain_id: profile.domain_id,
-        department_id: profile.department_id,
         sub_domain_id: profile.sub_domain_id,
       }]);
 
@@ -389,11 +387,11 @@ app.get('/api/departments', async (req, res) => {
 // Create department
 app.post('/api/departments/create', async (req, res) => {
   try {
-    const { domain_id, name, description } = req.body;
+    const { domain_id, sub_domain_id, name, description } = req.body;
     
     const { data, error } = await supabase
       .from('departments')
-      .insert([{ domain_id, name, description }])
+      .insert([{ domain_id, sub_domain_id, name, description }])
       .select()
       .single();
     
@@ -410,11 +408,11 @@ app.post('/api/departments/create', async (req, res) => {
 app.put('/api/departments/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, is_active } = req.body;
+    const { name, description, is_active, sub_domain_id } = req.body;
     
     const { data, error } = await supabase
       .from('departments')
-      .update({ name, description, is_active })
+      .update({ name, description, is_active, sub_domain_id })
       .eq('id', id)
       .select()
       .single();
@@ -476,11 +474,11 @@ app.get('/api/subdomains', async (req, res) => {
 // Create sub-domain
 app.post('/api/subdomains/create', async (req, res) => {
   try {
-    const { domain_id, name, description, type } = req.body;
+    const { domain_id, name, description, type, department_name, semester_name } = req.body;
     
     const { data, error } = await supabase
       .from('sub_domains')
-      .insert([{ domain_id, name, description, type }])
+      .insert([{ domain_id, name, description, type, department_name, semester_name }])
       .select()
       .single();
     
@@ -497,11 +495,11 @@ app.post('/api/subdomains/create', async (req, res) => {
 app.put('/api/subdomains/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, type, is_active } = req.body;
+    const { name, description, type, is_active, department_name, semester_name } = req.body;
     
     const { data, error } = await supabase
       .from('sub_domains')
-      .update({ name, description, type, is_active })
+      .update({ name, description, type, is_active, department_name, semester_name })
       .eq('id', id)
       .select()
       .single();
@@ -567,11 +565,11 @@ app.get('/api/semesters', async (req, res) => {
 // Create semester
 app.post('/api/semesters/create', async (req, res) => {
   try {
-    const { domain_id, department_id, name, description } = req.body;
+    const { domain_id, department_id, sub_domain_id, name, description } = req.body;
     
     const { data, error } = await supabase
       .from('semesters')
-      .insert([{ domain_id, department_id, name, description }])
+      .insert([{ domain_id, department_id, sub_domain_id, name, description }])
       .select()
       .single();
     
@@ -588,11 +586,11 @@ app.post('/api/semesters/create', async (req, res) => {
 app.put('/api/semesters/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, department_id, is_active } = req.body;
+    const { name, description, department_id, is_active, sub_domain_id } = req.body;
     
     const { data, error } = await supabase
       .from('semesters')
-      .update({ name, description, department_id, is_active })
+      .update({ name, description, department_id, is_active, sub_domain_id })
       .eq('id', id)
       .select()
       .single();
@@ -1024,6 +1022,179 @@ app.put('/api/community/posts/:id', updateCommunityPost);
 app.delete('/api/community/posts/:id', deleteCommunityPost);
 app.put('/api/community/replies/:id', updateCommunityReply);
 app.delete('/api/community/replies/:id', deleteCommunityReply);
+
+// ==================== AI TUTOR ENDPOINTS (OLLAMA) ====================
+
+// AI Tutor chat endpoint
+app.post('/api/ai-tutor/chat', async (req, res) => {
+  try {
+    const { message, model = 'deepseek-r1:1.5b' } = req.body;
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    console.log(`[AI Tutor] Received message: "${message.substring(0, 50)}..." using model: ${model}`);
+
+    // Call Ollama API running on localhost:11434
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+
+    try {
+      console.log(`[AI Tutor] Calling Ollama with model: ${model}`);
+      
+      const response = await fetch('http://localhost:11434/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: model,
+          prompt: message,
+          stream: false,
+          temperature: 0.7,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[AI Tutor] HTTP Error ${response.status}:`, errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // Read the entire response as text first
+      const text = await response.text();
+      
+      if (!text || text.trim().length === 0) {
+        console.error('[AI Tutor] Empty response from Ollama');
+        return res.status(500).json({ error: 'Empty response from Ollama' });
+      }
+      
+      // Parse JSON
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (parseError) {
+        console.error('[AI Tutor] JSON parse failed');
+        console.error('[AI Tutor] Response length:', text.length);
+        console.error('[AI Tutor] First 500 chars:', text.substring(0, 500));
+        console.error('[AI Tutor] Last 200 chars:', text.substring(Math.max(0, text.length - 200)));
+        return res.status(500).json({ 
+          error: 'Failed to parse Ollama response',
+          details: `Response length: ${text.length}, Parse error: ${parseError.message}`
+        });
+      }
+      
+      // Extract response text
+      const responseText = data.response || data.text || '';
+      
+      if (!responseText || responseText.trim().length === 0) {
+        console.warn('[AI Tutor] Empty response text from model');
+        return res.status(500).json({ error: 'Model returned empty response' });
+      }
+      
+      console.log(`[AI Tutor] Success! Response length: ${responseText.length}`);
+      res.json({ response: responseText });
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      
+      if (fetchError.name === 'AbortError') {
+        throw new Error('AI response timeout. Ollama may be overloaded or not responding.');
+      }
+      
+      if (fetchError.message.includes('ECONNREFUSED')) {
+        throw new Error('Cannot connect to Ollama. Make sure Ollama is running on port 11434. Run: ollama serve');
+      }
+      
+      throw fetchError;
+    }
+  } catch (error) {
+    console.error('Error calling AI Tutor:', error);
+    
+    let errorMessage = error.message;
+    if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('Cannot connect')) {
+      errorMessage = 'Ollama is not running. Start it with: ollama serve or use START_DEEPSEEK_OLLAMA.bat';
+    }
+    
+    res.status(500).json({ 
+      error: errorMessage,
+      hint: 'Make sure Ollama is running with: ollama serve'
+    });
+  }
+});
+
+// AI Tutor document analysis endpoint
+app.post('/api/ai-tutor/analyze', async (req, res) => {
+  try {
+    const { fileName, content } = req.body;
+
+    if (!content) {
+      return res.status(400).json({ error: 'Document content is required' });
+    }
+
+    const analysisPrompt = `Analyze this document and provide:
+1. Summary (2-3 sentences)
+2. Key Points (3-5 bullet points)
+3. Mistakes or Issues (if any)
+4. Improvements (suggestions)
+5. Related Concepts
+
+Document: ${content.substring(0, 2000)}`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout for analysis
+
+    try {
+      const response = await fetch('http://localhost:11434/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'deepseek-r1:1.5b',
+          prompt: analysisPrompt,
+          stream: false,
+          temperature: 0.5,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Ollama API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      res.json({ analysis: { content: data.response || 'Analysis could not be generated' } });
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      
+      if (fetchError.name === 'AbortError') {
+        throw new Error('Analysis timeout. Document may be too large or Ollama is overloaded.');
+      }
+      
+      if (fetchError.message.includes('ECONNREFUSED')) {
+        throw new Error('Cannot connect to Ollama. Make sure Ollama is running on port 11434.');
+      }
+      
+      throw fetchError;
+    }
+  } catch (error) {
+    console.error('Error analyzing document:', error);
+    
+    let errorMessage = error.message;
+    if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('Cannot connect')) {
+      errorMessage = 'Ollama is not running. Start it with: ollama serve';
+    }
+    
+    res.status(500).json({ 
+      error: errorMessage,
+      hint: 'Make sure Ollama is running'
+    });
+  }
+});
+
+// ==================== SERVER START ====================
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

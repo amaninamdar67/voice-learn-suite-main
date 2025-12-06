@@ -4,7 +4,7 @@ import { NavigateNext, Home } from '@mui/icons-material';
 import { useLocation, Link as RouterLink } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
-import { AITutorChat } from '../AITutor/AITutorChat';
+import { AITutorEnhanced } from '../AITutor/AITutorEnhanced';
 import { useSystemConfig } from '../../contexts/SystemConfigContext';
 
 interface MainLayoutProps {
@@ -102,7 +102,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         
         {children}
       </Box>
-      {isFeatureEnabled('aiTutor') && <AITutorChat />}
+      {isFeatureEnabled('aiTutor') && <AITutorEnhanced />}
     </Box>
   );
 };

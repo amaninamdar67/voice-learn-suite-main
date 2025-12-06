@@ -1,0 +1,98 @@
+================================================================================
+                    AI TUTOR - DEEPSEEK OLLAMA SETUP
+================================================================================
+
+QUICK START (Windows):
+1. Download Ollama from: https://ollama.ai
+2. Install and restart your computer
+3. Double-click: START_DEEPSEEK_OLLAMA.bat
+4. Wait for "Ollama service running on port 11434"
+5. Run: npm run dev
+6. Click the 🤖 button in bottom-right corner
+7. Start chatting!
+
+QUICK START (Mac/Linux):
+1. Download Ollama from: https://ollama.ai
+2. Install it
+3. Open Terminal and run:
+   ollama pull deepseek-r1:1.5b
+   ollama serve
+4. In another terminal, run: npm run dev
+5. Click the 🤖 button and start chatting!
+
+================================================================================
+
+WHAT YOU NEED:
+- Ollama installed (https://ollama.ai)
+- 6GB RAM minimum (4GB if you close other apps)
+- ~1.5GB disk space for the model
+- Internet connection (for first-time model download only)
+
+================================================================================
+
+FILES CREATED:
+- START_DEEPSEEK_OLLAMA.bat - Windows batch file to start Ollama
+- AI_TUTOR_QUICK_START.md - Quick reference guide
+- OLLAMA_SETUP_INSTRUCTIONS.md - Detailed setup guide
+- DEEPSEEK_OLLAMA_SETUP_GUIDE.md - Original setup guide
+
+================================================================================
+
+TROUBLESHOOTING:
+
+"No response from AI"
+→ Make sure Ollama is running (START_DEEPSEEK_OLLAMA.bat or ollama serve)
+
+"Cannot connect to Ollama"
+→ Ollama isn't running on port 11434
+→ Start it with the batch file or terminal command
+
+"Model not found"
+→ The model is downloading (first time only)
+→ Wait 2-5 minutes for download to complete
+
+"Out of memory"
+→ Close other applications
+→ Use smaller model: deepseek-r1:1b
+
+"Very slow responses"
+→ This is normal for local AI models
+→ First response takes longer as model loads
+→ Subsequent responses are faster
+
+================================================================================
+
+FEATURES:
+✓ Chat with AI Tutor
+✓ Voice input (press SPACEBAR)
+✓ Document analysis (upload PDFs/text)
+✓ Read responses aloud
+✓ Multiple view modes (popup, right panel, fullscreen)
+✓ Chat history saved locally
+✓ Works offline (no internet needed after setup)
+
+================================================================================
+
+BACKEND CHANGES:
+- Added better error handling for Ollama connection
+- Improved error messages with setup instructions
+- Added timeout handling (30 seconds for chat, 60 for analysis)
+- Frontend now shows helpful error messages
+
+FRONTEND CHANGES:
+- AI Tutor now floats on top of all components (z-index: 9999)
+- Click outside to close (popup and right-panel modes)
+- Better error messages with setup instructions
+- Improved user experience
+
+================================================================================
+
+NEXT STEPS:
+1. Install Ollama from https://ollama.ai
+2. Run START_DEEPSEEK_OLLAMA.bat (Windows) or ollama serve (Mac/Linux)
+3. Start your application: npm run dev
+4. Click the 🤖 button and enjoy!
+
+For detailed instructions, see: OLLAMA_SETUP_INSTRUCTIONS.md
+
+================================================================================

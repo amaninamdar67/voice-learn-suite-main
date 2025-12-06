@@ -1,191 +1,212 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
   CardContent,
+  Grid,
   Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Paper,
   Avatar,
-  LinearProgress,
+  Chip,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
-import {
-  Notifications,
-  Message,
-} from '@mui/icons-material';
+import { TrendingUp, Clock, AlertCircle } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+
+interface Child {
+  id: string;
+  name: string;
+  grade: string;
+  overall_score: number;
+  attendance_rate: number;
+  last_active: string;
+}
 
 const ParentDashboard: React.FC = () => {
-  const children = [
-    { name: 'Emma Johnson', grade: '10th', progress: 85, avatar: 'EJ' },
-    { name: 'Oliver Johnson', grade: '8th', progress: 72, avatar: 'OJ' },
-  ];
+  const { user } = useAuth();
+  const [children, setChildren] = useState<Child[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const alerts = [
-    { type: 'success', message: 'Emma completed her Math quiz with 95%' },
-    { type: 'warning', message: 'Oliver has a project deadline tomorrow' },
-    { type: 'info', message: 'New parent-teacher meeting scheduled' },
-  ];
+  useEffect(() => {
+    loadChildren();
+  }, [user?.id]);
+
+  const loadChildren = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`http://localhost:3001/api/parent/${user?.id}/children`);
+      const data = await response.json();
+      setChildren(data.children || []);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getChildStatus = (childId: string) => {
+    const child = children.find(c => c.id === childId);
+    if (!child) return 'unknown';
+    if (child.attendance_rate < 75) return 'at-risk';
+    if (child.overall_score < 60) return 'needs-help';
+    return 'good';
+  };
+
+  const avgAttendance = children.length > 0
+    ? Math.round(children.reduce((sum, c) => sum + c.attendance_rate, 0) / children.length)
+    : 0;
+
+  const avgScore = children.length > 0
+    ? Math.round(children.reduce((sum, c) => sum + c.overall_score, 0) / children.length)
+    : 0;
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom fontWeight={600}>
+    <Box sx={{ p: 3 }}>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      <Typography variant="h4" fontWeight={600} sx={{ mb: 4 }}>
         Parent Dashboard
       </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Monitor your children's progress and stay connected
+
+      {/* Stats Cards */}
+      <Grid container spacing={2} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <TrendingUp size={32} color="#4caf50" />
+                <Box>
+                  <Typography color="textSecondary" variant="body2">
+                    Average Score
+                  </Typography>
+                  <Typography variant="h6">{avgScore}%</Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Clock size={32} color="#ff9800" />
+                <Box>
+                  <Typography color="textSecondary" variant="body2">
+                    Attendance
+                  </Typography>
+                  <Typography variant="h6">{avgAttendance}%</Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <AlertCircle size={32} color="#f44336" />
+                <Box>
+                  <Typography color="textSecondary" variant="body2">
+                    Alerts
+                  </Typography>
+                  <Typography variant="h6">
+                    {children.filter(c => c.attendance_rate < 75).length}
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
+        My Children
       </Typography>
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 3 }}>
-        <Box>
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" gutterBottom fontWeight={600}>
-              My Children
-            </Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2, mt: 2 }}>
-              {children.map((child, index) => (
-                <Card
-                  key={index}
-                  sx={{
-                    cursor: 'pointer',
-                    transition: 'transform 0.2s',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                    },
-                  }}
-                >
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
-                        {child.avatar}
-                      </Avatar>
-                      <Box>
-                        <Typography variant="subtitle1" fontWeight={600}>
-                          {child.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {child.grade} Grade
-                        </Typography>
+      {children.length === 0 ? (
+        <Paper sx={{ p: 3, textAlign: 'center' }}>
+          <Typography color="textSecondary">No children linked yet</Typography>
+        </Paper>
+      ) : (
+        <TableContainer component={Paper} sx={{ mb: 3 }}>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                <TableCell fontWeight={600}>Child</TableCell>
+                <TableCell fontWeight={600}>Grade</TableCell>
+                <TableCell fontWeight={600}>Overall Score</TableCell>
+                <TableCell fontWeight={600}>Attendance</TableCell>
+                <TableCell fontWeight={600}>Status</TableCell>
+                <TableCell fontWeight={600}>Last Active</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {children.map((child) => {
+                const status = getChildStatus(child.id);
+                return (
+                  <TableRow key={child.id}>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Avatar sx={{ width: 32, height: 32 }}>
+                          {child.name[0]}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body2" fontWeight={500}>
+                            {child.name}
+                          </Typography>
+                        </Box>
                       </Box>
-                    </Box>
-                    <Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          Overall Progress
-                        </Typography>
-                        <Typography variant="body2" fontWeight={600}>
-                          {child.progress}%
-                        </Typography>
-                      </Box>
-                      <LinearProgress
-                        variant="determinate"
-                        value={child.progress}
-                        sx={{ height: 8, borderRadius: 4 }}
+                    </TableCell>
+                    <TableCell>{child.grade}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2">{child.overall_score}%</Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">{child.attendance_rate}%</Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={status}
+                        color={
+                          status === 'good'
+                            ? 'success'
+                            : status === 'at-risk'
+                            ? 'error'
+                            : 'warning'
+                        }
+                        size="small"
                       />
-                    </Box>
-                  </CardContent>
-                </Card>
-              ))}
-            </Box>
-          </Paper>
-
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom fontWeight={600}>
-              Recent Activity
-            </Typography>
-            <Box sx={{ mt: 2 }}>
-              {[
-                'Emma completed "Introduction to React" lesson',
-                'Oliver submitted Math homework',
-                'Emma scored 95% on Science quiz',
-                'Oliver participated in group discussion',
-              ].map((activity, index) => (
-                <Box
-                  key={index}
-                  sx={{
-                    p: 2,
-                    mb: 1,
-                    bgcolor: 'background.default',
-                    borderRadius: 1,
-                  }}
-                >
-                  <Typography variant="body2">{activity}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {index === 0 ? 'Today' : index === 1 ? 'Yesterday' : `${index} days ago`}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
-          </Paper>
-        </Box>
-
-        <Box>
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" gutterBottom fontWeight={600}>
-              <Notifications sx={{ mr: 1, verticalAlign: 'middle' }} />
-              Alerts & Updates
-            </Typography>
-            <Box sx={{ mt: 2 }}>
-              {alerts.map((alert, index) => (
-                <Box
-                  key={index}
-                  sx={{
-                    p: 2,
-                    mb: 2,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderRadius: 1,
-                    borderLeft: 4,
-                    borderLeftColor:
-                      alert.type === 'success'
-                        ? 'success.main'
-                        : alert.type === 'warning'
-                        ? 'warning.main'
-                        : 'info.main',
-                  }}
-                >
-                  <Typography variant="body2">{alert.message}</Typography>
-                </Box>
-              ))}
-            </Box>
-          </Paper>
-
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom fontWeight={600}>
-              <Message sx={{ mr: 1, verticalAlign: 'middle' }} />
-              Messages
-            </Typography>
-            <Box sx={{ mt: 2 }}>
-              {[
-                { from: 'Math Teacher', message: 'Parent meeting scheduled', time: '2h ago' },
-                { from: 'Science Teacher', message: 'Great progress this week!', time: '1d ago' },
-              ].map((msg, index) => (
-                <Box
-                  key={index}
-                  sx={{
-                    p: 2,
-                    mb: 1,
-                    bgcolor: 'background.default',
-                    borderRadius: 1,
-                    cursor: 'pointer',
-                    '&:hover': {
-                      bgcolor: 'action.hover',
-                    },
-                  }}
-                >
-                  <Typography variant="body2" fontWeight={500}>
-                    {msg.from}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem' }}>
-                    {msg.message}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {msg.time}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
-          </Paper>
-        </Box>
-      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="caption" color="textSecondary">
+                        {child.last_active}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
     </Box>
   );
 };
