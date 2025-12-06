@@ -4,11 +4,7 @@ import { NavigateNext, Home } from '@mui/icons-material';
 import { useLocation, Link as RouterLink } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
-<<<<<<< HEAD
 import { AITutorEnhanced } from '../AITutor/AITutorEnhanced';
-=======
-import { AITutorFab } from '../AITutor/AITutorFab';
->>>>>>> 3ed9867101865d47a8f860453d812a57bc7fa8f7
 import { useSystemConfig } from '../../contexts/SystemConfigContext';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -107,13 +103,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         
         {children}
       </Box>
-<<<<<<< HEAD
       {isFeatureEnabled('aiTutor') && <AITutorEnhanced />}
-=======
-      
-      {/* AI Tutor Floating Button - Always available for students */}
-      <AITutorFab />
->>>>>>> 3ed9867101865d47a8f860453d812a57bc7fa8f7
     </Box>
   );
 };
