@@ -41,6 +41,8 @@ import {
   updateCommunityReply,
   deleteCommunityReply,
 } from './lms-routes.js';
+import { initializeMentorParentMessaging } from './mentor-parent-messaging.js';
+import { initializeAdminLinkingRoutes } from './admin-linking-routes.js';
 
 dotenv.config();
 
@@ -56,6 +58,14 @@ const supabase = createClient(
 
 // Initialize LMS routes with Supabase client
 initializeLMSRoutes(supabase);
+
+// Initialize Mentor-Parent Messaging routes
+const mentorParentRouter = initializeMentorParentMessaging(supabase);
+app.use('/api/mentor-parent', mentorParentRouter);
+
+// Initialize Admin Linking routes
+const adminLinkingRouter = initializeAdminLinkingRoutes(supabase);
+app.use('/api/admin', adminLinkingRouter);
 
 // Create user endpoint (with domain support)
 app.post('/api/users/create', async (req, res) => {
