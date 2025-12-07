@@ -134,6 +134,86 @@ export const initializeMentorParentMessaging = (supabase) => {
     }
   });
 
+  // Get parent's children
+  router.get('/parent-children/:parentId', async (req, res) => {
+    try {
+      const { parentId } = req.params;
+
+      const { data, error } = await supabase
+        .from('parent_student_links')
+        .select('student_id, profiles!student_id(id, full_name)')
+        .eq('parent_id', parentId);
+
+      if (error) throw error;
+
+      const children = data.map(item => item.profiles).filter(Boolean);
+      res.json({ children });
+    } catch (error) {
+      console.error('Error fetching parent children:', error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get student's mentor
+  router.get('/student-mentor/:studentId', async (req, res) => {
+    try {
+      const { studentId } = req.params;
+
+      const { data, error } = await supabase
+        .from('mentor_student_link')
+        .select('mentor_id, profiles!mentor_id(id, full_name)')
+        .eq('student_id', studentId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+
+      res.json({ mentor: data?.profiles || null });
+    } catch (error) {
+      console.error('Error fetching student mentor:', error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get mentor's students
+  router.get('/mentor-students/:mentorId', async (req, res) => {
+    try {
+      const { mentorId } = req.params;
+
+      const { data, error } = await supabase
+        .from('mentor_student_link')
+        .select('student_id, profiles!student_id(id, full_name)')
+        .eq('mentor_id', mentorId);
+
+      if (error) throw error;
+
+      const students = data.map(item => item.profiles).filter(Boolean);
+      res.json({ students });
+    } catch (error) {
+      console.error('Error fetching mentor students:', error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get student's parent
+  router.get('/student-parent/:studentId', async (req, res) => {
+    try {
+      const { studentId } = req.params;
+
+      const { data, error } = await supabase
+        .from('parent_student_links')
+        .select('parent_id, profiles!parent_id(id, full_name)')
+        .eq('student_id', studentId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+
+      res.json({ parent: data?.profiles || null });
+    } catch (error) {
+      console.error('Error fetching student parent:', error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   // Get alerts
   router.get('/alerts/:userId', async (req, res) => {
     try {

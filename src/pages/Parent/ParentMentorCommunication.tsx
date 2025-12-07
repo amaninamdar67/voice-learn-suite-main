@@ -28,11 +28,29 @@ export const ParentMentorCommunication: React.FC = () => {
 
   const loadStudentMentors = async () => {
     try {
-      const response = await fetch(`/api/mentor-parent/mentors/${user?.id}`);
-      const data = await response.json();
-      setStudentMentors(data.studentMentors || []);
-      if (data.studentMentors?.length > 0) {
-        setSelectedStudent(data.studentMentors[0]);
+      // Get parent's children through parent_student_links
+      const childrenRes = await fetch(`/api/mentor-parent/parent-children/${user?.id}`);
+      const childrenData = await childrenRes.json();
+      
+      if (childrenData.children && childrenData.children.length > 0) {
+        // For each child, get their mentor through mentor_student_link
+        const studentMentorsPromises = childrenData.children.map(async (child: any) => {
+          const mentorRes = await fetch(`/api/mentor-parent/student-mentor/${child.id}`);
+          const mentorData = await mentorRes.json();
+          return {
+            student_id: child.id,
+            student_name: child.full_name,
+            mentor_id: mentorData.mentor?.id,
+            mentor_name: mentorData.mentor?.full_name
+          };
+        });
+        
+        const results = await Promise.all(studentMentorsPromises);
+        const validResults = results.filter(r => r.mentor_id);
+        setStudentMentors(validResults);
+        if (validResults.length > 0) {
+          setSelectedStudent(validResults[0]);
+        }
       }
     } catch (error) {
       console.error('Error loading student mentors:', error);

@@ -11,16 +11,17 @@ export const initializeAdminLinkingRoutes = (supabase) => {
       let query = supabase.from('profiles').select('id, full_name, email, role');
       
       if (role) {
-        query = query.eq('role', role);
+        // Handle role filtering - roles might be stored as JSON or text
+        query = query.ilike('role', `%${role}%`);
       }
       
-      const { data, error } = await query;
+      const { data, error } = await query.order('full_name', { ascending: true });
       
       if (error) throw error;
-      res.json({ users: data });
+      res.json({ users: data || [] });
     } catch (error) {
       console.error('Error fetching users:', error);
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ error: error.message, users: [] });
     }
   });
 
