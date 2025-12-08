@@ -65,16 +65,14 @@ export const TopBar: React.FC = () => {
       if (data.notifications && data.notifications.length > 0) {
         setNotifications(data.notifications);
         setHasNewNotifications(true);
+      } else {
+        setNotifications([]);
+        setHasNewNotifications(false);
       }
     } catch (err) {
       console.error('Error loading notifications:', err);
-      // Fallback to mock data
-      setNotifications([
-        { id: 1, message: 'New lesson available', time: '5 min ago', type: 'lesson' },
-        { id: 2, message: 'Quiz deadline approaching', time: '1 hour ago', type: 'quiz' },
-        { id: 3, message: 'New assignment posted', time: '2 hours ago', type: 'assignment' },
-      ]);
-      setHasNewNotifications(true);
+      setNotifications([]);
+      setHasNewNotifications(false);
     }
   };
 

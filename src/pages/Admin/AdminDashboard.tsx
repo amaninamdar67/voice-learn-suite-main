@@ -20,6 +20,13 @@ interface StatCard {
   color: string;
 }
 
+interface Activity {
+  id: string;
+  message: string;
+  timestamp: string;
+  type: string;
+}
+
 const AdminDashboard: React.FC = () => {
   const [stats, setStats] = React.useState<StatCard[]>([
     { title: 'Total Schools', value: 0, icon: <School />, color: '#2196F3' },
@@ -27,10 +34,14 @@ const AdminDashboard: React.FC = () => {
     { title: 'Total Teachers', value: 0, icon: <Person />, color: '#FF9800' },
     { title: 'Active Courses', value: 0, icon: <MenuBook />, color: '#9C27B0' },
   ]);
+  const [activities, setActivities] = React.useState<Activity[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
     loadDashboardStats();
+    loadActivities();
+    const interval = setInterval(loadActivities, 30000); // Refresh activities every 30 seconds
+    return () => clearInterval(interval);
   }, []);
 
   const loadDashboardStats = async () => {
@@ -64,6 +75,22 @@ const AdminDashboard: React.FC = () => {
       console.error('Error loading dashboard stats:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadActivities = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/system/activities');
+      const data = await response.json();
+      
+      if (data.activities && Array.isArray(data.activities)) {
+        setActivities(data.activities.slice(0, 5)); // Show top 5 activities
+      } else {
+        setActivities([]);
+      }
+    } catch (error) {
+      console.error('Error loading activities:', error);
+      setActivities([]);
     }
   };
 
@@ -134,29 +161,36 @@ const AdminDashboard: React.FC = () => {
             </Box>
         </Paper>
 
-        <Paper sx={{ p: 3, height: 400 }}>
+        <Paper sx={{ p: 3, height: 400, overflow: 'auto' }}>
             <Typography variant="h6" gutterBottom fontWeight={600}>
               Recent Activities
             </Typography>
             <Box sx={{ mt: 2 }}>
-              {[
-                'New student enrolled',
-                'Teacher uploaded lesson',
-                'Quiz completed by 25 students',
-                'New parent account created',
-              ].map((activity, index) => (
-                <Box
-                  key={index}
-                  sx={{
-                    p: 2,
-                    mb: 1,
-                    bgcolor: 'background.default',
-                    borderRadius: 1,
-                  }}
-                >
-                  <Typography variant="body2">{activity}</Typography>
-                </Box>
-              ))}
+              {activities.length > 0 ? (
+                activities.map((activity) => (
+                  <Box
+                    key={activity.id}
+                    sx={{
+                      p: 2,
+                      mb: 1,
+                      bgcolor: 'background.default',
+                      borderRadius: 1,
+                      borderLeft: '4px solid #2196F3',
+                    }}
+                  >
+                    <Typography variant="body2" fontWeight={500}>
+                      {activity.message}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {activity.timestamp}
+                    </Typography>
+                  </Box>
+                ))
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                  No recent activities
+                </Typography>
+              )}
             </Box>
         </Paper>
       </Box>

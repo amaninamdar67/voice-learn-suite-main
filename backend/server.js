@@ -78,6 +78,76 @@ app.use('/api/admin-linking', adminLinkingRouter);
 const parentStudentRouter = initializeParentStudentData(supabase);
 app.use('/api/parent-student', parentStudentRouter);
 
+// Get system activities
+app.get('/api/system/activities', async (req, res) => {
+  try {
+    const activities = [];
+
+    // Fetch recent user creations
+    const { data: recentUsers } = await supabase
+      .from('profiles')
+      .select('id, full_name, role, created_at')
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (recentUsers) {
+      recentUsers.forEach((user: any) => {
+        const roleText = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+        activities.push({
+          id: `user-${user.id}`,
+          message: `New ${user.role} enrolled: ${user.full_name}`,
+          timestamp: new Date(user.created_at).toLocaleString(),
+          type: 'user',
+        });
+      });
+    }
+
+    // Fetch recent lessons
+    const { data: recentLessons } = await supabase
+      .from('lessons')
+      .select('id, title, created_at')
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (recentLessons) {
+      recentLessons.forEach((lesson: any) => {
+        activities.push({
+          id: `lesson-${lesson.id}`,
+          message: `Teacher uploaded lesson: ${lesson.title}`,
+          timestamp: new Date(lesson.created_at).toLocaleString(),
+          type: 'lesson',
+        });
+      });
+    }
+
+    // Fetch recent quizzes
+    const { data: recentQuizzes } = await supabase
+      .from('quizzes')
+      .select('id, title, created_at')
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (recentQuizzes) {
+      recentQuizzes.forEach((quiz: any) => {
+        activities.push({
+          id: `quiz-${quiz.id}`,
+          message: `New quiz created: ${quiz.title}`,
+          timestamp: new Date(quiz.created_at).toLocaleString(),
+          type: 'quiz',
+        });
+      });
+    }
+
+    // Sort by timestamp (newest first) and return top 10
+    activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    res.json({ activities: activities.slice(0, 10) });
+  } catch (error) {
+    console.error('Error fetching activities:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // Get notifications for a user
 app.get('/api/notifications/:userId', async (req, res) => {
   try {
