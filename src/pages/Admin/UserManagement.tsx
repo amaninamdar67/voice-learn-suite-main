@@ -47,6 +47,7 @@ interface User {
   branch?: string;
   status: 'active' | 'inactive';
   lastLogin: string;
+  sub_domain_id?: string;
 }
 
 const UserManagement: React.FC = () => {
@@ -165,6 +166,7 @@ const UserManagement: React.FC = () => {
               lastLogin: getRelativeTime(profile.last_sign_in_at || profile.created_at),
               subjects: profile.subjects || [],
               is_super_admin: profile.is_super_admin || false,
+              sub_domain_id: profile.sub_domain_id,
             } as any;
           });
           setUsers(formattedUsers);
@@ -275,6 +277,7 @@ const UserManagement: React.FC = () => {
             status: 'active',
             lastLogin: getRelativeTime(profile.last_sign_in_at || profile.created_at),
             subjects: profile.subjects || [],
+            sub_domain_id: profile.sub_domain_id,
           } as any));
           setUsers(formattedUsers);
         }
@@ -457,6 +460,7 @@ const UserManagement: React.FC = () => {
             status: 'active',
             lastLogin: getRelativeTime(profile.last_sign_in_at || profile.created_at),
             subjects: profile.subjects || [],
+            sub_domain_id: profile.sub_domain_id,
           } as any));
           setUsers(formattedUsers);
         }
