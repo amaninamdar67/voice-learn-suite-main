@@ -59,6 +59,10 @@ const UserManagement: React.FC = () => {
   // Subdomain context
   const [selectedSubDomain, setSelectedSubDomain] = useState<any>(null);
   const [subDomains, setSubDomains] = useState<any[]>([]);
+  const [domains, setDomains] = useState<any[]>([]);
+  const [selectedDomain, setSelectedDomain] = useState<string>('all');
+  const [domainFilter, setDomainFilter] = useState<string>('all');
+  const [subDomainFilter, setSubDomainFilter] = useState<string>('all');
   
   const [openEditUser, setOpenEditUser] = useState(false);
   const [openAddUser, setOpenAddUser] = useState(false);
@@ -109,22 +113,29 @@ const UserManagement: React.FC = () => {
     return `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) > 1 ? 's' : ''} ago`;
   };
 
-  // Load subdomains
+  // Load domains and subdomains
   useEffect(() => {
-    const loadSubDomains = async () => {
+    const loadData = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/subdomains');
-        const data = await response.json();
-        setSubDomains(data.subdomains || []);
+        // Load domains
+        const domainsRes = await fetch('http://localhost:3001/api/domains');
+        const domainsData = await domainsRes.json();
+        setDomains(domainsData.domains || []);
+
+        // Load subdomains
+        const subDomainsRes = await fetch('http://localhost:3001/api/subdomains');
+        const subDomainsData = await subDomainsRes.json();
+        setSubDomains(subDomainsData.subdomains || []);
+        
         // Auto-select first subdomain
-        if (data.subdomains && data.subdomains.length > 0) {
-          setSelectedSubDomain(data.subdomains[0]);
+        if (subDomainsData.subdomains && subDomainsData.subdomains.length > 0) {
+          setSelectedSubDomain(subDomainsData.subdomains[0]);
         }
       } catch (err) {
-        console.error('Error loading subdomains:', err);
+        console.error('Error loading data:', err);
       }
     };
-    loadSubDomains();
+    loadData();
   }, []);
 
   // Load users for selected subdomain
@@ -464,7 +475,13 @@ const UserManagement: React.FC = () => {
     const matchesStatus = statusFilter === 'all' || 
                          (statusFilter === 'active' && user.status === 'active') ||
                          (statusFilter === 'inactive' && user.status === 'inactive');
-    return matchesSearch && matchesRole && matchesStatus;
+    
+    // Get user's subdomain to check domain and subdomain filters
+    const userSubDomain = subDomains.find(sd => sd.id === (user as any).sub_domain_id);
+    const matchesDomain = domainFilter === 'all' || (userSubDomain && userSubDomain.domain_id === domainFilter);
+    const matchesSubDomain = subDomainFilter === 'all' || (user as any).sub_domain_id === subDomainFilter;
+    
+    return matchesSearch && matchesRole && matchesStatus && matchesDomain && matchesSubDomain;
   });
 
   const getRoleColor = (role: UserRole) => {
@@ -497,11 +514,6 @@ const UserManagement: React.FC = () => {
           <Typography variant="h4" fontWeight={600} gutterBottom>
             User Management
           </Typography>
-          {selectedSubDomain && (
-            <Typography variant="body1" color="text.secondary">
-              Managing users in: <strong>{selectedSubDomain.name}</strong>
-            </Typography>
-          )}
         </Box>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
@@ -519,22 +531,6 @@ const UserManagement: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Subdomain Selector */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Typography variant="subtitle2" sx={{ mb: 1 }}>Select Subdomain:</Typography>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          {subDomains.map((sd) => (
-            <Chip
-              key={sd.id}
-              label={`${sd.name} (${sd.type})`}
-              onClick={() => setSelectedSubDomain(sd)}
-              color={selectedSubDomain?.id === sd.id ? 'primary' : 'default'}
-              variant={selectedSubDomain?.id === sd.id ? 'filled' : 'outlined'}
-            />
-          ))}
-        </Box>
-      </Paper>
-
       {/* Filters */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -548,6 +544,38 @@ const UserManagement: React.FC = () => {
             }}
             sx={{ minWidth: 250 }}
           />
+          <TextField
+            select
+            size="small"
+            label="Domain"
+            value={domainFilter}
+            onChange={(e) => setDomainFilter(e.target.value)}
+            sx={{ minWidth: 150 }}
+          >
+            <MenuItem value="all">All Domains</MenuItem>
+            {domains.map((domain) => (
+              <MenuItem key={domain.id} value={domain.id}>
+                {domain.name}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            size="small"
+            label="Sub-Domain"
+            value={subDomainFilter}
+            onChange={(e) => setSubDomainFilter(e.target.value)}
+            sx={{ minWidth: 150 }}
+          >
+            <MenuItem value="all">All Sub-Domains</MenuItem>
+            {subDomains
+              .filter((sd) => domainFilter === 'all' || sd.domain_id === domainFilter)
+              .map((sd) => (
+                <MenuItem key={sd.id} value={sd.id}>
+                  {sd.name}
+                </MenuItem>
+              ))}
+          </TextField>
           <TextField
             select
             size="small"

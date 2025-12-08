@@ -50,6 +50,21 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       >
         <Toolbar />
         
+        {/* Global Title */}
+        <Typography
+          variant="h5"
+          fontWeight={700}
+          sx={{
+            mb: 3,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
+          E-Learning Using AI
+        </Typography>
+        
         {/* Breadcrumbs */}
         {pathnames.length > 0 && (
           <Breadcrumbs
