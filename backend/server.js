@@ -78,6 +78,81 @@ app.use('/api/admin-linking', adminLinkingRouter);
 const parentStudentRouter = initializeParentStudentData(supabase);
 app.use('/api/parent-student', parentStudentRouter);
 
+// Get notifications for a user
+app.get('/api/notifications/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Fetch live classes for this user
+    const { data: liveClasses } = await supabase
+      .from('live_classes')
+      .select('id, title, created_at')
+      .eq('created_by', userId)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    // Fetch assignments for this user
+    const { data: assignments } = await supabase
+      .from('assignments')
+      .select('id, title, created_at')
+      .eq('created_by', userId)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    // Fetch quizzes for this user
+    const { data: quizzes } = await supabase
+      .from('quizzes')
+      .select('id, title, created_at')
+      .eq('created_by', userId)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    // Combine all notifications
+    const notifications = [];
+
+    if (liveClasses && liveClasses.length > 0) {
+      liveClasses.forEach((liveClass) => {
+        notifications.push({
+          id: `live-${liveClass.id}`,
+          message: `New live class: ${liveClass.title}`,
+          time: new Date(liveClass.created_at).toLocaleString(),
+          type: 'lesson',
+        });
+      });
+    }
+
+    if (assignments && assignments.length > 0) {
+      assignments.forEach((assignment) => {
+        notifications.push({
+          id: `assign-${assignment.id}`,
+          message: `New assignment: ${assignment.title}`,
+          time: new Date(assignment.created_at).toLocaleString(),
+          type: 'assignment',
+        });
+      });
+    }
+
+    if (quizzes && quizzes.length > 0) {
+      quizzes.forEach((quiz) => {
+        notifications.push({
+          id: `quiz-${quiz.id}`,
+          message: `New quiz: ${quiz.title}`,
+          time: new Date(quiz.created_at).toLocaleString(),
+          type: 'quiz',
+        });
+      });
+    }
+
+    // Sort by time (newest first)
+    notifications.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+
+    res.json({ notifications: notifications.slice(0, 10) });
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // Create user endpoint (with domain support)
 app.post('/api/users/create', async (req, res) => {
   try {
