@@ -27,7 +27,6 @@ import { useEnhancedVoiceNavigation } from '../../hooks/useEnhancedVoiceNavigati
 export const TopBar: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationAnchor, setNotificationAnchor] = useState<null | HTMLElement>(null);
-  const [modelAnchor, setModelAnchor] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { isListening, toggleListening } = useEnhancedVoiceNavigation();
@@ -37,13 +36,6 @@ export const TopBar: React.FC = () => {
     const saved = localStorage.getItem('voiceNavEnabled');
     return saved !== 'false'; // Default to true
   });
-
-  // AI Tutor model state
-  const [selectedModel, setSelectedModel] = useState(() => {
-    return localStorage.getItem('aiTutorModel') || 'deepseek-r1:1.5b';
-  });
-
-  const availableModels = ['deepseek-r1:1.5b', 'deepseek-r1:1b', 'llama2'];
 
   const handleToggleVoiceNav = () => {
     const newValue = !voiceNavEnabled;
@@ -84,21 +76,6 @@ export const TopBar: React.FC = () => {
 
   const handleAITutorOpen = () => {
     window.dispatchEvent(new Event('open-ai-tutor'));
-  };
-
-  const handleModelOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setModelAnchor(event.currentTarget);
-  };
-
-  const handleModelClose = () => {
-    setModelAnchor(null);
-  };
-
-  const handleModelSelect = (model: string) => {
-    setSelectedModel(model);
-    localStorage.setItem('aiTutorModel', model);
-    window.dispatchEvent(new CustomEvent('ai-tutor-model-changed', { detail: { model } }));
-    handleModelClose();
   };
 
   const mockNotifications = [
@@ -194,18 +171,6 @@ export const TopBar: React.FC = () => {
             </IconButton>
           </Tooltip>
 
-          <Tooltip title="AI Model">
-            <IconButton
-              size="large"
-              onClick={handleModelOpen}
-              sx={{
-                color: 'inherit',
-              }}
-            >
-              ⚙️
-            </IconButton>
-          </Tooltip>
-
           <Tooltip title="Notifications">
             <IconButton
               size="large"
@@ -290,35 +255,6 @@ export const TopBar: React.FC = () => {
           ))}
         </Menu>
 
-        <Menu
-          anchorEl={modelAnchor}
-          open={Boolean(modelAnchor)}
-          onClose={handleModelClose}
-          anchorOrigin={{
-            vertical: 'bottom',
-            horizontal: 'right',
-          }}
-          transformOrigin={{
-            vertical: 'top',
-            horizontal: 'right',
-          }}
-        >
-          <Box sx={{ px: 2, py: 1 }}>
-            <Typography variant="subtitle2" fontWeight={600}>
-              AI Model
-            </Typography>
-          </Box>
-          <Divider />
-          {['deepseek-r1:1.5b', 'deepseek-r1:1b', 'llama2'].map((model) => (
-            <MenuItem 
-              key={model} 
-              onClick={() => handleModelSelect(model)}
-              selected={selectedModel === model}
-            >
-              {model}
-            </MenuItem>
-          ))}
-        </Menu>
       </Toolbar>
     </AppBar>
   );
