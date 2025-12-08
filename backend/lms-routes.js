@@ -276,6 +276,34 @@ export const deleteLiveClass = async (req, res) => {
   }
 };
 
+// ==================== ASSIGNMENTS ENDPOINTS ====================
+
+// Get all assignments
+export const getAssignments = async (req, res) => {
+  try {
+    const { grade, subject, teacherId } = req.query;
+    
+    let query = supabase
+      .from('assignments')
+      .select('*, profiles!assignments_teacher_id_fkey(full_name)');
+    
+    if (grade) query = query.eq('grade', grade);
+    if (subject) query = query.eq('subject', subject);
+    if (teacherId) query = query.eq('teacher_id', teacherId);
+    
+    query = query.order('created_at', { ascending: false });
+    
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    
+    res.json({ assignments: data });
+  } catch (error) {
+    console.error('Error fetching assignments:', error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
 // ==================== QUIZZES ENDPOINTS ====================
 
 // Get all quizzes
