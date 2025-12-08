@@ -94,14 +94,27 @@ export const MentorParentChat: React.FC<MentorParentChatProps> = ({
     msg.message.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getMessageColor = (type: string) => {
-    switch (type) {
-      case 'alert':
-        return 'bg-red-500/20 border-red-500/30';
-      case 'update':
-        return 'bg-blue-500/20 border-blue-500/30';
-      default:
-        return 'bg-slate-700/50 border-slate-600/30';
+  const getMessageColor = (type: string, isCurrentUser: boolean) => {
+    if (isCurrentUser) {
+      // Mentor/Current user messages - Blue
+      switch (type) {
+        case 'alert':
+          return 'bg-blue-600/40 border-blue-500/60 shadow-lg shadow-blue-500/20';
+        case 'update':
+          return 'bg-blue-600/40 border-blue-500/60 shadow-lg shadow-blue-500/20';
+        default:
+          return 'bg-blue-600/40 border-blue-500/60 shadow-lg shadow-blue-500/20';
+      }
+    } else {
+      // Parent messages - Warm Brown/Tan
+      switch (type) {
+        case 'alert':
+          return 'bg-amber-700/40 border-amber-600/60 shadow-lg shadow-amber-600/20';
+        case 'update':
+          return 'bg-amber-700/40 border-amber-600/60 shadow-lg shadow-amber-600/20';
+        default:
+          return 'bg-amber-700/40 border-amber-600/60 shadow-lg shadow-amber-600/20';
+      }
     }
   };
 
@@ -149,24 +162,27 @@ export const MentorParentChat: React.FC<MentorParentChatProps> = ({
             <p>No messages yet. Start the conversation!</p>
           </div>
         ) : (
-          filteredMessages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.mentor_id === currentUserId ? 'justify-end' : 'justify-start'}`}
-            >
+          filteredMessages.map((msg) => {
+            const isCurrentUser = msg.mentor_id === currentUserId;
+            return (
               <div
-                className={`max-w-xs px-4 py-3 rounded-lg border ${getMessageColor(msg.message_type)}`}
+                key={msg.id}
+                className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
               >
-                <p className="text-xs text-slate-400 mb-1">
-                  {msg.mentor_id === currentUserId ? 'You' : msg.parent?.full_name || 'Mentor'}
-                </p>
-                <p className="text-sm text-white">{msg.message}</p>
-                <p className="text-xs text-slate-500 mt-1">
-                  {new Date(msg.created_at).toLocaleTimeString()}
-                </p>
+                <div
+                  className={`max-w-xs px-4 py-3 rounded-lg border-2 ${getMessageColor(msg.message_type, isCurrentUser)}`}
+                >
+                  <p className={`text-xs font-semibold mb-1 ${isCurrentUser ? 'text-blue-200' : 'text-amber-200'}`}>
+                    {isCurrentUser ? 'You (Mentor)' : msg.parent?.full_name || 'Parent'}
+                  </p>
+                  <p className="text-sm text-white">{msg.message}</p>
+                  <p className={`text-xs mt-2 font-medium ${isCurrentUser ? 'text-blue-300' : 'text-amber-300'}`}>
+                    {new Date(msg.created_at).toLocaleString()}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
         <div ref={messagesEndRef} />
       </div>

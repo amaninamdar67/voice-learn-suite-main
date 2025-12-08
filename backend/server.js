@@ -43,6 +43,7 @@ import {
 } from './lms-routes.js';
 import { initializeMentorParentMessaging } from './mentor-parent-messaging.js';
 import { initializeAdminLinkingRoutes } from './admin-linking-routes.js';
+import { initializeParentStudentData } from './parent-student-data.js';
 
 dotenv.config();
 
@@ -63,9 +64,19 @@ initializeLMSRoutes(supabase);
 const mentorParentRouter = initializeMentorParentMessaging(supabase);
 app.use('/api/mentor-parent', mentorParentRouter);
 
+// Test DELETE endpoint
+app.delete('/api/test-delete/:id', (req, res) => {
+  console.log('DELETE test endpoint hit with ID:', req.params.id);
+  res.json({ success: true, message: 'DELETE works', id: req.params.id });
+});
+
 // Initialize Admin Linking routes
 const adminLinkingRouter = initializeAdminLinkingRoutes(supabase);
-app.use('/api/admin', adminLinkingRouter);
+app.use('/api/admin-linking', adminLinkingRouter);
+
+// Initialize Parent Student Data routes
+const parentStudentRouter = initializeParentStudentData(supabase);
+app.use('/api/parent-student', parentStudentRouter);
 
 // Create user endpoint (with domain support)
 app.post('/api/users/create', async (req, res) => {
@@ -1201,6 +1212,152 @@ Document: ${content.substring(0, 2000)}`;
       error: errorMessage,
       hint: 'Make sure Ollama is running'
     });
+  }
+});
+
+// ==================== MENTOR DASHBOARD ENDPOINTS ====================
+
+// Get mentor's students
+app.get('/api/mentor/students', async (req, res) => {
+  try {
+    // First try to get from mentor_student_links
+    const { data, error } = await supabase
+      .from('mentor_student_links')
+      .select(`
+        student_id,
+        profiles!mentor_student_links_student_id_fkey(
+          id, full_name, email
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.warn('Error fetching mentor_student_links:', error.message);
+      // Return empty array if table doesn't exist yet
+      return res.json({ students: [] });
+    }
+
+    const students = data.map(link => ({
+      id: link.profiles?.id,
+      name: link.profiles?.full_name || 'Unknown',
+      email: link.profiles?.email || '',
+      mentoring_focus: 'General',
+      progress_score: 0,
+      last_session: new Date().toISOString(),
+    })).filter(s => s.id);
+
+    res.json({ students });
+  } catch (error) {
+    console.error('Error fetching mentor students:', error);
+    res.status(400).json({ error: error.message, students: [] });
+  }
+});
+
+// Get mentor's sessions
+app.get('/api/mentor/sessions', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('mentoring_sessions')
+      .select('*')
+      .order('session_date', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.warn('Error fetching mentoring_sessions:', error.message);
+      // Return empty array if table doesn't exist yet
+      return res.json({ sessions: [] });
+    }
+
+    const sessions = data.map(session => ({
+      id: session.id,
+      student_id: session.student_id,
+      student_name: session.student_name || 'Unknown',
+      session_date: session.session_date,
+      duration_minutes: session.duration_minutes || 60,
+      notes: session.notes || '',
+      rating: session.rating || 5,
+    }));
+
+    res.json({ sessions });
+  } catch (error) {
+    console.error('Error fetching mentor sessions:', error);
+    res.status(400).json({ error: error.message, sessions: [] });
+  }
+});
+
+// Get realtime status
+app.get('/api/mentor/realtime-status', async (req, res) => {
+  try {
+    res.json({ status: [] });
+  } catch (error) {
+    console.error('Error fetching realtime status:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Create mentoring session
+app.post('/api/mentor/sessions/create', async (req, res) => {
+  try {
+    const { student_id, duration_minutes, notes, rating } = req.body;
+
+    const { data, error } = await supabase
+      .from('mentoring_sessions')
+      .insert([{
+        student_id,
+        duration_minutes,
+        notes,
+        rating,
+        session_date: new Date().toISOString(),
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({ success: true, session: data });
+  } catch (error) {
+    console.error('Error creating mentoring session:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// ==================== PARENT DASHBOARD ENDPOINTS ====================
+
+// Get parent's children
+app.get('/api/parent/:parentId/children', async (req, res) => {
+  try {
+    const { parentId } = req.params;
+
+    const { data, error } = await supabase
+      .from('parent_student_links')
+      .select(`
+        student_id,
+        profiles!parent_student_links_student_id_fkey(
+          id, full_name
+        )
+      `)
+      .eq('parent_id', parentId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.warn('Error fetching parent_student_links:', error.message);
+      // Return empty array if table doesn't exist yet
+      return res.json({ children: [] });
+    }
+
+    const children = data.map(link => ({
+      id: link.profiles?.id,
+      name: link.profiles?.full_name || 'Unknown',
+      grade: 'N/A',
+      overall_score: 0,
+      attendance_rate: 0,
+      last_active: new Date().toISOString(),
+    })).filter(c => c.id);
+
+    res.json({ children });
+  } catch (error) {
+    console.error('Error fetching parent children:', error);
+    res.status(400).json({ error: error.message, children: [] });
   }
 });
 

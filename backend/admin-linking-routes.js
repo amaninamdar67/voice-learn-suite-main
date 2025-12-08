@@ -8,19 +8,27 @@ export const initializeAdminLinkingRoutes = (supabase) => {
     try {
       const { role } = req.query;
       
-      let query = supabase.from('profiles').select('id, full_name, email, role');
+      console.log(`[Admin Linking] Fetching users with role: ${role || 'all'}`);
+      
+      let query = supabase.from('profiles').select('id, full_name, role');
       
       if (role) {
-        // Handle role filtering - roles might be stored as JSON or text
-        query = query.ilike('role', `%${role}%`);
+        // Filter by exact role match
+        query = query.eq('role', role);
       }
       
       const { data, error } = await query.order('full_name', { ascending: true });
       
-      if (error) throw error;
+      if (error) {
+        console.error('[Admin Linking] Error fetching users:', error);
+        // Return empty array if there's an error
+        return res.json({ users: [] });
+      }
+      
+      console.log(`[Admin Linking] Found ${data?.length || 0} users`);
       res.json({ users: data || [] });
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('[Admin Linking] Error fetching users:', error);
       res.status(400).json({ error: error.message, users: [] });
     }
   });
@@ -172,6 +180,104 @@ export const initializeAdminLinkingRoutes = (supabase) => {
     } catch (error) {
       console.error('Error deleting parent-mentor link:', error);
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get student-mentor links
+  router.get('/student-mentor-links', async (req, res) => {
+    try {
+      const { data, error } = await supabase
+        .from('mentor_student_links')
+        .select(`
+          id,
+          student_id,
+          mentor_id,
+          student:profiles!student_id(full_name),
+          mentor:profiles!mentor_id(full_name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const links = data.map(link => ({
+        id: link.id,
+        student_id: link.student_id,
+        mentor_id: link.mentor_id,
+        student_name: link.student?.full_name,
+        mentor_name: link.mentor?.full_name
+      }));
+
+      res.json({ links });
+    } catch (error) {
+      console.error('Error fetching student-mentor links:', error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Create student-mentor link
+  router.post('/student-mentor-links', async (req, res) => {
+    try {
+      const { student_id, mentor_id } = req.body;
+
+      const { data, error } = await supabase
+        .from('mentor_student_links')
+        .insert([{
+          student_id,
+          mentor_id
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      res.json({ success: true, link: data });
+    } catch (error) {
+      console.error('Error creating student-mentor link:', error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Delete student-mentor link
+  router.delete('/student-mentor-links/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const { error } = await supabase
+        .from('mentor_student_links')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting student-mentor link:', error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get students linked to a parent
+  router.get('/parent-students/:parentId', async (req, res) => {
+    try {
+      const { parentId } = req.params;
+
+      const { data, error } = await supabase
+        .from('parent_student_links')
+        .select(`
+          student_id,
+          student:profiles!student_id(id, full_name)
+        `)
+        .eq('parent_id', parentId);
+
+      if (error) throw error;
+
+      const students = data.map(link => ({
+        id: link.student_id,
+        full_name: link.student?.full_name,
+      }));
+
+      res.json({ students });
+    } catch (error) {
+      console.error('Error fetching parent students:', error);
+      res.status(400).json({ error: error.message, students: [] });
     }
   });
 

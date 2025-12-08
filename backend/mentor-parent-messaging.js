@@ -1,8 +1,8 @@
 import { Router } from 'express';
 
-const router = Router();
-
 export const initializeMentorParentMessaging = (supabase) => {
+  const router = Router();
+  
   // Get conversations between mentor and parent
   router.get('/conversations/:mentorId/:parentId', async (req, res) => {
     try {
@@ -12,8 +12,8 @@ export const initializeMentorParentMessaging = (supabase) => {
         .from('mentor_parent_messages')
         .select(`
           *,
-          mentor:profiles!mentor_id(id, full_name, avatar_url),
-          parent:profiles!parent_id(id, full_name, avatar_url),
+          mentor:profiles!mentor_id(id, full_name),
+          parent:profiles!parent_id(id, full_name),
           student:profiles!student_id(id, full_name)
         `)
         .or(`and(mentor_id.eq.${mentorId},parent_id.eq.${parentId}),and(mentor_id.eq.${parentId},parent_id.eq.${mentorId})`)
@@ -160,7 +160,7 @@ export const initializeMentorParentMessaging = (supabase) => {
       const { studentId } = req.params;
 
       const { data, error } = await supabase
-        .from('mentor_student_link')
+        .from('mentor_student_links')
         .select('mentor_id, profiles!mentor_id(id, full_name)')
         .eq('student_id', studentId)
         .single();
@@ -180,7 +180,7 @@ export const initializeMentorParentMessaging = (supabase) => {
       const { mentorId } = req.params;
 
       const { data, error } = await supabase
-        .from('mentor_student_link')
+        .from('mentor_student_links')
         .select('student_id, profiles!student_id(id, full_name)')
         .eq('mentor_id', mentorId);
 
@@ -284,7 +284,202 @@ export const initializeMentorParentMessaging = (supabase) => {
     }
   });
 
+  // Get all messages for a mentor
+  router.get('/mentor-messages/:mentorId', async (req, res) => {
+    try {
+      const { mentorId } = req.params;
+
+      const { data, error } = await supabase
+        .from('mentor_parent_messages')
+        .select(`
+          id,
+          mentor_id,
+          parent_id,
+          student_id,
+          message,
+          is_read,
+          created_at,
+          mentor:profiles!mentor_id(id, full_name),
+          parent:profiles!parent_id(id, full_name),
+          student:profiles!student_id(id, full_name)
+        `)
+        .eq('mentor_id', mentorId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      res.json({ messages: data });
+    } catch (error) {
+      console.error('Error fetching mentor messages:', error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Send reply from mentor to parent
+  router.post('/reply', async (req, res) => {
+    try {
+      const { mentorId, parentId, studentId, replyMessage, originalMessageId } = req.body;
+
+      console.log('[REPLY] Mentor:', mentorId, 'Parent:', parentId, 'Student:', studentId);
+
+      const { data, error } = await supabase
+        .from('mentor_parent_messages')
+        .insert([{
+          mentor_id: mentorId,
+          parent_id: parentId,
+          student_id: studentId,
+          message: replyMessage,
+          message_type: 'reply',
+          reply_to_id: originalMessageId
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      console.log('[REPLY] Reply sent successfully:', data.id);
+      res.json({ success: true, message: data });
+    } catch (error) {
+      console.error('Error sending reply:', error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get replies for a specific message
+  router.get('/messages/:messageId/replies', async (req, res) => {
+    try {
+      const { messageId } = req.params;
+
+      const { data, error } = await supabase
+        .from('mentor_parent_messages')
+        .select(`
+          id,
+          mentor_id,
+          parent_id,
+          student_id,
+          message,
+          is_read,
+          created_at,
+          mentor:profiles!mentor_id(id, full_name),
+          parent:profiles!parent_id(id, full_name),
+          student:profiles!student_id(id, full_name)
+        `)
+        .eq('reply_to_id', messageId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      res.json({ replies: data });
+    } catch (error) {
+      console.error('Error fetching replies:', error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Delete message (PERMANENT - hard delete)
+  router.delete('/messages/:messageId', async (req, res) => {
+    try {
+      const { messageId } = req.params;
+      const { userId } = req.body;
+
+      console.log('[DELETE] Permanently deleting message:', messageId, 'by user:', userId);
+
+      // First, verify the message exists and get both parent_id and mentor_id
+      const { data: messages, error: fetchError } = await supabase
+        .from('mentor_parent_messages')
+        .select('parent_id, mentor_id, id')
+        .eq('id', messageId);
+
+      if (fetchError) {
+        console.error('[DELETE] Fetch error:', fetchError);
+        return res.status(400).json({ error: 'Failed to fetch message: ' + fetchError.message });
+      }
+
+      if (!messages || messages.length === 0) {
+        console.log('[DELETE] Message not found:', messageId);
+        return res.status(404).json({ error: 'Message not found' });
+      }
+
+      const message = messages[0];
+      console.log('[DELETE] Found message:', message);
+
+      // Allow deletion if user is either the parent or mentor who sent the message
+      if (message.parent_id !== userId && message.mentor_id !== userId) {
+        console.log('[DELETE] Unauthorized - user is neither parent nor mentor');
+        return res.status(403).json({ error: 'Unauthorized: You can only delete your own messages' });
+      }
+
+      // PERMANENT DELETE - remove from database completely
+      const { error: deleteError } = await supabase
+        .from('mentor_parent_messages')
+        .delete()
+        .eq('id', messageId);
+
+      if (deleteError) {
+        console.error('[DELETE] Delete error:', deleteError);
+        return res.status(400).json({ error: 'Failed to delete message: ' + deleteError.message });
+      }
+
+      console.log('[DELETE] Message permanently deleted:', messageId);
+      res.json({ success: true, message: 'Message permanently deleted' });
+    } catch (error) {
+      console.error('[DELETE] Error deleting message:', error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Delete message (PERMANENT - hard delete) - using POST
+  router.post('/messages/:messageId/delete', async (req, res) => {
+    try {
+      const { messageId } = req.params;
+      const { userId } = req.body;
+
+      console.log('[DELETE-POST] Permanently deleting message:', messageId, 'by user:', userId);
+
+      // First, verify the message exists and get both parent_id and mentor_id
+      const { data: messages, error: fetchError } = await supabase
+        .from('mentor_parent_messages')
+        .select('parent_id, mentor_id, id')
+        .eq('id', messageId);
+
+      if (fetchError) {
+        console.error('[DELETE-POST] Fetch error:', fetchError);
+        return res.status(400).json({ error: 'Failed to fetch message: ' + fetchError.message });
+      }
+
+      if (!messages || messages.length === 0) {
+        console.log('[DELETE-POST] Message not found:', messageId);
+        return res.status(404).json({ error: 'Message not found' });
+      }
+
+      const message = messages[0];
+      console.log('[DELETE-POST] Found message:', message);
+
+      // Allow deletion if user is either the parent or mentor who sent the message
+      if (message.parent_id !== userId && message.mentor_id !== userId) {
+        console.log('[DELETE-POST] Unauthorized - user is neither parent nor mentor');
+        return res.status(403).json({ error: 'Unauthorized: You can only delete your own messages' });
+      }
+
+      // PERMANENT DELETE - remove from database completely
+      const { error: deleteError } = await supabase
+        .from('mentor_parent_messages')
+        .delete()
+        .eq('id', messageId);
+
+      if (deleteError) {
+        console.error('[DELETE-POST] Delete error:', deleteError);
+        return res.status(400).json({ error: 'Failed to delete message: ' + deleteError.message });
+      }
+
+      console.log('[DELETE-POST] Message permanently deleted:', messageId);
+      res.json({ success: true, message: 'Message permanently deleted' });
+    } catch (error) {
+      console.error('[DELETE-POST] Error deleting message:', error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+
+
   return router;
 };
 
-export default router;
+export default initializeMentorParentMessaging;

@@ -22,10 +22,12 @@ import UserManagement from "./pages/Admin/UserManagement";
 import Analytics from "./pages/Admin/Analytics";
 import SystemConfig from "./pages/Admin/SystemConfig";
 import DomainManagement from "./pages/Admin/DomainManagement";
+import LinkAccount from "./pages/Admin/LinkAccount";
 import LessonUpload from "./pages/Teacher/LessonUpload";
 import QuizCreator from "./pages/Teacher/QuizCreator";
 import ChildrenView from "./pages/Parent/ChildrenView";
 import MentoringView from "./pages/Mentor/MentoringView";
+import MentorMessages from "./pages/Mentor/MentorMessages";
 
 // LMS Teacher Pages
 import VideoLessonUpload from "./pages/Teacher/VideoLessonUpload";
@@ -41,7 +43,6 @@ import LiveClassesView from "./pages/Student/LiveClassesView";
 import QuizzesView from "./pages/Student/QuizzesView";
 import QuizRankingsView from "./pages/Student/QuizRankingsView";
 import OverallRankings from "./pages/Student/OverallRankings";
-import { AITutor } from "./pages/Student/AITutor";
 
 // Community Pages
 import RecordedClassesCommunity from "./pages/Community/RecordedClassesCommunity";
@@ -180,6 +181,16 @@ const App = () => (
                 }
               />
               <Route
+                path="/link-account"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <LinkAccount />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
                 path="/lessons/upload"
                 element={
                   <PrivateRoute>
@@ -215,6 +226,16 @@ const App = () => (
                   <PrivateRoute>
                     <MainLayout>
                       <MentoringView />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/mentor/messages"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <MentorMessages />
                     </MainLayout>
                   </PrivateRoute>
                 }

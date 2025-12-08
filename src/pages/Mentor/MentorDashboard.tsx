@@ -56,10 +56,16 @@ const MentorDashboard: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
+      setError('');
+      
       const [studentsRes, sessionsRes] = await Promise.all([
         fetch('http://localhost:3001/api/mentor/students'),
         fetch('http://localhost:3001/api/mentor/sessions')
       ]);
+
+      if (!studentsRes.ok || !sessionsRes.ok) {
+        throw new Error('Failed to fetch mentor data');
+      }
 
       const studentsData = await studentsRes.json();
       const sessionsData = await sessionsRes.json();
@@ -67,7 +73,8 @@ const MentorDashboard: React.FC = () => {
       setStudents(studentsData.students || []);
       setSessions(sessionsData.sessions || []);
     } catch (err: any) {
-      setError(err.message);
+      console.error('Error loading mentor data:', err);
+      setError('Failed to load mentor data. Make sure the backend server is running.');
     } finally {
       setLoading(false);
     }
@@ -77,7 +84,7 @@ const MentorDashboard: React.FC = () => {
     try {
       const res = await fetch('http://localhost:3001/api/mentor/realtime-status');
       const data = await res.json();
-      const statusMap = new Map(data.status?.map((s: RealtimeUpdate) => [s.student_id, s]) || []);
+      const statusMap = new Map<string, RealtimeUpdate>(data.status?.map((s: RealtimeUpdate) => [s.student_id, s]) || []);
       setRealtimeStatus(statusMap);
     } catch (err) {
       console.error('Failed to load realtime data:', err);
@@ -135,7 +142,7 @@ const MentorDashboard: React.FC = () => {
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid sx={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -149,7 +156,7 @@ const MentorDashboard: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid sx={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -163,7 +170,7 @@ const MentorDashboard: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid sx={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -177,7 +184,7 @@ const MentorDashboard: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid sx={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -197,12 +204,12 @@ const MentorDashboard: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-              <TableCell fontWeight={600}>Student</TableCell>
-              <TableCell fontWeight={600}>Focus Area</TableCell>
-              <TableCell fontWeight={600}>Progress</TableCell>
-              <TableCell fontWeight={600}>Status</TableCell>
-              <TableCell fontWeight={600}>Last Active</TableCell>
-              <TableCell fontWeight={600}>Actions</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Student</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Focus Area</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Progress</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Last Active</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -269,11 +276,11 @@ const MentorDashboard: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-              <TableCell fontWeight={600}>Student</TableCell>
-              <TableCell fontWeight={600}>Date</TableCell>
-              <TableCell fontWeight={600}>Duration</TableCell>
-              <TableCell fontWeight={600}>Rating</TableCell>
-              <TableCell fontWeight={600}>Notes</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Student</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Duration</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Rating</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Notes</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>

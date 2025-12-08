@@ -118,8 +118,6 @@ const DomainManagement: React.FC = () => {
           type: formData.type,
           description: formData.description,
           domain_id: selectedDomain.id,
-          department_name: formData.department_name,
-          semester_name: formData.semester_name,
         }),
       });
 
@@ -342,10 +340,6 @@ const DomainManagement: React.FC = () => {
                       <Box sx={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 1, mb: 2 }}>
                         <Typography variant="body2" color="text.secondary" fontWeight={600}>Type:</Typography>
                         <Typography variant="body2">{typeOptions.find(t => t.value === sd.type)?.label || sd.type}</Typography>
-                        <Typography variant="body2" color="text.secondary" fontWeight={600}>Department:</Typography>
-                        <Typography variant="body2">{sd.department_name || 'Not set'}</Typography>
-                        <Typography variant="body2" color="text.secondary" fontWeight={600}>Semester:</Typography>
-                        <Typography variant="body2">{sd.semester_name || 'Not set'}</Typography>
                         <Typography variant="body2" color="text.secondary" fontWeight={600}>Status:</Typography>
                         <Typography variant="body2" color={sd.is_active ? 'success.main' : 'text.secondary'}>● {sd.is_active ? 'Active' : 'In-Active'}</Typography>
                       </Box>

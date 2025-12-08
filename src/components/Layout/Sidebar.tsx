@@ -11,6 +11,7 @@ import {
   Box,
   Divider,
   Avatar,
+  SvgIcon,
 } from '@mui/material';
 import {
   Dashboard,
@@ -29,6 +30,14 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserRole } from '../../types';
 
+// Chalkboard icon component
+const ChalkboardIcon = (props: any) => (
+  <SvgIcon {...props} viewBox="0 0 24 24">
+    <path d="M3 3h18v14H3V3zm1 1v12h16V4H4zm2 2h12v8H6V6zm1 1v6h10V7H7z" fill="currentColor"/>
+    <path d="M2 18h20v2H2z" fill="currentColor"/>
+  </SvgIcon>
+);
+
 const drawerWidth = 240;
 
 interface MenuItem {
@@ -43,6 +52,7 @@ const menuItems: MenuItem[] = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['admin'] },
   { text: 'Domains', icon: <Settings />, path: '/domains', roles: ['admin'] },
   { text: 'Users', icon: <People />, path: '/users', roles: ['admin'] },
+  { text: 'Link Account', icon: <People />, path: '/link-account', roles: ['admin'] },
   { text: 'Analytics', icon: <Analytics />, path: '/analytics', roles: ['admin'] },
   { text: 'System Config', icon: <Settings />, path: '/system-config', roles: ['admin'] },
   { text: 'Leaderboard', icon: <Quiz />, path: '/leaderboard', roles: ['admin'] },
@@ -83,6 +93,7 @@ const menuItems: MenuItem[] = [
   // Mentor Menu
   { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['mentor'] },
   { text: 'Mentoring', icon: <People />, path: '/mentoring', roles: ['mentor'] },
+  { text: 'Messages', icon: <ChalkboardIcon />, path: '/mentor/messages', roles: ['mentor'] },
   { text: 'Leaderboard', icon: <Quiz />, path: '/leaderboard', roles: ['mentor'] },
   { text: 'Settings', icon: <Settings />, path: '/settings', roles: ['mentor'] },
 ];

@@ -56,7 +56,7 @@ export default function RecordedClassesCommunity() {
   const [editSubject, setEditSubject] = useState('');
 
   const canSeeRealIdentity = user?.role === 'mentor' || user?.role === 'parent';
-  const canComment = user?.role === 'student' || user?.role === 'teacher';
+  const canComment = user?.role === 'student' || user?.role === 'teacher' || user?.role === 'admin';
 
   const [newPost, setNewPost] = useState({
     title: '',
