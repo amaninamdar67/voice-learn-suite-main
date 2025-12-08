@@ -61,6 +61,7 @@ const UserManagement: React.FC = () => {
   const [subDomains, setSubDomains] = useState<any[]>([]);
   
   const [openEditUser, setOpenEditUser] = useState(false);
+  const [openAddUser, setOpenAddUser] = useState(false);
   const [openSettings, setOpenSettings] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -281,6 +282,108 @@ const UserManagement: React.FC = () => {
     handleMenuClose();
   };
 
+  const handleCreateUser = async () => {
+    if (!selectedSubDomain) {
+      setError('Please select a subdomain first');
+      return;
+    }
+
+    if (!newUser.name || !newUser.email || !newUser.password) {
+      setError('Name, email, and password are required');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const profileData: any = {
+        role: newUser.role,
+        full_name: newUser.name,
+        phone: newUser.phone || null,
+        sub_domain_id: selectedSubDomain.id,
+        department: newUser.department || null,
+        semester: newUser.semester || null,
+      };
+
+      if (newUser.role === 'student') {
+        profileData.student_id = newUser.studentId;
+        profileData.grade = newUser.grade;
+        profileData.section = newUser.section;
+      } else if (newUser.role === 'teacher') {
+        profileData.employee_id = newUser.employeeId;
+        profileData.qualifications = newUser.qualifications;
+        profileData.subjects = newUser.subjects;
+      } else if (newUser.role === 'mentor') {
+        profileData.mentor_id = newUser.mentorId;
+        profileData.expertise_area = newUser.expertiseArea;
+      } else if (newUser.role === 'admin') {
+        profileData.employee_id = newUser.employeeId;
+      }
+
+      const response = await fetch('http://localhost:3001/api/users/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: newUser.email,
+          password: newUser.password,
+          profile: profileData,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create user');
+      }
+
+      setSuccess(`User ${newUser.name} created successfully!`);
+      setOpenAddUser(false);
+      setNewUser({
+        name: '',
+        email: '',
+        password: '',
+        role: 'student',
+        phone: '',
+        studentId: '',
+        employeeId: '',
+        mentorId: '',
+        grade: '',
+        section: '',
+        department: '',
+        semester: '',
+        qualifications: '',
+        expertiseArea: '',
+        subjects: [],
+      });
+
+      // Reload users for current subdomain
+      if (selectedSubDomain) {
+        const response = await fetch(`http://localhost:3001/api/users?sub_domain_id=${selectedSubDomain.id}`);
+        const data = await response.json();
+        if (data.users) {
+          const formattedUsers: User[] = data.users.map((profile: any) => ({
+            id: profile.id,
+            name: profile.full_name || 'N/A',
+            email: profile.email || 'N/A',
+            role: profile.role,
+            semester: profile.semester || '',
+            branch: profile.department || '',
+            status: 'active',
+            lastLogin: getRelativeTime(profile.last_sign_in_at || profile.created_at),
+            subjects: profile.subjects || [],
+          } as any));
+          setUsers(formattedUsers);
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to create user');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleUpdateUser = async () => {
     if (!selectedUser) return;
     
@@ -400,11 +503,20 @@ const UserManagement: React.FC = () => {
             </Typography>
           )}
         </Box>
-        <Tooltip title="Settings">
-          <IconButton onClick={() => setOpenSettings(true)}>
-            <Settings />
-          </IconButton>
-        </Tooltip>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="contained"
+            onClick={() => setOpenAddUser(true)}
+            disabled={!selectedSubDomain}
+          >
+            + Add User
+          </Button>
+          <Tooltip title="Settings">
+            <IconButton onClick={() => setOpenSettings(true)}>
+              <Settings />
+            </IconButton>
+          </Tooltip>
+        </Box>
       </Box>
 
       {/* Subdomain Selector */}
@@ -744,6 +856,159 @@ const UserManagement: React.FC = () => {
             startIcon={loading && <CircularProgress size={20} />}
           >
             {loading ? 'Updating...' : 'Update User'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add User Dialog */}
+      <Dialog open={openAddUser} onClose={() => setOpenAddUser(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Add New User to {selectedSubDomain?.name}</DialogTitle>
+        <DialogContent>
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+          {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
+          
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            <Typography variant="subtitle2" color="text.secondary">Basic Information</Typography>
+            
+            <TextField
+              fullWidth
+              label="Full Name"
+              value={newUser.name}
+              onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+              required
+            />
+            
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+              <TextField
+                fullWidth
+                label="Email"
+                type="email"
+                value={newUser.email}
+                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                required
+              />
+              <TextField
+                fullWidth
+                label="Password"
+                type="password"
+                value={newUser.password}
+                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                required
+              />
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+              <TextField
+                fullWidth
+                label="Phone"
+                value={newUser.phone}
+                onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+              />
+              <TextField
+                select
+                fullWidth
+                label="Role"
+                value={newUser.role}
+                onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })}
+                required
+              >
+                <MenuItem value="teacher">Teacher</MenuItem>
+                <MenuItem value="student">Student</MenuItem>
+                <MenuItem value="parent">Parent</MenuItem>
+                <MenuItem value="mentor">Mentor</MenuItem>
+                <MenuItem value="admin">Admin</MenuItem>
+              </TextField>
+            </Box>
+
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
+              Department & Semester
+            </Typography>
+            
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+              <TextField
+                fullWidth
+                label="Department"
+                value={newUser.department}
+                onChange={(e) => setNewUser({ ...newUser, department: e.target.value })}
+                placeholder="e.g., Computer Science"
+              />
+              <TextField
+                fullWidth
+                label="Semester"
+                value={newUser.semester}
+                onChange={(e) => setNewUser({ ...newUser, semester: e.target.value })}
+                placeholder="e.g., Fall 2024"
+              />
+            </Box>
+
+            {newUser.role === 'student' && (
+              <>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
+                  Student Information
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2 }}>
+                  <TextField
+                    fullWidth
+                    label="Student ID"
+                    value={newUser.studentId}
+                    onChange={(e) => setNewUser({ ...newUser, studentId: e.target.value })}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Grade"
+                    value={newUser.grade}
+                    onChange={(e) => setNewUser({ ...newUser, grade: e.target.value })}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Section"
+                    value={newUser.section}
+                    onChange={(e) => setNewUser({ ...newUser, section: e.target.value })}
+                  />
+                </Box>
+              </>
+            )}
+
+            {newUser.role === 'teacher' && (
+              <>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
+                  Teacher Information
+                </Typography>
+                <TextField
+                  fullWidth
+                  label="Employee ID"
+                  value={newUser.employeeId}
+                  onChange={(e) => setNewUser({ ...newUser, employeeId: e.target.value })}
+                />
+                <TextField
+                  fullWidth
+                  label="Qualifications"
+                  value={newUser.qualifications}
+                  onChange={(e) => setNewUser({ ...newUser, qualifications: e.target.value })}
+                />
+                <TextField
+                  fullWidth
+                  label="Subjects"
+                  value={newUser.subjects.join(', ')}
+                  onChange={(e) => setNewUser({ ...newUser, subjects: e.target.value.split(',').map(s => s.trim()).filter(s => s) })}
+                  placeholder="Mathematics, Physics, Chemistry"
+                  helperText="Enter subjects separated by commas"
+                />
+              </>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenAddUser(false)} disabled={loading}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleCreateUser}
+            disabled={!newUser.name || !newUser.email || !newUser.password || loading}
+            startIcon={loading && <CircularProgress size={20} />}
+          >
+            {loading ? 'Creating...' : 'Create User'}
           </Button>
         </DialogActions>
       </Dialog>
