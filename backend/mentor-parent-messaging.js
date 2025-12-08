@@ -30,7 +30,7 @@ export const initializeMentorParentMessaging = (supabase) => {
   // Send message
   router.post('/messages', async (req, res) => {
     try {
-      const { mentorId, parentId, studentId, message, messageType } = req.body;
+      const { mentorId, parentId, studentId, message, messageType, senderId } = req.body;
 
       const { data, error } = await supabase
         .from('mentor_parent_messages')
@@ -39,7 +39,8 @@ export const initializeMentorParentMessaging = (supabase) => {
           parent_id: parentId,
           student_id: studentId,
           message,
-          message_type: messageType || 'text'
+          message_type: messageType || 'text',
+          sender_id: senderId
         }])
         .select()
         .single();

@@ -107,10 +107,13 @@ const Analytics: React.FC = () => {
       let replyRatio = '0/0';
       try {
         const interactionsRes = await fetch('http://localhost:3001/api/admin/mentor-parent-interactions');
-        const interactionsData = interactionsRes.ok ? await interactionsRes.json() : { totalParentMessages: 0, totalMentorReplies: 0, replyRatio: '0/0' };
-        parentReports = interactionsData.totalParentMessages || 0;
-        mentorReplies = interactionsData.totalMentorReplies || 0;
-        replyRatio = interactionsData.replyRatio || '0/0';
+        if (interactionsRes.ok) {
+          const interactionsData = await interactionsRes.json();
+          console.log('Mentor-Parent Interactions:', interactionsData);
+          parentReports = interactionsData.totalParentMessages || 0;
+          mentorReplies = interactionsData.totalMentorReplies || 0;
+          replyRatio = interactionsData.replyRatio || '0/0';
+        }
       } catch (error) {
         console.error('Error fetching parent/mentor data:', error);
       }
@@ -119,11 +122,23 @@ const Analytics: React.FC = () => {
       let accountsLinked = 0;
       try {
         const linkedRes = await fetch('http://localhost:3001/api/admin/accounts-linked-count');
-        const linkedData = linkedRes.ok ? await linkedRes.json() : { totalLinked: 0 };
-        accountsLinked = linkedData.totalLinked || 0;
+        if (linkedRes.ok) {
+          const linkedData = await linkedRes.json();
+          console.log('Accounts Linked:', linkedData);
+          accountsLinked = linkedData.totalLinked || 0;
+        }
       } catch (error) {
         console.error('Error fetching linking data:', error);
       }
+
+      console.log('Analytics Data:', {
+        students,
+        totalComments,
+        parentReports,
+        mentorReplies,
+        accountsLinked,
+        activeLiveClasses,
+      });
 
       setStats([
         { label: 'Total Students', value: students.toString(), change: '+0%', icon: <People />, color: '#2196F3' },

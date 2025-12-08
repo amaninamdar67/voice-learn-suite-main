@@ -75,7 +75,8 @@ export const MentorParentChat: React.FC<MentorParentChatProps> = ({
           parentId,
           studentId,
           message: inputValue,
-          messageType: 'text'
+          messageType: 'text',
+          senderId: currentUserId
         })
       });
 

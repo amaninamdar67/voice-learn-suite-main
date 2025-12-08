@@ -1524,6 +1524,44 @@ app.get('/api/admin/comments-count', async (req, res) => {
   }
 });
 
+// Get all analytics data in one call
+app.get('/api/admin/all-analytics', async (req, res) => {
+  try {
+    // Get all data in parallel
+    const [
+      { data: allMessages, error: msgError },
+      { data: parentChildLinks, error: pcError },
+      { data: mentorStudentLinks, error: msError },
+      { data: communityPosts, error: cpError }
+    ] = await Promise.all([
+      supabase.from('mentor_parent_messages').select('id', { count: 'exact', head: true }),
+      supabase.from('parent_child_links').select('id', { count: 'exact', head: true }),
+      supabase.from('mentor_student_links').select('id', { count: 'exact', head: true }),
+      supabase.from('community_posts').select('id', { count: 'exact', head: true })
+    ]);
+
+    if (msgError || pcError || msError || cpError) {
+      throw msgError || pcError || msError || cpError;
+    }
+
+    const totalParentMessages = allMessages?.length || 0;
+    const totalAccountsLinked = (parentChildLinks?.length || 0) + (mentorStudentLinks?.length || 0);
+    const totalComments = communityPosts?.length || 0;
+
+    res.json({
+      totalParentMessages,
+      totalMentorReplies: 0,
+      replyRatio: `0/${totalParentMessages}`,
+      totalAccountsLinked,
+      totalComments,
+      allMessagesCount: totalParentMessages
+    });
+  } catch (error) {
+    console.error('Error fetching all analytics:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // Get total parent messages count
 app.get('/api/admin/parent-messages-count', async (req, res) => {
   try {
@@ -1582,35 +1620,52 @@ app.get('/api/admin/accounts-linked-count', async (req, res) => {
   }
 });
 
+// Debug endpoint to check messages table
+app.get('/api/admin/debug-messages', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('mentor_parent_messages')
+      .select('*')
+      .limit(10);
+    
+    if (error) throw error;
+    
+    res.json({
+      count: data?.length || 0,
+      messages: data,
+      error: null
+    });
+  } catch (error) {
+    console.error('Debug error:', error);
+    res.status(400).json({ error: error.message, count: 0 });
+  }
+});
+
 // Get mentor-parent interactions count
 app.get('/api/admin/mentor-parent-interactions', async (req, res) => {
   try {
-    // Count parent messages (initial messages from parents)
-    const { data: parentMessages, error: pmError } = await supabase
+    // Get all messages (not just count)
+    const { data: allMessages, error: allError, count } = await supabase
       .from('mentor_parent_messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('sender_role', 'parent')
-      .is('reply_to_id', null);
+      .select('*', { count: 'exact' });
     
-    if (pmError) throw pmError;
+    if (allError) throw allError;
     
-    const totalParentMessages = parentMessages?.length || 0;
+    const totalMessages = count || allMessages?.length || 0;
     
-    // Count mentor replies (replies from mentors to parent messages)
-    const { data: mentorReplies, error: mrError } = await supabase
-      .from('mentor_parent_messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('sender_role', 'mentor')
-      .not('reply_to_id', 'is', null);
+    console.log('Mentor-Parent Messages Debug:', {
+      totalMessages,
+      count,
+      dataLength: allMessages?.length,
+      firstMessage: allMessages?.[0]
+    });
     
-    if (mrError) throw mrError;
-    
-    const totalMentorReplies = mentorReplies?.length || 0;
-    
+    // For now, show total messages as parent reports
+    // Mentor replies will be 0 until reply_to_id is properly populated
     res.json({
-      totalParentMessages: totalParentMessages,
-      totalMentorReplies: totalMentorReplies,
-      replyRatio: `${totalMentorReplies}/${totalParentMessages}`,
+      totalParentMessages: totalMessages,
+      totalMentorReplies: 0,
+      replyRatio: `0/${totalMessages}`,
     });
   } catch (error) {
     console.error('Error fetching mentor-parent interactions:', error);
