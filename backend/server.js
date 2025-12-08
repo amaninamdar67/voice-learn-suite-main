@@ -19,6 +19,7 @@ import {
   updateLiveClassStatus,
   sendAttendancePing,
   deleteLiveClass,
+  getAssignments,
   getQuizzes,
   getQuizWithQuestions,
   createQuiz,
@@ -91,7 +92,7 @@ app.get('/api/system/activities', async (req, res) => {
       .limit(5);
 
     if (recentUsers) {
-      recentUsers.forEach((user: any) => {
+      recentUsers.forEach((user) => {
         const roleText = user.role.charAt(0).toUpperCase() + user.role.slice(1);
         activities.push({
           id: `user-${user.id}`,
@@ -110,7 +111,7 @@ app.get('/api/system/activities', async (req, res) => {
       .limit(5);
 
     if (recentLessons) {
-      recentLessons.forEach((lesson: any) => {
+      recentLessons.forEach((lesson) => {
         activities.push({
           id: `lesson-${lesson.id}`,
           message: `Teacher uploaded lesson: ${lesson.title}`,
@@ -128,7 +129,7 @@ app.get('/api/system/activities', async (req, res) => {
       .limit(5);
 
     if (recentQuizzes) {
-      recentQuizzes.forEach((quiz: any) => {
+      recentQuizzes.forEach((quiz) => {
         activities.push({
           id: `quiz-${quiz.id}`,
           message: `New quiz created: ${quiz.title}`,
@@ -144,6 +145,321 @@ app.get('/api/system/activities', async (req, res) => {
     res.json({ activities: activities.slice(0, 10) });
   } catch (error) {
     console.error('Error fetching activities:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get comprehensive admin analytics
+app.get('/api/admin/analytics', async (req, res) => {
+  try {
+    const { range = 'week' } = req.query;
+    
+    // Calculate date range
+    const endDate = new Date();
+    const startDate = new Date();
+    
+    if (range === 'week') {
+      startDate.setDate(endDate.getDate() - 7);
+    } else if (range === 'month') {
+      startDate.setDate(endDate.getDate() - 30);
+    } else if (range === 'year') {
+      startDate.setMonth(endDate.getMonth() - 12);
+    }
+
+    // Fetch all data in parallel
+    const [usersRes, lessonsRes, quizzesRes, assignmentsRes, liveClassesRes, attendanceRes] = await Promise.all([
+      supabase.from('profiles').select('id, created_at').gte('created_at', startDate.toISOString()),
+      supabase.from('lessons').select('id, created_at').gte('created_at', startDate.toISOString()),
+      supabase.from('quizzes').select('id, created_at').gte('created_at', startDate.toISOString()),
+      supabase.from('assignments').select('id, created_at').gte('created_at', startDate.toISOString()),
+      supabase.from('live_classes').select('id, created_at').gte('created_at', startDate.toISOString()),
+      supabase.from('live_attendance').select('id, is_present, created_at').gte('created_at', startDate.toISOString()),
+    ]);
+
+    // Group data by date
+    const groupByDate = (data, range) => {
+      const grouped = {};
+      
+      if (!data) return grouped;
+      
+      data.forEach((item) => {
+        const date = new Date(item.created_at);
+        let key;
+        
+        if (range === 'week' || range === 'month') {
+          key = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        } else {
+          key = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        }
+        
+        if (!grouped[key]) grouped[key] = 0;
+        grouped[key]++;
+      });
+      
+      return grouped;
+    };
+
+    const usersByDate = groupByDate(usersRes.data, range);
+    const lessonsByDate = groupByDate(lessonsRes.data, range);
+    const quizzesByDate = groupByDate(quizzesRes.data, range);
+    const assignmentsByDate = groupByDate(assignmentsRes.data, range);
+    const liveClassesByDate = groupByDate(liveClassesRes.data, range);
+
+    // Calculate attendance stats
+    const totalAttendance = attendanceRes.data?.length || 0;
+    const presentCount = attendanceRes.data?.filter(a => a.is_present)?.length || 0;
+    const attendanceRate = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0;
+
+    // Merge all dates
+    const allDates = new Set([
+      ...Object.keys(usersByDate),
+      ...Object.keys(lessonsByDate),
+      ...Object.keys(quizzesByDate),
+      ...Object.keys(assignmentsByDate),
+      ...Object.keys(liveClassesByDate),
+    ]);
+
+    const chartData = Array.from(allDates).map(date => ({
+      date,
+      users: usersByDate[date] || 0,
+      lessons: lessonsByDate[date] || 0,
+      quizzes: quizzesByDate[date] || 0,
+      assignments: assignmentsByDate[date] || 0,
+      liveClasses: liveClassesByDate[date] || 0,
+      total: (usersByDate[date] || 0) + (lessonsByDate[date] || 0) + (quizzesByDate[date] || 0) + (assignmentsByDate[date] || 0) + (liveClassesByDate[date] || 0),
+    }));
+
+    // Calculate totals
+    const totals = {
+      users: usersRes.data?.length || 0,
+      lessons: lessonsRes.data?.length || 0,
+      quizzes: quizzesRes.data?.length || 0,
+      assignments: assignmentsRes.data?.length || 0,
+      liveClasses: liveClassesRes.data?.length || 0,
+      attendance: {
+        total: totalAttendance,
+        present: presentCount,
+        rate: attendanceRate,
+      },
+    };
+
+    res.json({ chartData, totals, range });
+  } catch (error) {
+    console.error('Error fetching admin analytics:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get weekly attendance data
+app.get('/api/admin/attendance/weekly', async (req, res) => {
+  try {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 7);
+
+    // For each day, calculate attendance
+    const weeklyData = {};
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    
+    for (let i = 0; i < 7; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - (6 - i));
+      const dayName = days[date.getDay()];
+      const dateStr = date.toISOString().split('T')[0];
+
+      // Get attendance for this day
+      const { data: dayAttendance } = await supabase
+        .from('live_attendance')
+        .select('id, is_present')
+        .gte('created_at', `${dateStr}T00:00:00`)
+        .lte('created_at', `${dateStr}T23:59:59`);
+
+      const total = dayAttendance?.length || 0;
+      const present = dayAttendance?.filter(a => a.is_present)?.length || 0;
+      const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
+
+      weeklyData[dayName] = {
+        day: dayName,
+        percentage,
+        total,
+        present,
+        date: dateStr,
+      };
+    }
+
+    res.json({ weeklyData: Object.values(weeklyData) });
+  } catch (error) {
+    console.error('Error fetching weekly attendance:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get quiz performance analytics
+app.get('/api/admin/quiz-performance', async (req, res) => {
+  try {
+    const { range = 'week' } = req.query;
+    
+    // Calculate date range
+    const endDate = new Date();
+    const startDate = new Date();
+    
+    if (range === 'week') {
+      startDate.setDate(endDate.getDate() - 7);
+    } else if (range === 'month') {
+      startDate.setDate(endDate.getDate() - 30);
+    } else if (range === 'year') {
+      startDate.setMonth(endDate.getMonth() - 12);
+    }
+
+    // Get all quizzes with submissions
+    const { data: quizzes } = await supabase
+      .from('quizzes')
+      .select('id, title')
+      .gte('created_at', startDate.toISOString());
+
+    const quizPerformance = [];
+
+    for (const quiz of quizzes || []) {
+      const { data: submissions } = await supabase
+        .from('quiz_submissions')
+        .select('score')
+        .eq('quiz_id', quiz.id)
+        .gte('created_at', startDate.toISOString());
+
+      if (submissions && submissions.length > 0) {
+        const avgScore = Math.round(submissions.reduce((sum, s) => sum + (s.score || 0), 0) / submissions.length);
+        quizPerformance.push({
+          subject: quiz.title,
+          avgScore,
+          students: submissions.length,
+        });
+      }
+    }
+
+    res.json({ quizPerformance });
+  } catch (error) {
+    console.error('Error fetching quiz performance:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get AI Tutor usage statistics
+app.get('/api/admin/ai-tutor-stats', async (req, res) => {
+  try {
+    const { range = 'week' } = req.query;
+    
+    // Calculate date range
+    const endDate = new Date();
+    const startDate = new Date();
+    
+    if (range === 'week') {
+      startDate.setDate(endDate.getDate() - 7);
+    } else if (range === 'month') {
+      startDate.setDate(endDate.getDate() - 30);
+    } else if (range === 'year') {
+      startDate.setMonth(endDate.getMonth() - 12);
+    }
+
+    // Get AI tutor sessions (if table exists)
+    const { data: aiSessions } = await supabase
+      .from('ai_tutor_sessions')
+      .select('id, category, tokens_used, created_at')
+      .gte('created_at', startDate.toISOString())
+      .catch(() => ({ data: [] }));
+
+    // Group by category
+    const categories = {};
+    let totalTokens = 0;
+    let totalSessions = 0;
+
+    if (aiSessions) {
+      aiSessions.forEach(session => {
+        const category = session.category || 'General Help';
+        if (!categories[category]) {
+          categories[category] = { sessions: 0, tokens: 0 };
+        }
+        categories[category].sessions++;
+        categories[category].tokens += session.tokens_used || 0;
+        totalTokens += session.tokens_used || 0;
+        totalSessions++;
+      });
+    }
+
+    // Format response
+    const aiTutorEngagement = Object.entries(categories).map(([category, data]) => ({
+      category,
+      sessions: data.sessions,
+      tokensUsed: data.tokens,
+    }));
+
+    // Get popular questions
+    const { data: questions } = await supabase
+      .from('ai_tutor_questions')
+      .select('question, count')
+      .gte('created_at', startDate.toISOString())
+      .order('count', { ascending: false })
+      .limit(4)
+      .catch(() => ({ data: [] }));
+
+    res.json({
+      aiTutorEngagement,
+      totalSessions,
+      totalTokensUsed: totalTokens,
+      popularQuestions: questions || [],
+    });
+  } catch (error) {
+    console.error('Error fetching AI tutor stats:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get LMS analytics
+app.get('/api/admin/lms-analytics', async (req, res) => {
+  try {
+    const { range = 'week' } = req.query;
+    
+    // Calculate date range
+    const endDate = new Date();
+    const startDate = new Date();
+    
+    if (range === 'week') {
+      startDate.setDate(endDate.getDate() - 7);
+    } else if (range === 'month') {
+      startDate.setDate(endDate.getDate() - 30);
+    } else if (range === 'year') {
+      startDate.setMonth(endDate.getMonth() - 12);
+    }
+
+    // Get LMS content stats
+    const [videoLessonsRes, recordedVideosRes, liveClassesRes, quizzesRes, assignmentsRes] = await Promise.all([
+      supabase.from('lessons').select('id').gte('created_at', startDate.toISOString()),
+      supabase.from('recorded_videos').select('id').gte('created_at', startDate.toISOString()),
+      supabase.from('live_classes').select('id').gte('created_at', startDate.toISOString()),
+      supabase.from('quizzes').select('id').gte('created_at', startDate.toISOString()),
+      supabase.from('assignments').select('id').gte('created_at', startDate.toISOString()),
+    ]);
+
+    // Get engagement metrics
+    const { data: lessonTracking } = await supabase
+      .from('lesson_attendance')
+      .select('id, is_completed')
+      .gte('created_at', startDate.toISOString());
+
+    const completedLessons = lessonTracking?.filter(l => l.is_completed)?.length || 0;
+    const totalLessonViews = lessonTracking?.length || 0;
+    const avgCompletion = totalLessonViews > 0 ? Math.round((completedLessons / totalLessonViews) * 100) : 0;
+
+    res.json({
+      videoLessons: videoLessonsRes.data?.length || 0,
+      recordedVideos: recordedVideosRes.data?.length || 0,
+      liveClasses: liveClassesRes.data?.length || 0,
+      quizzes: quizzesRes.data?.length || 0,
+      assignments: assignmentsRes.data?.length || 0,
+      totalViews: totalLessonViews,
+      avgCompletion,
+    });
+  } catch (error) {
+    console.error('Error fetching LMS analytics:', error);
     res.status(400).json({ error: error.message });
   }
 });
@@ -1151,6 +1467,9 @@ app.delete('/api/lms/recorded-videos/:id', deleteRecordedVideo);
 app.post('/api/lms/recorded-videos/:videoId/track', trackVideoProgress);
 app.get('/api/lms/watch-history/:studentId', getWatchHistory);
 
+// Assignments
+app.get('/api/lms/assignments', getAssignments);
+
 // Live Classes
 app.get('/api/lms/live-classes', getLiveClasses);
 app.post('/api/lms/live-classes', createLiveClass);
@@ -1188,6 +1507,116 @@ app.put('/api/community/posts/:id', updateCommunityPost);
 app.delete('/api/community/posts/:id', deleteCommunityPost);
 app.put('/api/community/replies/:id', updateCommunityReply);
 app.delete('/api/community/replies/:id', deleteCommunityReply);
+
+// Get total comments count
+app.get('/api/admin/comments-count', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('community_posts')
+      .select('id', { count: 'exact', head: true });
+    
+    if (error) throw error;
+    
+    res.json({ totalComments: data?.length || 0 });
+  } catch (error) {
+    console.error('Error fetching comments count:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get total parent messages count
+app.get('/api/admin/parent-messages-count', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('mentor_parent_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('sender_role', 'parent');
+    
+    if (error) throw error;
+    
+    res.json({ totalMessages: data?.length || 0 });
+  } catch (error) {
+    console.error('Error fetching parent messages count:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get total mentor replies count
+app.get('/api/admin/mentor-replies-count', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('mentor_parent_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('sender_role', 'mentor')
+      .not('reply_to_id', 'is', null);
+    
+    if (error) throw error;
+    
+    res.json({ totalReplies: data?.length || 0 });
+  } catch (error) {
+    console.error('Error fetching mentor replies count:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get total accounts linked count
+app.get('/api/admin/accounts-linked-count', async (req, res) => {
+  try {
+    // Count parent-child links
+    const { data: parentChildLinks, error: pcError } = await supabase
+      .from('parent_child_links')
+      .select('id', { count: 'exact', head: true });
+    
+    // Count mentor-student links
+    const { data: mentorStudentLinks, error: msError } = await supabase
+      .from('mentor_student_links')
+      .select('id', { count: 'exact', head: true });
+    
+    if (pcError || msError) throw pcError || msError;
+    
+    const totalLinked = (parentChildLinks?.length || 0) + (mentorStudentLinks?.length || 0);
+    res.json({ totalLinked });
+  } catch (error) {
+    console.error('Error fetching accounts linked count:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get mentor-parent interactions count
+app.get('/api/admin/mentor-parent-interactions', async (req, res) => {
+  try {
+    // Count parent messages (initial messages from parents)
+    const { data: parentMessages, error: pmError } = await supabase
+      .from('mentor_parent_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('sender_role', 'parent')
+      .is('reply_to_id', null);
+    
+    if (pmError) throw pmError;
+    
+    const totalParentMessages = parentMessages?.length || 0;
+    
+    // Count mentor replies (replies from mentors to parent messages)
+    const { data: mentorReplies, error: mrError } = await supabase
+      .from('mentor_parent_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('sender_role', 'mentor')
+      .not('reply_to_id', 'is', null);
+    
+    if (mrError) throw mrError;
+    
+    const totalMentorReplies = mentorReplies?.length || 0;
+    
+    res.json({
+      totalParentMessages: totalParentMessages,
+      totalMentorReplies: totalMentorReplies,
+      replyRatio: `${totalMentorReplies}/${totalParentMessages}`,
+    });
+  } catch (error) {
+    console.error('Error fetching mentor-parent interactions:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
 
 // ==================== AI TUTOR ENDPOINTS (OLLAMA) ====================
 

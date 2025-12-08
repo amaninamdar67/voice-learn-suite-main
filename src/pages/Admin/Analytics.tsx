@@ -37,57 +37,107 @@ const Analytics: React.FC = () => {
   const [timeRange, setTimeRange] = useState('week');
   const [stats, setStats] = useState([
     { label: 'Total Students', value: '0', change: '+0%', icon: <People />, color: '#2196F3' },
-    { label: 'Video Lessons', value: '0', change: '+0%', icon: <School />, color: '#4CAF50' },
-    { label: 'Quizzes Completed', value: '0', change: '+0%', icon: <Quiz />, color: '#FF9800' },
-    { label: 'Live Classes', value: '0', change: '+0%', icon: <SmartToy />, color: '#9C27B0' },
+    { label: 'Student Interaction', value: '0', change: '+0%', icon: <School />, color: '#FF6B6B' },
+    { label: 'Parent Reports', value: '0', change: '+0%', icon: <People />, color: '#4CAF50', subtext: '' },
+    { label: 'Mentor Talk', value: '0', change: '+0%', icon: <School />, color: '#FF9800', subtext: '' },
+    { label: 'Account Linked', value: '0', change: '+0%', icon: <People />, color: '#2196F3', subtext: '' },
+    { label: 'Active Live-Classes', value: '0', change: '+0%', icon: <SmartToy />, color: '#9C27B0' },
   ]);
   const [lmsStats, setLmsStats] = useState({
     videoLessons: 0,
-    recordedVideos: 0,
+    studyMaterials: 0,
+    assignments: 0,
     liveClasses: 0,
     quizzes: 0,
     totalViews: 0,
     avgCompletion: 0,
   });
+  const [attendanceData, setAttendanceData] = useState([]);
+  const [quizPerformance, setQuizPerformance] = useState([]);
+  const [aiTutorData, setAiTutorData] = useState({
+    aiTutorEngagement: [],
+    totalSessions: 0,
+    totalTokensUsed: 0,
+    popularQuestions: [],
+  });
 
   React.useEffect(() => {
     loadAnalyticsData();
-  }, []);
+    loadAttendanceData();
+    loadQuizPerformance();
+    loadAiTutorStats();
+    loadLmsAnalytics();
+  }, [timeRange]);
 
   const loadAnalyticsData = async () => {
     try {
-      // Load users
       const usersResponse = await fetch('http://localhost:3001/api/users');
       const usersData = await usersResponse.json();
       
-      // Load LMS data
-      const [videoLessonsRes, recordedVideosRes, liveClassesRes, quizzesRes] = await Promise.all([
-        fetch('http://localhost:3001/api/lms/video-lessons'),
+      const [lessonsRes, recordedVideosRes, assignmentsRes, liveClassesRes, quizzesRes] = await Promise.all([
+        fetch('http://localhost:3001/api/lessons'),
         fetch('http://localhost:3001/api/lms/recorded-videos'),
+        fetch('http://localhost:3001/api/lms/assignments'),
         fetch('http://localhost:3001/api/lms/live-classes'),
         fetch('http://localhost:3001/api/lms/quizzes'),
       ]);
 
-      const videoLessons = await videoLessonsRes.json();
-      const recordedVideos = await recordedVideosRes.json();
-      const liveClasses = await liveClassesRes.json();
-      const quizzes = await quizzesRes.json();
+      const lessons = lessonsRes.ok ? await lessonsRes.json() : { lessons: [] };
+      const recordedVideos = recordedVideosRes.ok ? await recordedVideosRes.json() : { videos: [] };
+      const assignments = assignmentsRes.ok ? await assignmentsRes.json() : { assignments: [] };
+      const liveClasses = liveClassesRes.ok ? await liveClassesRes.json() : { liveClasses: [] };
+      const quizzes = quizzesRes.ok ? await quizzesRes.json() : { quizzes: [] };
+      
+      const commentsRes = await fetch('http://localhost:3001/api/admin/comments-count');
+      const commentsData = commentsRes.ok ? await commentsRes.json() : { totalComments: 0 };
 
-      const students = usersData.users?.filter((u: any) => u.role === 'student').length || 0;
-      const totalVideoLessons = videoLessons.lessons?.length || 0;
-      const totalLiveClasses = liveClasses.liveClasses?.length || 0;
+      const students = usersData.users?.filter((u) => u.role === 'student').length || 0;
+      const totalStudyMaterials = Array.isArray(lessons.lessons) ? lessons.lessons.length : 0;
+      const totalRecordedVideos = Array.isArray(recordedVideos.videos) ? recordedVideos.videos.length : 0;
+      const totalAssignments = Array.isArray(assignments.assignments) ? assignments.assignments.length : 0;
+      const totalComments = commentsData.totalComments || 0;
+      const allLiveClasses = liveClasses.liveClasses || [];
+      const totalLiveClasses = allLiveClasses.length || 0;
+      const activeLiveClasses = allLiveClasses.filter((lc) => lc.status === 'active' || lc.status === 'ongoing').length || 0;
       const totalQuizzes = quizzes.quizzes?.length || 0;
+      
+      // Fetch parent and mentor messaging data
+      let parentReports = 0;
+      let mentorReplies = 0;
+      let replyRatio = '0/0';
+      try {
+        const interactionsRes = await fetch('http://localhost:3001/api/admin/mentor-parent-interactions');
+        const interactionsData = interactionsRes.ok ? await interactionsRes.json() : { totalParentMessages: 0, totalMentorReplies: 0, replyRatio: '0/0' };
+        parentReports = interactionsData.totalParentMessages || 0;
+        mentorReplies = interactionsData.totalMentorReplies || 0;
+        replyRatio = interactionsData.replyRatio || '0/0';
+      } catch (error) {
+        console.error('Error fetching parent/mentor data:', error);
+      }
+
+      // Fetch account linking data
+      let accountsLinked = 0;
+      try {
+        const linkedRes = await fetch('http://localhost:3001/api/admin/accounts-linked-count');
+        const linkedData = linkedRes.ok ? await linkedRes.json() : { totalLinked: 0 };
+        accountsLinked = linkedData.totalLinked || 0;
+      } catch (error) {
+        console.error('Error fetching linking data:', error);
+      }
 
       setStats([
         { label: 'Total Students', value: students.toString(), change: '+0%', icon: <People />, color: '#2196F3' },
-        { label: 'Video Lessons', value: totalVideoLessons.toString(), change: '+0%', icon: <School />, color: '#4CAF50' },
-        { label: 'Total Quizzes', value: totalQuizzes.toString(), change: '+0%', icon: <Quiz />, color: '#FF9800' },
-        { label: 'Live Classes', value: totalLiveClasses.toString(), change: '+0%', icon: <SmartToy />, color: '#9C27B0' },
+        { label: 'Student Interaction', value: totalComments.toString(), change: '+0%', icon: <School />, color: '#FF6B6B' },
+        { label: 'Parent Reports', value: parentReports.toString(), change: '+0%', icon: <People />, color: '#4CAF50', subtext: '' },
+        { label: 'Mentor Talk', value: mentorReplies.toString(), change: '+0%', icon: <School />, color: '#FF9800', subtext: replyRatio },
+        { label: 'Account Linked', value: accountsLinked.toString(), change: '+0%', icon: <People />, color: '#2196F3', subtext: '' },
+        { label: 'Active Live-Classes', value: activeLiveClasses.toString(), change: '+0%', icon: <SmartToy />, color: '#9C27B0' },
       ]);
 
       setLmsStats({
-        videoLessons: totalVideoLessons,
-        recordedVideos: recordedVideos.videos?.length || 0,
+        videoLessons: totalRecordedVideos,
+        studyMaterials: totalStudyMaterials,
+        assignments: totalAssignments,
         liveClasses: totalLiveClasses,
         quizzes: totalQuizzes,
         totalViews: 0,
@@ -98,27 +148,62 @@ const Analytics: React.FC = () => {
     }
   };
 
-  const attendanceData = [
-    { day: 'Mon', percentage: 85 },
-    { day: 'Tue', percentage: 92 },
-    { day: 'Wed', percentage: 88 },
-    { day: 'Thu', percentage: 90 },
-    { day: 'Fri', percentage: 87 },
-  ];
+  const loadAttendanceData = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/admin/attendance/weekly');
+      const data = await response.json();
+      if (data.weeklyData) {
+        setAttendanceData(data.weeklyData);
+      }
+    } catch (error) {
+      console.error('Error loading attendance data:', error);
+    }
+  };
 
-  const quizPerformance = [
-    { subject: 'Mathematics', avgScore: 85, students: 234 },
-    { subject: 'Science', avgScore: 78, students: 198 },
-    { subject: 'English', avgScore: 92, students: 256 },
-    { subject: 'History', avgScore: 81, students: 189 },
-  ];
+  const loadQuizPerformance = async () => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/admin/quiz-performance?range=${timeRange}`);
+      const data = await response.json();
+      if (data.quizPerformance) {
+        setQuizPerformance(data.quizPerformance);
+      }
+    } catch (error) {
+      console.error('Error loading quiz performance:', error);
+    }
+  };
 
-  const aiTutorEngagement = [
-    { category: 'Math Help', sessions: 456 },
-    { category: 'Science Questions', sessions: 389 },
-    { category: 'Homework Assistance', sessions: 567 },
-    { category: 'Exam Preparation', sessions: 234 },
-  ];
+  const loadAiTutorStats = async () => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/admin/ai-tutor-stats?range=${timeRange}`);
+      const data = await response.json();
+      setAiTutorData({
+        aiTutorEngagement: data.aiTutorEngagement || [],
+        totalSessions: data.totalSessions || 0,
+        totalTokensUsed: data.totalTokensUsed || 0,
+        popularQuestions: data.popularQuestions || [],
+      });
+    } catch (error) {
+      console.error('Error loading AI tutor stats:', error);
+      setAiTutorData({
+        aiTutorEngagement: [],
+        totalSessions: 0,
+        totalTokensUsed: 0,
+        popularQuestions: [],
+      });
+    }
+  };
+
+  const loadLmsAnalytics = async () => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/admin/lms-analytics?range=${timeRange}`);
+      const data = await response.json();
+      setLmsStats(prev => ({ ...prev, ...data }));
+    } catch (error) {
+      console.error('Error loading LMS analytics:', error);
+    }
+  };
+
+
 
   return (
     <Box>
@@ -159,42 +244,48 @@ const Analytics: React.FC = () => {
       </Box>
 
       {/* Stats Cards */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(6, 1fr)' }, gap: 2, mb: 4 }}>
         {stats.map((stat, index) => (
-          <Card key={index}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <Card key={index} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <CardContent sx={{ flex: 1, pb: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 1 }}>
                 <Box
                   sx={{
                     bgcolor: stat.color,
                     color: 'white',
-                    p: 1.5,
-                    borderRadius: 2,
+                    p: 0.75,
+                    borderRadius: 1,
                     display: 'flex',
-                    mr: 2,
+                    flexShrink: 0,
+                    '& svg': { fontSize: '1.25rem' },
                   }}
                 >
                   {stat.icon}
                 </Box>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.25 }}>
                     {stat.label}
                   </Typography>
-                  <Typography variant="h5" fontWeight={700}>
+                  <Typography variant="h6" fontWeight={700} sx={{ lineHeight: 1 }}>
                     {stat.value}
                   </Typography>
+                  {stat.subtext && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
+                      {stat.subtext}
+                    </Typography>
+                  )}
                 </Box>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <TrendingUp fontSize="small" color="success" />
-                <Typography variant="body2" color="success.main">
-                  {stat.change}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  vs last {timeRange}
-                </Typography>
-              </Box>
             </CardContent>
+            <Box sx={{ borderTop: '1px solid', borderColor: 'divider', px: 2, py: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <TrendingUp fontSize="small" color="success" sx={{ flexShrink: 0 }} />
+              <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
+                {stat.change}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                vs last {timeRange}
+              </Typography>
+            </Box>
           </Card>
         ))}
       </Box>
@@ -204,7 +295,7 @@ const Analytics: React.FC = () => {
         <Typography variant="h6" fontWeight={600} gutterBottom>
           LMS Content Overview
         </Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2, mt: 2 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(6, 1fr)' }, gap: 2, mt: 2 }}>
           <Card variant="outlined">
             <CardContent>
               <Typography variant="h4" fontWeight={700} color="primary">
@@ -218,10 +309,30 @@ const Analytics: React.FC = () => {
           <Card variant="outlined">
             <CardContent>
               <Typography variant="h4" fontWeight={700} color="success.main">
-                {lmsStats.recordedVideos}
+                {lmsStats.studyMaterials}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Recorded Videos
+                Study Materials
+              </Typography>
+            </CardContent>
+          </Card>
+          <Card variant="outlined">
+            <CardContent>
+              <Typography variant="h4" fontWeight={700} color="info.main">
+                {lmsStats.assignments}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Assignments
+              </Typography>
+            </CardContent>
+          </Card>
+          <Card variant="outlined">
+            <CardContent>
+              <Typography variant="h4" fontWeight={700} color="warning.main">
+                {lmsStats.quizzes}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Quizzes
               </Typography>
             </CardContent>
           </Card>
@@ -231,7 +342,17 @@ const Analytics: React.FC = () => {
                 {lmsStats.liveClasses}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Live Classes
+                Live Classes Conducted
+              </Typography>
+            </CardContent>
+          </Card>
+          <Card variant="outlined">
+            <CardContent>
+              <Typography variant="h4" fontWeight={700} color="info.main">
+                {(lmsStats.videoLessons || 0) + (lmsStats.studyMaterials || 0) + (lmsStats.assignments || 0) + (lmsStats.liveClasses || 0) + (lmsStats.quizzes || 0)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Total Content
               </Typography>
             </CardContent>
           </Card>
@@ -260,54 +381,95 @@ const Analytics: React.FC = () => {
             </Button>
           </Box>
           
-          {/* Bar Chart Placeholder */}
+          {/* Real-time Attendance Chart */}
           <Box sx={{ height: 400, display: 'flex', alignItems: 'flex-end', gap: 2, px: 2 }}>
-            {attendanceData.map((data, index) => (
-              <Box
-                key={index}
-                sx={{
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 1,
-                }}
-              >
-                <Typography variant="h6" fontWeight={600} color="primary">
-                  {data.percentage}%
-                </Typography>
+            {attendanceData.length > 0 ? (
+              attendanceData.map((data, index) => (
                 <Box
+                  key={index}
                   sx={{
-                    width: '100%',
-                    height: `${data.percentage * 3}px`,
-                    bgcolor: 'primary.main',
-                    borderRadius: 1,
-                    transition: 'height 0.3s',
-                    '&:hover': {
-                      bgcolor: 'primary.dark',
-                    },
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 1,
                   }}
-                />
-                <Typography variant="body2" fontWeight={500}>
-                  {data.day}
-                </Typography>
-              </Box>
-            ))}
+                >
+                  <Typography variant="h6" fontWeight={600} color="primary">
+                    {data.percentage}%
+                  </Typography>
+                  <Box
+                    sx={{
+                      width: '100%',
+                      height: `${data.percentage * 3}px`,
+                      bgcolor: data.percentage >= 85 ? '#4CAF50' : data.percentage >= 70 ? '#FF9800' : '#F44336',
+                      borderRadius: 1,
+                      transition: 'height 0.3s',
+                      '&:hover': {
+                        opacity: 0.8,
+                      },
+                    }}
+                    title={`${data.present}/${data.total} present`}
+                  />
+                  <Typography variant="body2" fontWeight={500}>
+                    {data.day}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {data.present}/{data.total}
+                  </Typography>
+                </Box>
+              ))
+            ) : (
+              <Typography color="text.secondary">Loading attendance data...</Typography>
+            )}
           </Box>
 
-          <Box sx={{ mt: 4, p: 2, bgcolor: 'background.default', borderRadius: 2 }}>
-            <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-              Key Insights
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              • Average attendance rate: 88.4%
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              • Highest attendance: Tuesday (92%)
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              • 15 students with perfect attendance this week
-            </Typography>
+          <Box sx={{ mt: 4, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2 }}>
+            <Paper sx={{ p: 2, bgcolor: 'background.default', borderRadius: 2 }}>
+              <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                📊 Key Insights
+              </Typography>
+              {attendanceData.length > 0 && (
+                <>
+                  <Typography variant="body2" color="text.secondary">
+                    • Average rate: {Math.round(attendanceData.reduce((sum, d) => sum + d.percentage, 0) / attendanceData.length)}%
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    • Highest: {attendanceData.reduce((max, d) => d.percentage > max.percentage ? d : max).day} ({attendanceData.reduce((max, d) => d.percentage > max.percentage ? d : max).percentage}%)
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    • Lowest: {attendanceData.reduce((min, d) => d.percentage < min.percentage ? d : min).day} ({attendanceData.reduce((min, d) => d.percentage < min.percentage ? d : min).percentage}%)
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    • Total records: {attendanceData.reduce((sum, d) => sum + d.total, 0)}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    • Total present: {attendanceData.reduce((sum, d) => sum + d.present, 0)}
+                  </Typography>
+                </>
+              )}
+            </Paper>
+            <Paper sx={{ p: 2, bgcolor: 'success.light', borderRadius: 2 }}>
+              <Typography variant="subtitle2" fontWeight={600} gutterBottom color="success.dark">
+                ✓ Attendance Summary
+              </Typography>
+              {attendanceData.length > 0 && (
+                <>
+                  <Typography variant="body2" color="success.dark">
+                    • Days tracked: {attendanceData.length}
+                  </Typography>
+                  <Typography variant="body2" color="success.dark">
+                    • Avg students/day: {Math.round(attendanceData.reduce((sum, d) => sum + d.total, 0) / attendanceData.length)}
+                  </Typography>
+                  <Typography variant="body2" color="success.dark">
+                    • Avg present/day: {Math.round(attendanceData.reduce((sum, d) => sum + d.present, 0) / attendanceData.length)}
+                  </Typography>
+                  <Typography variant="body2" color="success.dark">
+                    • Consistency: {attendanceData.filter(d => d.percentage >= 80).length}/{attendanceData.length} days ≥80%
+                  </Typography>
+                </>
+              )}
+            </Paper>
           </Box>
         </Paper>
       </TabPanel>
@@ -320,57 +482,95 @@ const Analytics: React.FC = () => {
           </Typography>
           
           <Box sx={{ mt: 3 }}>
-            {quizPerformance.map((subject, index) => (
-              <Box key={index} sx={{ mb: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body1" fontWeight={500}>
-                    {subject.subject}
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 3 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      {subject.students} students
+            {quizPerformance.length > 0 ? (
+              quizPerformance.map((subject, index) => (
+                <Box key={index} sx={{ mb: 3 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body1" fontWeight={500}>
+                      {subject.subject}
                     </Typography>
-                    <Typography variant="body2" fontWeight={600} color="primary">
-                      {subject.avgScore}% avg
-                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 3 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {subject.students} students
+                      </Typography>
+                      <Typography variant="body2" fontWeight={600} color="primary">
+                        {subject.avgScore}% avg
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Box sx={{ position: 'relative', height: 40, bgcolor: 'background.default', borderRadius: 1 }}>
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        height: '100%',
+                        width: `${subject.avgScore}%`,
+                        bgcolor: subject.avgScore >= 85 ? 'success.main' : subject.avgScore >= 70 ? 'primary.main' : 'warning.main',
+                        borderRadius: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'flex-end',
+                        px: 2,
+                        transition: 'width 0.5s',
+                      }}
+                    >
+                      <Typography variant="body2" color="white" fontWeight={600}>
+                        {subject.avgScore}%
+                      </Typography>
+                    </Box>
                   </Box>
                 </Box>
-                <Box sx={{ position: 'relative', height: 40, bgcolor: 'background.default', borderRadius: 1 }}>
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      left: 0,
-                      top: 0,
-                      height: '100%',
-                      width: `${subject.avgScore}%`,
-                      bgcolor: subject.avgScore >= 85 ? 'success.main' : subject.avgScore >= 70 ? 'primary.main' : 'warning.main',
-                      borderRadius: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'flex-end',
-                      px: 2,
-                      transition: 'width 0.5s',
-                    }}
-                  >
-                    <Typography variant="body2" color="white" fontWeight={600}>
-                      {subject.avgScore}%
-                    </Typography>
-                  </Box>
-                </Box>
-              </Box>
-            ))}
+              ))
+            ) : (
+              <Typography color="text.secondary">Loading quiz performance data...</Typography>
+            )}
           </Box>
 
-          <Box sx={{ mt: 4, p: 2, bgcolor: 'info.light', borderRadius: 2 }}>
-            <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-              💡 Recommendations
-            </Typography>
-            <Typography variant="body2">
-              • Science scores are below average - consider additional tutoring sessions
-            </Typography>
-            <Typography variant="body2">
-              • English performance is excellent - share best practices with other subjects
-            </Typography>
+          <Box sx={{ mt: 4, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2 }}>
+            <Paper sx={{ p: 2, bgcolor: 'info.light', borderRadius: 2 }}>
+              <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                💡 Recommendations
+              </Typography>
+              {quizPerformance.length > 0 ? (
+                <>
+                  <Typography variant="body2">
+                    • Focus on subjects with lower scores
+                  </Typography>
+                  <Typography variant="body2">
+                    • {quizPerformance.find(q => q.avgScore === Math.max(...quizPerformance.map(q => q.avgScore)))?.subject} is performing well
+                  </Typography>
+                  <Typography variant="body2">
+                    • Total students assessed: {quizPerformance.reduce((sum, q) => sum + q.students, 0)}
+                  </Typography>
+                </>
+              ) : (
+                <Typography variant="body2">No quiz data available yet</Typography>
+              )}
+            </Paper>
+            <Paper sx={{ p: 2, bgcolor: 'warning.light', borderRadius: 2 }}>
+              <Typography variant="subtitle2" fontWeight={600} gutterBottom color="warning.dark">
+                📈 Quiz Statistics
+              </Typography>
+              {quizPerformance.length > 0 ? (
+                <>
+                  <Typography variant="body2" color="warning.dark">
+                    • Quizzes: {quizPerformance.length}
+                  </Typography>
+                  <Typography variant="body2" color="warning.dark">
+                    • Avg score: {Math.round(quizPerformance.reduce((sum, q) => sum + q.avgScore, 0) / quizPerformance.length)}%
+                  </Typography>
+                  <Typography variant="body2" color="warning.dark">
+                    • Highest: {Math.max(...quizPerformance.map(q => q.avgScore))}%
+                  </Typography>
+                  <Typography variant="body2" color="warning.dark">
+                    • Lowest: {Math.min(...quizPerformance.map(q => q.avgScore))}%
+                  </Typography>
+                </>
+              ) : (
+                <Typography variant="body2">No data</Typography>
+              )}
+            </Paper>
           </Box>
         </Paper>
       </TabPanel>
@@ -393,7 +593,12 @@ const Analytics: React.FC = () => {
               </Paper>
               <Paper sx={{ p: 2, bgcolor: 'success.light' }}>
                 <Typography variant="body2" color="success.contrastText">
-                  Recorded Videos: {lmsStats.recordedVideos}
+                  Study Materials: {lmsStats.studyMaterials}
+                </Typography>
+              </Paper>
+              <Paper sx={{ p: 2, bgcolor: 'info.light' }}>
+                <Typography variant="body2" color="info.contrastText">
+                  Assignments: {lmsStats.assignments}
                 </Typography>
               </Paper>
               <Paper sx={{ p: 2, bgcolor: 'error.light' }}>
@@ -409,19 +614,63 @@ const Analytics: React.FC = () => {
             </Box>
           </Box>
 
-          <Box sx={{ mt: 4, p: 2, bgcolor: 'info.light', borderRadius: 2 }}>
-            <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-              📊 LMS Insights
-            </Typography>
-            <Typography variant="body2">
-              • Total content items: {lmsStats.videoLessons + lmsStats.recordedVideos + lmsStats.liveClasses + lmsStats.quizzes}
-            </Typography>
-            <Typography variant="body2">
-              • Most popular content type: Video Lessons
-            </Typography>
-            <Typography variant="body2">
-              • Quiz completion rate: Track student engagement
-            </Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mt: 3 }}>
+            <Paper sx={{ p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Total Views
+              </Typography>
+              <Typography variant="h5" fontWeight={600}>
+                {lmsStats.totalViews}
+              </Typography>
+            </Paper>
+            <Paper sx={{ p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Avg Completion Rate
+              </Typography>
+              <Typography variant="h5" fontWeight={600} color={lmsStats.avgCompletion >= 70 ? 'success.main' : 'warning.main'}>
+                {lmsStats.avgCompletion}%
+              </Typography>
+            </Paper>
+          </Box>
+
+          <Box sx={{ mt: 4, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2 }}>
+            <Paper sx={{ p: 2, bgcolor: 'info.light', borderRadius: 2 }}>
+              <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                📊 LMS Insights
+              </Typography>
+              <Typography variant="body2">
+                • Total content: {(lmsStats.videoLessons || 0) + (lmsStats.studyMaterials || 0) + (lmsStats.assignments || 0) + (lmsStats.liveClasses || 0) + (lmsStats.quizzes || 0)}
+              </Typography>
+              <Typography variant="body2">
+                • Total views: {lmsStats.totalViews}
+              </Typography>
+              <Typography variant="body2">
+                • Completion: {lmsStats.avgCompletion}%
+              </Typography>
+              <Typography variant="body2">
+                • Avg per type: {Math.round(((lmsStats.videoLessons || 0) + (lmsStats.studyMaterials || 0) + (lmsStats.assignments || 0) + (lmsStats.liveClasses || 0) + (lmsStats.quizzes || 0)) / 5)}
+              </Typography>
+            </Paper>
+            <Paper sx={{ p: 2, bgcolor: 'primary.light', borderRadius: 2 }}>
+              <Typography variant="subtitle2" fontWeight={600} gutterBottom color="primary.dark">
+                🎓 Content Breakdown
+              </Typography>
+              <Typography variant="body2" color="primary.dark">
+                • Video Lessons: {lmsStats.videoLessons} ({Math.round(((lmsStats.videoLessons || 0) / ((lmsStats.videoLessons || 0) + (lmsStats.studyMaterials || 0) + (lmsStats.assignments || 0) + (lmsStats.liveClasses || 0) + (lmsStats.quizzes || 0))) * 100)}%)
+              </Typography>
+              <Typography variant="body2" color="primary.dark">
+                • Study Materials: {lmsStats.studyMaterials} ({Math.round(((lmsStats.studyMaterials || 0) / ((lmsStats.videoLessons || 0) + (lmsStats.studyMaterials || 0) + (lmsStats.assignments || 0) + (lmsStats.liveClasses || 0) + (lmsStats.quizzes || 0))) * 100)}%)
+              </Typography>
+              <Typography variant="body2" color="primary.dark">
+                • Assignments: {lmsStats.assignments} ({Math.round(((lmsStats.assignments || 0) / ((lmsStats.videoLessons || 0) + (lmsStats.studyMaterials || 0) + (lmsStats.assignments || 0) + (lmsStats.liveClasses || 0) + (lmsStats.quizzes || 0))) * 100)}%)
+              </Typography>
+              <Typography variant="body2" color="primary.dark">
+                • Live Classes: {lmsStats.liveClasses} ({Math.round(((lmsStats.liveClasses || 0) / ((lmsStats.videoLessons || 0) + (lmsStats.studyMaterials || 0) + (lmsStats.assignments || 0) + (lmsStats.liveClasses || 0) + (lmsStats.quizzes || 0))) * 100)}%)
+              </Typography>
+              <Typography variant="body2" color="primary.dark">
+                • Quizzes: {lmsStats.quizzes} ({Math.round(((lmsStats.quizzes || 0) / ((lmsStats.videoLessons || 0) + (lmsStats.studyMaterials || 0) + (lmsStats.assignments || 0) + (lmsStats.liveClasses || 0) + (lmsStats.quizzes || 0))) * 100)}%)
+              </Typography>
+            </Paper>
           </Box>
         </Paper>
       </TabPanel>
@@ -432,52 +681,111 @@ const Analytics: React.FC = () => {
           <Typography variant="h6" fontWeight={600} gutterBottom>
             AI Tutor Usage Statistics
           </Typography>
+
+          {/* Summary Stats */}
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2, mb: 3 }}>
+            <Paper sx={{ p: 2, bgcolor: 'primary.light', borderRadius: 1 }}>
+              <Typography variant="body2" color="primary.contrastText" gutterBottom>
+                Total Sessions
+              </Typography>
+              <Typography variant="h5" fontWeight={600} color="primary.contrastText">
+                {aiTutorData.totalSessions}
+              </Typography>
+            </Paper>
+            <Paper sx={{ p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
+              <Typography variant="body2" color="success.contrastText" gutterBottom>
+                Tokens Used
+              </Typography>
+              <Typography variant="h5" fontWeight={600} color="success.contrastText">
+                {aiTutorData.totalTokensUsed.toLocaleString()}
+              </Typography>
+            </Paper>
+          </Box>
           
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 3, mt: 2 }}>
-            {aiTutorEngagement.map((item, index) => (
-              <Card variant="outlined" key={index}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box
-                      sx={{
-                        bgcolor: 'primary.main',
-                        color: 'white',
-                        p: 2,
-                        borderRadius: 2,
-                      }}
-                    >
-                      <SmartToy />
+            {aiTutorData.aiTutorEngagement.length > 0 ? (
+              aiTutorData.aiTutorEngagement.map((item, index) => (
+                <Card variant="outlined" key={index}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Box
+                        sx={{
+                          bgcolor: 'primary.main',
+                          color: 'white',
+                          p: 2,
+                          borderRadius: 2,
+                        }}
+                      >
+                        <SmartToy />
+                      </Box>
+                      <Box>
+                        <Typography variant="h4" fontWeight={700}>
+                          {item.sessions}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {item.category}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {item.tokensUsed} tokens
+                        </Typography>
+                      </Box>
                     </Box>
-                    <Box>
-                      <Typography variant="h4" fontWeight={700}>
-                        {item.sessions}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {item.category}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Typography color="text.secondary">Loading AI tutor data...</Typography>
+            )}
           </Box>
 
-          <Box sx={{ mt: 4 }}>
-            <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-              Popular Questions
-            </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 2 }}>
-              {[
-                'How do I solve quadratic equations?',
-                'Explain photosynthesis process',
-                'What is the difference between mitosis and meiosis?',
-                'Help with essay writing structure',
-              ].map((question, idx) => (
-                <Paper key={idx} sx={{ p: 2, bgcolor: 'background.default' }}>
-                  <Typography variant="body2">{question}</Typography>
-                </Paper>
-              ))}
+          <Box sx={{ mt: 4, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2 }}>
+            <Box>
+              <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                Popular Questions
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 2 }}>
+                {aiTutorData.popularQuestions.length > 0 ? (
+                  aiTutorData.popularQuestions.map((item, idx) => (
+                    <Paper key={idx} sx={{ p: 2, bgcolor: 'background.default' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="body2">{item.question}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {item.count}x
+                        </Typography>
+                      </Box>
+                    </Paper>
+                  ))
+                ) : (
+                  <Typography variant="body2" color="text.secondary">No questions recorded yet</Typography>
+                )}
+              </Box>
             </Box>
+            <Paper sx={{ p: 2, bgcolor: 'success.light', borderRadius: 2 }}>
+              <Typography variant="subtitle2" fontWeight={600} gutterBottom color="success.dark">
+                🤖 AI Tutor Summary
+              </Typography>
+              {aiTutorData.totalSessions > 0 ? (
+                <>
+                  <Typography variant="body2" color="success.dark">
+                    • Total sessions: {aiTutorData.totalSessions}
+                  </Typography>
+                  <Typography variant="body2" color="success.dark">
+                    • Categories: {aiTutorData.aiTutorEngagement.length}
+                  </Typography>
+                  <Typography variant="body2" color="success.dark">
+                    • Avg tokens/session: {Math.round(aiTutorData.totalTokensUsed / aiTutorData.totalSessions)}
+                  </Typography>
+                  <Typography variant="body2" color="success.dark">
+                    • Most used: {aiTutorData.aiTutorEngagement.length > 0 ? aiTutorData.aiTutorEngagement.reduce((max, item) => item.sessions > max.sessions ? item : max).category : 'N/A'}
+                  </Typography>
+                  <Typography variant="body2" color="success.dark">
+                    • Popular questions: {aiTutorData.popularQuestions.length}
+                  </Typography>
+                </>
+              ) : (
+                <Typography variant="body2" color="success.dark">No AI tutor data yet</Typography>
+              )}
+            </Paper>
           </Box>
         </Paper>
       </TabPanel>
