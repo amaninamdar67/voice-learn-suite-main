@@ -15,7 +15,6 @@ import {
   Notifications,
   AccountCircle,
   Logout,
-  Settings as SettingsIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -75,11 +74,6 @@ export const TopBar: React.FC = () => {
 
   const handleNotificationClose = () => {
     setNotificationAnchor(null);
-  };
-
-  const handleSettings = () => {
-    navigate('/settings');
-    handleMenuClose();
   };
 
   const handleLogout = () => {
@@ -256,10 +250,6 @@ export const TopBar: React.FC = () => {
             </Typography>
           </Box>
           <Divider />
-          <MenuItem onClick={handleSettings}>
-            <SettingsIcon sx={{ mr: 2 }} fontSize="small" />
-            Settings
-          </MenuItem>
           <MenuItem onClick={handleLogout}>
             <Logout sx={{ mr: 2 }} fontSize="small" />
             Logout
