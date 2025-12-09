@@ -10,7 +10,7 @@ interface StudentRanking {
   quiz_points: number;
   assignment_points: number;
   attendance_points: number;
-  participation_points: number;
+  community_points: number;
   rank: number;
   percentile: number;
   grade: string;
@@ -52,12 +52,13 @@ export default function OverallRankings() {
       // Calculate points for each student
       const studentRankings = await Promise.all(
         students?.map(async (student) => {
-          // Quiz points
+          // Quiz points - sum of all quiz scores
           const { data: quizData } = await supabase
-            .from('quiz_rankings')
-            .select('marks_obtained')
-            .eq('student_id', student.id);
-          const quizPoints = quizData?.reduce((sum, q) => sum + (q.marks_obtained || 0), 0) || 0;
+            .from('quiz_results')
+            .select('score')
+            .eq('student_id', student.id)
+            .eq('is_completed', true);
+          const quizPoints = quizData?.reduce((sum, q) => sum + (q.score || 0), 0) || 0;
 
           // Assignment points
           const { data: assignmentData } = await supabase
@@ -67,22 +68,50 @@ export default function OverallRankings() {
             .eq('status', 'graded');
           const assignmentPoints = assignmentData?.reduce((sum, a) => sum + (a.marks_obtained || 0), 0) || 0;
 
-          // Video lesson attendance points (completed lessons)
-          const { data: videoAttendance } = await supabase
-            .from('lesson_attendance')
-            .select('is_completed')
+          // Live class attendance points: 5 points per attendance
+          // Fallback to lesson_attendance if live_attendance is empty
+          let attendancePoints = 0;
+          
+          const { count: liveAttendanceCount, error: liveError } = await supabase
+            .from('live_attendance')
+            .select('*', { count: 'exact', head: true })
             .eq('student_id', student.id)
-            .eq('is_completed', true);
-          const attendancePoints = (videoAttendance?.length || 0) * 10; // 10 points per completed lesson
+            .not('left_at', 'is', null);
+          
+          if (!liveError && liveAttendanceCount) {
+            attendancePoints = (liveAttendanceCount || 0) * 5; // 5 points per live class attendance
+          } else {
+            // Fallback: use completed video lessons as attendance (10 points each)
+            const { count: videoCount } = await supabase
+              .from('lesson_attendance')
+              .select('*', { count: 'exact', head: true })
+              .eq('student_id', student.id)
+              .eq('is_completed', true);
+            attendancePoints = (videoCount || 0) * 10;
+          }
 
-          // Live class attendance points
-          const { data: liveAttendance } = await supabase
-            .from('live_class_attendance')
-            .select('attendance_percentage')
-            .eq('student_id', student.id);
-          const participationPoints = liveAttendance?.reduce((sum, l) => sum + (l.attendance_percentage || 0) / 10, 0) || 0;
+          // Active Community points: 1 point per comment + 5 points per like + 5 points per reply
+          const { count: commentCount } = await supabase
+            .from('community_comments')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', student.id);
+          const commentPoints = (commentCount || 0) * 1;
 
-          const totalPoints = quizPoints + assignmentPoints + attendancePoints + participationPoints;
+          const { count: likeCount } = await supabase
+            .from('community_comment_likes')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', student.id);
+          const likePoints = (likeCount || 0) * 5;
+
+          const { count: replyCount } = await supabase
+            .from('community_comment_replies')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', student.id);
+          const replyPoints = (replyCount || 0) * 5;
+
+          const communityPoints = commentPoints + likePoints + replyPoints;
+
+          const totalPoints = quizPoints + assignmentPoints + attendancePoints + communityPoints;
 
           return {
             student_id: student.id,
@@ -91,7 +120,7 @@ export default function OverallRankings() {
             quiz_points: quizPoints,
             assignment_points: assignmentPoints,
             attendance_points: attendancePoints,
-            participation_points: Math.round(participationPoints),
+            community_points: communityPoints,
             rank: 0,
             percentile: 0,
             grade: student.grade || '',
@@ -191,8 +220,8 @@ export default function OverallRankings() {
               <p className="text-2xl font-bold">{myRanking.attendance_points}</p>
             </div>
             <div>
-              <p className="text-white/80 text-sm">Participation</p>
-              <p className="text-2xl font-bold">{myRanking.participation_points}</p>
+              <p className="text-white/80 text-sm">Active Community</p>
+              <p className="text-2xl font-bold">{myRanking.community_points}</p>
             </div>
           </div>
         </div>
@@ -245,7 +274,7 @@ export default function OverallRankings() {
             <strong>Attendance Points:</strong> 10 points per completed video lesson
           </div>
           <div>
-            <strong>Participation:</strong> Live class attendance percentage / 10
+            <strong>Active Community:</strong> 1 point per comment, 5 points per like, 5 points per reply
           </div>
         </div>
       </div>
@@ -307,7 +336,7 @@ export default function OverallRankings() {
                   Attendance
                 </th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Participation
+                  Active Community
                 </th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Percentile
@@ -367,7 +396,7 @@ export default function OverallRankings() {
                     <div className="text-sm font-medium text-gray-900">{student.attendance_points}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <div className="text-sm font-medium text-gray-900">{student.participation_points}</div>
+                    <div className="text-sm font-medium text-gray-900">{student.community_points}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <div className="flex items-center justify-center gap-1">

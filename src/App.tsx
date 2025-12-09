@@ -358,6 +358,10 @@ const App = () => (
 
               {/* Community Routes */}
               <Route
+                path="/community"
+                element={<Navigate to="/community/recorded-classes" />}
+              />
+              <Route
                 path="/community/recorded-classes"
                 element={
                   <PrivateRoute>

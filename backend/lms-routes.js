@@ -653,16 +653,14 @@ export const submitQuiz = async (req, res) => {
       .insert([{
         student_id: studentId,
         quiz_id: quizId,
-        score,
-        total_marks: quiz.total_marks,
-        percentage,
+        score: Math.round(score),
+        total_marks: Math.round(quiz.total_marks),
+        percentage: Math.round(percentage * 100) / 100,
         time_taken_seconds: timeTaken,
         answers,
         is_completed: true,
         completed_at: new Date().toISOString(),
-      }])
-      .select()
-      .single();
+      }]);
     
     if (error) {
       console.error('Quiz submission error:', error);

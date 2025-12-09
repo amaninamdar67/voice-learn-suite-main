@@ -45,6 +45,7 @@ import {
 import { initializeMentorParentMessaging } from './mentor-parent-messaging.js';
 import { initializeAdminLinkingRoutes } from './admin-linking-routes.js';
 import { initializeParentStudentData } from './parent-student-data.js';
+import { initializeDatabase } from './db-setup.js';
 
 dotenv.config();
 
@@ -2211,6 +2212,18 @@ app.get('/api/parent/:parentId/children', async (req, res) => {
 // ==================== SERVER START ====================
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Backend server running on http://localhost:${PORT}`);
-});
+
+// Start server with async initialization
+(async () => {
+  try {
+    // Initialize database
+    await initializeDatabase(supabase);
+    
+    app.listen(PORT, () => {
+      console.log(`Backend server running on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+})();

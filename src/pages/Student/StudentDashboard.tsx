@@ -77,10 +77,11 @@ export default function StudentDashboard() {
 
       // Fetch quiz attempts
       const { data: quizAttempts, count: quizCount } = await supabase
-        .from('quiz_attempts')
+        .from('quiz_results')
         .select('*, quizzes(title, total_marks)', { count: 'exact' })
         .eq('student_id', user?.id)
-        .order('submitted_at', { ascending: false })
+        .eq('is_completed', true)
+        .order('completed_at', { ascending: false })
         .limit(5);
 
       // Fetch assignment submissions
@@ -100,10 +101,11 @@ export default function StudentDashboard() {
         .gte('last_watched_at', oneWeekAgo.toISOString());
 
       const { data: thisWeekQuizData } = await supabase
-        .from('quiz_attempts')
+        .from('quiz_results')
         .select('score, total_marks')
         .eq('student_id', user?.id)
-        .gte('submitted_at', oneWeekAgo.toISOString());
+        .eq('is_completed', true)
+        .gte('completed_at', oneWeekAgo.toISOString());
 
       // Calculate average quiz score
       const avgScore = quizAttempts && quizAttempts.length > 0
@@ -137,7 +139,7 @@ export default function StudentDashboard() {
           title: qa.quizzes?.title || 'Quiz',
           type: 'quiz',
           completed: true,
-          date: qa.submitted_at,
+          date: qa.completed_at,
           score: Math.round((qa.score / qa.total_marks) * 100),
         });
       });

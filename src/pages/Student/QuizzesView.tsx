@@ -394,7 +394,7 @@ export default function QuizzesView() {
                 Back to Quizzes
               </button>
               <button
-                onClick={() => window.location.href = `/student/quiz-rankings/${selectedQuiz?.id}`}
+                onClick={() => navigate('/leaderboard')}
                 className="flex-1 px-6 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 font-semibold flex items-center justify-center gap-2"
               >
                 <Trophy size={20} />
