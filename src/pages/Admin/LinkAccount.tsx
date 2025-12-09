@@ -5,7 +5,7 @@ import {
   Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   IconButton, Chip, Select, MenuItem, FormControl, InputLabel, Grid,
 } from '@mui/material';
-import { Add, Delete, Link as LinkIcon, Edit, Close } from '@mui/icons-material';
+import { Add, Delete, Link as LinkIcon, Edit, Close, LinkOff } from '@mui/icons-material';
 
 interface User {
   id: string;
@@ -500,12 +500,40 @@ const LinkAccount: React.FC = () => {
   const linkedStudentsData = permanentStudents;
 
   // Handle creating link form
-  const handleOpenLinkForm = (studentId: string) => {
+  const handleOpenLinkForm = (studentId: string, isEditing: boolean = false) => {
     setSelectedStudentForMentor(studentId);
     setSelectedStudent(studentId);
-    setSelectedParent('');
-    setSelectedMentor('');
-    setRelationship('guardian');
+    
+    // Find the existing links for this student
+    const parentLink = studentParentLinks.find(l => l.student_id === studentId);
+    const mentorLink = studentMentorLinks.find(l => l.student_id === studentId);
+    
+    if (parentLink && mentorLink) {
+      // Links exist - set them as current values
+      setSelectedParent(parentLink.parent_id);
+      setSelectedMentor(mentorLink.mentor_id);
+      setRelationship(parentLink.relationship);
+      
+      // Set editing mode with both link objects
+      setEditingStudentMentorLink({
+        id: mentorLink.id,
+        student_id: studentId,
+        mentor_id: mentorLink.mentor_id,
+        student_name: mentorLink.student_name,
+        mentor_name: mentorLink.mentor_name,
+      });
+      
+      // Store parent link ID for update
+      (window as any).editingParentLinkId = parentLink.id;
+    } else {
+      // No existing links - clear form for new linking
+      setSelectedParent('');
+      setSelectedMentor('');
+      setRelationship('guardian');
+      setEditingStudentMentorLink(null);
+      (window as any).editingParentLinkId = null;
+    }
+    
     setOpenStudentMentorDialog(true);
   };
 
@@ -518,30 +546,122 @@ const LinkAccount: React.FC = () => {
 
     try {
       setLoading(true);
+      const isEditing = editingStudentMentorLink !== null;
 
-      // Create parent link
-      await fetch('http://localhost:3001/api/admin-linking/parent-student-links', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          student_id: selectedStudent,
-          parent_id: selectedParent,
-          relationship,
-        }),
-      });
+      if (isEditing) {
+        // Update existing links - delete old and create new
+        const parentLinkId = (window as any).editingParentLinkId;
+        const mentorLinkId = editingStudentMentorLink?.id;
+        
+        // Get old parent and mentor IDs for cleanup
+        const oldParentLink = studentParentLinks.find(l => l.student_id === selectedStudent);
+        const oldMentorLink = studentMentorLinks.find(l => l.student_id === selectedStudent);
+        const oldParentId = oldParentLink?.parent_id;
+        const oldMentorId = oldMentorLink?.mentor_id;
 
-      // Create mentor link
-      await fetch('http://localhost:3001/api/admin-linking/student-mentor-links', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          student_id: selectedStudent,
-          mentor_id: selectedMentor,
-        }),
-      });
+        // Find all other students that have the NEW parent (to clean up their old messages)
+        const otherStudentsWithNewParent = studentParentLinks.filter(
+          l => l.parent_id === selectedParent && l.student_id !== selectedStudent
+        );
 
-      setSuccess('All links created successfully!');
+        // Delete old parent link
+        if (parentLinkId) {
+          await fetch(`http://localhost:3001/api/admin-linking/parent-student-links/${parentLinkId}`, {
+            method: 'DELETE',
+          });
+        }
+
+        // Delete old mentor link
+        if (mentorLinkId) {
+          await fetch(`http://localhost:3001/api/admin-linking/student-mentor-links/${mentorLinkId}`, {
+            method: 'DELETE',
+          });
+        }
+
+        // Create new parent link
+        await fetch('http://localhost:3001/api/admin-linking/parent-student-links', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            student_id: selectedStudent,
+            parent_id: selectedParent,
+            relationship,
+          }),
+        });
+
+        // Create new mentor link
+        await fetch('http://localhost:3001/api/admin-linking/student-mentor-links', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            student_id: selectedStudent,
+            mentor_id: selectedMentor,
+          }),
+        });
+
+        // Clean up old messages from previous parent for THIS student (if parent changed)
+        if (oldParentId && oldParentId !== selectedParent) {
+          try {
+            await fetch(`http://localhost:3001/api/mentor-parent/cleanup-messages/parent/${selectedStudent}/${oldParentId}`, {
+              method: 'POST',
+            });
+          } catch (err) {
+            console.error('Error cleaning up parent messages for current student:', err);
+          }
+        }
+
+        // Clean up messages from new parent for OTHER students (since parent is now reassigned)
+        for (const otherLink of otherStudentsWithNewParent) {
+          try {
+            await fetch(`http://localhost:3001/api/mentor-parent/cleanup-messages/parent/${otherLink.student_id}/${selectedParent}`, {
+              method: 'POST',
+            });
+          } catch (err) {
+            console.error('Error cleaning up parent messages for other student:', err);
+          }
+        }
+
+        // Clean up old messages from previous mentor (if mentor changed)
+        if (oldMentorId && oldMentorId !== selectedMentor) {
+          try {
+            await fetch(`http://localhost:3001/api/mentor-parent/cleanup-messages/mentor/${selectedStudent}/${oldMentorId}/${oldParentId}`, {
+              method: 'POST',
+            });
+          } catch (err) {
+            console.error('Error cleaning up mentor messages:', err);
+          }
+        }
+
+        setSuccess('Links updated successfully! Messages from old relationships have been cleared.');
+      } else {
+        // Create new links
+        // Create parent link
+        await fetch('http://localhost:3001/api/admin-linking/parent-student-links', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            student_id: selectedStudent,
+            parent_id: selectedParent,
+            relationship,
+          }),
+        });
+
+        // Create mentor link
+        await fetch('http://localhost:3001/api/admin-linking/student-mentor-links', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            student_id: selectedStudent,
+            mentor_id: selectedMentor,
+          }),
+        });
+
+        setSuccess('All links created successfully!');
+      }
+
       setOpenStudentMentorDialog(false);
+      setEditingStudentMentorLink(null);
+      (window as any).editingParentLinkId = null;
       setSelectedStudent('');
       setSelectedParent('');
       setSelectedMentor('');
@@ -549,6 +669,71 @@ const LinkAccount: React.FC = () => {
       await loadData();
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle unlinking all relationships for a student
+  const handleUnlinkAll = async () => {
+    if (!editingStudentMentorLink) {
+      setError('No link to unlink');
+      return;
+    }
+
+    if (!window.confirm('⚠️ WARNING: This will unlink the student from all parents and mentors. Continue?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+
+      const studentId = editingStudentMentorLink.student_id;
+
+      // Get all parent and mentor links before deletion (for cleanup)
+      const parentLinks = studentParentLinks.filter(link => link.student_id === studentId);
+      const mentorLinks = studentMentorLinks.filter(link => link.student_id === studentId);
+
+      // Delete all parent links for this student
+      for (const link of parentLinks) {
+        await fetch(`http://localhost:3001/api/admin-linking/parent-student-links/${link.id}`, {
+          method: 'DELETE',
+        });
+      }
+
+      // Delete all mentor links for this student
+      for (const link of mentorLinks) {
+        await fetch(`http://localhost:3001/api/admin-linking/student-mentor-links/${link.id}`, {
+          method: 'DELETE',
+        });
+      }
+
+      // Clean up ALL messages for this student
+      try {
+        console.log('Cleaning up ALL messages for student:', studentId);
+        const cleanupRes = await fetch(`http://localhost:3001/api/mentor-parent/cleanup-messages/student/${studentId}`, {
+          method: 'POST',
+        });
+        const cleanupData = await cleanupRes.json();
+        console.log('Student cleanup response:', cleanupData);
+      } catch (err) {
+        console.error('Error cleaning up student messages:', err);
+      }
+
+      // Remove from permanent cards
+      removePermanentStudent(studentId);
+
+      setSuccess('Student unlinked successfully! All messages from parents and mentors have been deleted.');
+      setOpenStudentMentorDialog(false);
+      setEditingStudentMentorLink(null);
+      setSelectedStudent('');
+      setSelectedParent('');
+      setSelectedMentor('');
+      setRelationship('guardian');
+      await loadData();
+    } catch (err: any) {
+      setError(err.message || 'Failed to unlink');
     } finally {
       setLoading(false);
     }
@@ -713,7 +898,7 @@ const LinkAccount: React.FC = () => {
                       <IconButton
                         size="small"
                         color="primary"
-                        onClick={() => handleOpenLinkForm(card.student_id)}
+                        onClick={() => handleOpenLinkForm(card.student_id, true)}
                         title="Edit"
                       >
                         <Edit fontSize="small" />
@@ -816,25 +1001,30 @@ const LinkAccount: React.FC = () => {
             </FormControl>
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => { setOpenStudentMentorDialog(false); setEditingStudentMentorLink(null); }}>Cancel</Button>
+        <DialogActions sx={{ justifyContent: 'space-between', px: 3, pb: 2 }}>
           {editingStudentMentorLink && (
             <Button
-              variant="outlined"
               color="error"
-              onClick={() => handleDeleteStudentMentorLink(editingStudentMentorLink.id)}
+              startIcon={<LinkOff />}
+              onClick={handleUnlinkAll}
               disabled={loading}
             >
-              Delete
+              {loading ? 'Unlinking...' : 'Unlink'}
             </Button>
           )}
-          <Button
-            variant="contained"
-            onClick={handleLinkAll}
-            disabled={!selectedStudent || !selectedParent || !selectedMentor || loading}
-          >
-            {loading ? 'Linking...' : 'Link All'}
-          </Button>
+          
+          {!editingStudentMentorLink && <Box />}
+          
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button onClick={() => { setOpenStudentMentorDialog(false); setEditingStudentMentorLink(null); (window as any).editingParentLinkId = null; }}>Cancel</Button>
+            <Button
+              variant="contained"
+              onClick={handleLinkAll}
+              disabled={!selectedStudent || !selectedParent || !selectedMentor || loading}
+            >
+              {loading ? (editingStudentMentorLink ? 'Updating...' : 'Linking...') : (editingStudentMentorLink ? 'Update Links' : 'Link All')}
+            </Button>
+          </Box>
         </DialogActions>
       </Dialog>
 

@@ -361,18 +361,23 @@ app.get('/api/admin/ai-tutor-stats', async (req, res) => {
     }
 
     // Get AI tutor sessions (if table exists)
-    const { data: aiSessions } = await supabase
-      .from('ai_tutor_sessions')
-      .select('id, category, tokens_used, created_at')
-      .gte('created_at', startDate.toISOString())
-      .catch(() => ({ data: [] }));
+    let aiSessions = [];
+    try {
+      const { data } = await supabase
+        .from('ai_tutor_sessions')
+        .select('id, category, tokens_used, created_at')
+        .gte('created_at', startDate.toISOString());
+      aiSessions = data || [];
+    } catch (e) {
+      aiSessions = [];
+    }
 
     // Group by category
     const categories = {};
     let totalTokens = 0;
     let totalSessions = 0;
 
-    if (aiSessions) {
+    if (aiSessions && aiSessions.length > 0) {
       aiSessions.forEach(session => {
         const category = session.category || 'General Help';
         if (!categories[category]) {
@@ -393,13 +398,18 @@ app.get('/api/admin/ai-tutor-stats', async (req, res) => {
     }));
 
     // Get popular questions
-    const { data: questions } = await supabase
-      .from('ai_tutor_questions')
-      .select('question, count')
-      .gte('created_at', startDate.toISOString())
-      .order('count', { ascending: false })
-      .limit(4)
-      .catch(() => ({ data: [] }));
+    let questions = [];
+    try {
+      const { data } = await supabase
+        .from('ai_tutor_questions')
+        .select('question, count')
+        .gte('created_at', startDate.toISOString())
+        .order('count', { ascending: false })
+        .limit(4);
+      questions = data || [];
+    } catch (e) {
+      questions = [];
+    }
 
     res.json({
       aiTutorEngagement,
@@ -450,8 +460,8 @@ app.get('/api/admin/lms-analytics', async (req, res) => {
     const avgCompletion = totalLessonViews > 0 ? Math.round((completedLessons / totalLessonViews) * 100) : 0;
 
     res.json({
-      videoLessons: videoLessonsRes.data?.length || 0,
-      recordedVideos: recordedVideosRes.data?.length || 0,
+      videoLessons: recordedVideosRes.data?.length || 0,
+      studyMaterials: videoLessonsRes.data?.length || 0,
       liveClasses: liveClassesRes.data?.length || 0,
       quizzes: quizzesRes.data?.length || 0,
       assignments: assignmentsRes.data?.length || 0,
@@ -700,8 +710,8 @@ app.put('/api/users/:id', async (req, res) => {
 
     if (error) throw error;
 
-    // If children_ids provided (for parent role), update relationships
-    if (children_ids && Array.isArray(children_ids)) {
+    // Only update relationships if children_ids is explicitly provided in the request
+    if ('children_ids' in req.body && Array.isArray(children_ids)) {
       // Delete existing relationships
       await supabase
         .from('parent_children')
@@ -840,6 +850,190 @@ app.delete('/api/domains/:id', async (req, res) => {
   }
 });
 
+// ==================== STAT ENDPOINTS ====================
+
+// Get total teachers count
+app.get('/api/stats/teachers-count', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('role', 'teacher');
+    
+    if (error) throw error;
+    
+    res.json({ totalTeachers: data?.length || 0 });
+  } catch (error) {
+    console.error('Error fetching teachers count:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get total students count
+app.get('/api/stats/students-count', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('role', 'student');
+    
+    if (error) throw error;
+    
+    res.json({ totalStudents: data?.length || 0 });
+  } catch (error) {
+    console.error('Error fetching students count:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get total active live classes count (only classes with status='live')
+app.get('/api/stats/live-classes-count', async (req, res) => {
+  try {
+    // Count all live classes that have been conducted (status='ended' or 'live')
+    const { data, error } = await supabase
+      .from('live_classes')
+      .select('id')
+      .in('status', ['ended', 'live']);
+    
+    if (error) throw error;
+    
+    res.json({ totalLiveClasses: data?.length || 0 });
+  } catch (error) {
+    console.error('Error fetching live classes count:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get ongoing live classes count (only classes with status='live')
+app.get('/api/stats/ongoing-live-classes-count', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('live_classes')
+      .select('id')
+      .eq('status', 'live');
+    
+    if (error) throw error;
+    
+    res.json({ ongoingLiveClasses: data?.length || 0 });
+  } catch (error) {
+    console.error('Error fetching ongoing live classes count:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get total domains count
+app.get('/api/stats/domains-count', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('domains')
+      .select('id');
+    
+    if (error) throw error;
+    
+    res.json({ totalDomains: data?.length || 0 });
+  } catch (error) {
+    console.error('Error fetching domains count:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get community activity count (posts + replies)
+app.get('/api/stats/community-activity-count', async (req, res) => {
+  try {
+    const [postsRes, repliesRes] = await Promise.all([
+      supabase.from('community_posts').select('id'),
+      supabase.from('community_replies').select('id'),
+    ]);
+
+    const posts = postsRes.data?.length || 0;
+    const replies = repliesRes.data?.length || 0;
+    
+    res.json({ totalCommunityActivity: posts + replies });
+  } catch (error) {
+    console.error('Error fetching community activity count:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get parent reports count (messages from parents to mentors)
+app.get('/api/stats/parent-reports-count', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('mentor_parent_messages')
+      .select('id')
+      .not('parent_id', 'is', null);
+    
+    if (error) throw error;
+    
+    res.json({ totalParentReports: data?.length || 0 });
+  } catch (error) {
+    console.error('Error fetching parent reports count:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get mentor talk count (messages from mentors)
+app.get('/api/stats/mentor-talk-count', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('mentor_parent_messages')
+      .select('id')
+      .not('mentor_id', 'is', null);
+    
+    if (error) throw error;
+    
+    res.json({ totalMentorTalk: data?.length || 0 });
+  } catch (error) {
+    console.error('Error fetching mentor talk count:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get account linked count (sum of parent-student, mentor-student, and parent-mentor links)
+app.get('/api/stats/account-linked-count', async (req, res) => {
+  try {
+    let totalAccountLinked = 0;
+    
+    // Try parent_children table
+    try {
+      const { data } = await supabase.from('parent_children').select('id');
+      totalAccountLinked += data?.length || 0;
+    } catch (e) {
+      console.log('parent_children table not found or error:', e.message);
+    }
+    
+    // Try mentor_students table
+    try {
+      const { data } = await supabase.from('mentor_students').select('id');
+      totalAccountLinked += data?.length || 0;
+    } catch (e) {
+      console.log('mentor_students table not found or error:', e.message);
+    }
+    
+    // Try mentor_student_links table (alternative name)
+    try {
+      const { data } = await supabase.from('mentor_student_links').select('id');
+      totalAccountLinked += data?.length || 0;
+    } catch (e) {
+      console.log('mentor_student_links table not found or error:', e.message);
+    }
+    
+    // Try parent_mentor_links table
+    try {
+      const { data } = await supabase.from('parent_mentor_links').select('id');
+      totalAccountLinked += data?.length || 0;
+    } catch (e) {
+      console.log('parent_mentor_links table not found or error:', e.message);
+    }
+    
+    console.log('✅ Account linked count:', totalAccountLinked);
+    res.json({ totalAccountLinked });
+  } catch (error) {
+    console.error('Error fetching account linked count:', error);
+    res.json({ totalAccountLinked: 0 });
+  }
+});
+
 // ==================== DEPARTMENTS ENDPOINTS ====================
 
 // Get all departments (optionally filtered by domain)
@@ -928,6 +1122,22 @@ app.delete('/api/departments/:id', async (req, res) => {
 });
 
 // ==================== SUB-DOMAINS ENDPOINTS ====================
+
+// Get total subdomains count (all domains combined) - MUST BE BEFORE /api/subdomains
+app.get('/api/subdomains-count', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('sub_domains')
+      .select('id');
+    
+    if (error) throw error;
+    
+    res.json({ totalSubdomains: data?.length || 0 });
+  } catch (error) {
+    console.error('Error fetching subdomains count:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
 
 // Get all sub-domains (optionally filtered by domain)
 app.get('/api/subdomains', async (req, res) => {
@@ -1644,28 +1854,36 @@ app.get('/api/admin/debug-messages', async (req, res) => {
 // Get mentor-parent interactions count
 app.get('/api/admin/mentor-parent-interactions', async (req, res) => {
   try {
-    // Get all messages (not just count)
+    // Get all non-deleted messages
     const { data: allMessages, error: allError, count } = await supabase
       .from('mentor_parent_messages')
-      .select('*', { count: 'exact' });
+      .select('*', { count: 'exact' })
+      .eq('is_deleted', false);
     
     if (allError) throw allError;
     
     const totalMessages = count || allMessages?.length || 0;
     
+    // Count parent messages (messages where reply_to_id is NULL - original messages)
+    const parentMessages = allMessages?.filter(msg => !msg.reply_to_id) || [];
+    const totalParentMessages = parentMessages.length;
+    
+    // Count mentor replies (messages where reply_to_id is NOT NULL - replies to parent messages)
+    const mentorReplies = allMessages?.filter(msg => msg.reply_to_id) || [];
+    const totalMentorReplies = mentorReplies.length;
+    
     console.log('Mentor-Parent Messages Debug:', {
       totalMessages,
+      totalParentMessages,
+      totalMentorReplies,
       count,
       dataLength: allMessages?.length,
       firstMessage: allMessages?.[0]
     });
     
-    // For now, show total messages as parent reports
-    // Mentor replies will be 0 until reply_to_id is properly populated
     res.json({
-      totalParentMessages: totalMessages,
-      totalMentorReplies: 0,
-      replyRatio: `0/${totalMessages}`,
+      totalParentMessages,
+      totalMentorReplies,
     });
   } catch (error) {
     console.error('Error fetching mentor-parent interactions:', error);

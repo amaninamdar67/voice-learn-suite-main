@@ -27,12 +27,11 @@ import {
   CircularProgress,
 } from '@mui/material';
 import {
-  Edit,
   Delete,
   MoreVert,
   LockReset,
   Search,
-  Settings,
+  Edit,
 } from '@mui/icons-material';
 import { UserRole } from '../../types';
 import { supabase } from '../../lib/supabase';
@@ -65,27 +64,14 @@ const UserManagement: React.FC = () => {
   const [domainFilter, setDomainFilter] = useState<string>('all');
   const [subDomainFilter, setSubDomainFilter] = useState<string>('all');
   
-  const [openEditUser, setOpenEditUser] = useState(false);
-  const [openAddUser, setOpenAddUser] = useState(false);
-  const [openSettings, setOpenSettings] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [menuUser, setMenuUser] = useState<User | null>(null);
-  
-  const [mentors, setMentors] = useState<User[]>([]);
-  const [students, setStudents] = useState<User[]>([]);
-
-  const [newUser, setNewUser] = useState({
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [editFormData, setEditFormData] = useState({
     name: '',
-    email: '',
-    password: '',
-    role: 'student' as UserRole,
     phone: '',
-    studentId: '',
-    employeeId: '',
-    mentorId: '',
-    grade: '',
-    section: '',
+    role: 'student' as UserRole,
     department: '',
     semester: '',
     qualifications: '',
@@ -170,8 +156,6 @@ const UserManagement: React.FC = () => {
             } as any;
           });
           setUsers(formattedUsers);
-          setStudents(formattedUsers.filter(u => u.role === 'student'));
-          setMentors(formattedUsers.filter(u => u.role === 'mentor'));
         }
       } catch (err: any) {
         console.error('Error loading users:', err);
@@ -192,40 +176,7 @@ const UserManagement: React.FC = () => {
     setMenuUser(null);
   };
 
-  const handleEditUser = async (user: User) => {
-    setSelectedUser(user);
-    
-    try {
-      const response = await fetch(`http://localhost:3001/api/users/${user.id}`);
-      const data = await response.json();
-      
-      if (data.user) {
-        const profile = data.user;
-        setNewUser({
-          name: profile.full_name || '',
-          email: profile.email || '',
-          password: '',
-          role: profile.role || 'student',
-          phone: profile.phone || '',
-          studentId: profile.student_id || '',
-          employeeId: profile.employee_id || '',
-          mentorId: profile.mentor_id || '',
-          grade: profile.grade || '',
-          section: profile.section || '',
-          department: profile.department || '',
-          semester: profile.semester || '',
-          qualifications: profile.qualifications || '',
-          expertiseArea: profile.expertise_area || '',
-          subjects: profile.subjects || [],
-        });
-      }
-    } catch (err) {
-      console.error('Error loading user details:', err);
-    }
-    
-    setOpenEditUser(true);
-    handleMenuClose();
-  };
+
 
   const handleDeleteUser = async (userId: string) => {
     const userToDelete = users.find(u => u.id === userId);
@@ -296,137 +247,46 @@ const UserManagement: React.FC = () => {
     handleMenuClose();
   };
 
-  const handleCreateUser = async () => {
-    if (!selectedSubDomain) {
-      setError('Please select a subdomain first');
-      return;
-    }
-
-    if (!newUser.name || !newUser.email || !newUser.password) {
-      setError('Name, email, and password are required');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-    setSuccess('');
-
-    try {
-      const profileData: any = {
-        role: newUser.role,
-        full_name: newUser.name,
-        phone: newUser.phone || null,
-        sub_domain_id: selectedSubDomain.id,
-        department: newUser.department || null,
-        semester: newUser.semester || null,
-      };
-
-      if (newUser.role === 'student') {
-        profileData.student_id = newUser.studentId;
-        profileData.grade = newUser.grade;
-        profileData.section = newUser.section;
-      } else if (newUser.role === 'teacher') {
-        profileData.employee_id = newUser.employeeId;
-        profileData.qualifications = newUser.qualifications;
-        profileData.subjects = newUser.subjects;
-      } else if (newUser.role === 'mentor') {
-        profileData.mentor_id = newUser.mentorId;
-        profileData.expertise_area = newUser.expertiseArea;
-      } else if (newUser.role === 'admin') {
-        profileData.employee_id = newUser.employeeId;
-      }
-
-      const response = await fetch('http://localhost:3001/api/users/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: newUser.email,
-          password: newUser.password,
-          profile: profileData,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create user');
-      }
-
-      setSuccess(`User ${newUser.name} created successfully!`);
-      setOpenAddUser(false);
-      setNewUser({
-        name: '',
-        email: '',
-        password: '',
-        role: 'student',
-        phone: '',
-        studentId: '',
-        employeeId: '',
-        mentorId: '',
-        grade: '',
-        section: '',
-        department: '',
-        semester: '',
-        qualifications: '',
-        expertiseArea: '',
-        subjects: [],
-      });
-
-      // Reload users for current subdomain
-      if (selectedSubDomain) {
-        const response = await fetch(`http://localhost:3001/api/users?sub_domain_id=${selectedSubDomain.id}`);
-        const data = await response.json();
-        if (data.users) {
-          const formattedUsers: User[] = data.users.map((profile: any) => ({
-            id: profile.id,
-            name: profile.full_name || 'N/A',
-            email: profile.email || 'N/A',
-            role: profile.role,
-            semester: profile.semester || '',
-            branch: profile.department || '',
-            status: 'active',
-            lastLogin: getRelativeTime(profile.last_sign_in_at || profile.created_at),
-            subjects: profile.subjects || [],
-          } as any));
-          setUsers(formattedUsers);
-        }
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to create user');
-    } finally {
-      setLoading(false);
-    }
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setEditFormData({
+      name: user.name,
+      phone: '',
+      role: user.role,
+      department: user.branch || '',
+      semester: user.semester || '',
+      qualifications: '',
+      expertiseArea: '',
+      subjects: (user as any).subjects || [],
+    });
+    setOpenEditDialog(true);
+    handleMenuClose();
   };
 
   const handleUpdateUser = async () => {
     if (!selectedUser) return;
-    
+
     setLoading(true);
     setError('');
     setSuccess('');
 
     try {
       const profileData: any = {
-        role: newUser.role,
-        full_name: newUser.name,
-        phone: newUser.phone || null,
-        department: newUser.department || null,
-        semester: newUser.semester || null,
+        full_name: editFormData.name,
+        phone: editFormData.phone || null,
+        role: editFormData.role,
       };
 
-      if (newUser.role === 'student') {
-        profileData.student_id = newUser.studentId;
-        profileData.grade = newUser.grade;
-        profileData.section = newUser.section;
-      } else if (newUser.role === 'teacher') {
-        profileData.employee_id = newUser.employeeId;
-        profileData.qualifications = newUser.qualifications;
-        profileData.subjects = newUser.subjects;
-      } else if (newUser.role === 'mentor') {
-        profileData.mentor_id = newUser.mentorId;
-        profileData.expertise_area = newUser.expertiseArea;
-      } else if (newUser.role === 'admin') {
-        profileData.employee_id = newUser.employeeId;
+      if (editFormData.role === 'student' || editFormData.role === 'teacher' || editFormData.role === 'mentor') {
+        profileData.department = editFormData.department || null;
+        profileData.semester = editFormData.semester || null;
+      }
+
+      if (editFormData.role === 'teacher') {
+        profileData.qualifications = editFormData.qualifications;
+        profileData.subjects = editFormData.subjects;
+      } else if (editFormData.role === 'mentor') {
+        profileData.expertise_area = editFormData.expertiseArea;
       }
 
       const response = await fetch(`http://localhost:3001/api/users/${selectedUser.id}`, {
@@ -441,11 +301,11 @@ const UserManagement: React.FC = () => {
         throw new Error(data.error || 'Failed to update user');
       }
 
-      setSuccess(`User ${newUser.name} updated successfully!`);
-      setOpenEditUser(false);
+      setSuccess(`User ${editFormData.name} updated successfully!`);
+      setOpenEditDialog(false);
       setSelectedUser(null);
-      
-      // Reload users for current subdomain
+
+      // Reload users
       if (selectedSubDomain) {
         const response = await fetch(`http://localhost:3001/api/users?sub_domain_id=${selectedSubDomain.id}`);
         const data = await response.json();
@@ -471,6 +331,8 @@ const UserManagement: React.FC = () => {
       setLoading(false);
     }
   };
+
+
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -518,20 +380,6 @@ const UserManagement: React.FC = () => {
           <Typography variant="h4" fontWeight={600} gutterBottom>
             User Management
           </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
-            variant="contained"
-            onClick={() => setOpenAddUser(true)}
-            disabled={!selectedSubDomain}
-          >
-            + Add User
-          </Button>
-          <Tooltip title="Settings">
-            <IconButton onClick={() => setOpenSettings(true)}>
-              <Settings />
-            </IconButton>
-          </Tooltip>
         </Box>
       </Box>
 
@@ -699,7 +547,10 @@ const UserManagement: React.FC = () => {
                     }}
                   >
                     <Tooltip title="Edit">
-                      <IconButton size="small" onClick={() => handleEditUser(user)}>
+                      <IconButton 
+                        size="small" 
+                        onClick={() => handleEditUser(user)}
+                      >
                         <Edit fontSize="small" />
                       </IconButton>
                     </Tooltip>
@@ -727,6 +578,142 @@ const UserManagement: React.FC = () => {
         </Paper>
       )}
 
+      {/* Edit User Dialog */}
+      <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Edit User</DialogTitle>
+        <DialogContent>
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+          {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
+          
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            <Typography variant="subtitle2" color="text.secondary">Basic Information</Typography>
+            
+            <TextField
+              fullWidth
+              label="Full Name"
+              value={editFormData.name}
+              onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+              required
+            />
+            
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+              <TextField
+                select
+                fullWidth
+                label="Role"
+                value={editFormData.role}
+                onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value as UserRole })}
+                required
+              >
+                <MenuItem value="teacher">Teacher</MenuItem>
+                <MenuItem value="student">Student</MenuItem>
+                <MenuItem value="parent">Parent</MenuItem>
+                <MenuItem value="mentor">Mentor</MenuItem>
+                <MenuItem value="admin">Admin</MenuItem>
+              </TextField>
+              
+              <TextField
+                fullWidth
+                label="Phone"
+                value={editFormData.phone}
+                onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+              />
+            </Box>
+
+            {(editFormData.role === 'student' || editFormData.role === 'teacher' || editFormData.role === 'mentor') && (
+              <>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
+                  Department & Semester
+                </Typography>
+                
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                  <TextField
+                    fullWidth
+                    label="Department"
+                    value={editFormData.department}
+                    onChange={(e) => setEditFormData({ ...editFormData, department: e.target.value })}
+                    placeholder="e.g., Computer Science"
+                  />
+                  <TextField
+                    fullWidth
+                    label="Semester"
+                    value={editFormData.semester}
+                    onChange={(e) => setEditFormData({ ...editFormData, semester: e.target.value })}
+                    placeholder="e.g., Fall 2024"
+                  />
+                </Box>
+              </>
+            )}
+
+            {editFormData.role === 'student' && (
+              <>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
+                  Student Information
+                </Typography>
+                <TextField
+                  fullWidth
+                  label="Section"
+                  value={editFormData.phone}
+                  onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                  placeholder="e.g., A, B, C"
+                />
+              </>
+            )}
+
+            {editFormData.role === 'teacher' && (
+              <>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
+                  Teacher Information
+                </Typography>
+                <TextField
+                  fullWidth
+                  label="Qualifications"
+                  value={editFormData.qualifications}
+                  onChange={(e) => setEditFormData({ ...editFormData, qualifications: e.target.value })}
+                  placeholder="M.Sc. Mathematics"
+                />
+                <TextField
+                  fullWidth
+                  label="Subjects"
+                  value={editFormData.subjects.join(', ')}
+                  onChange={(e) => setEditFormData({ ...editFormData, subjects: e.target.value.split(',').map(s => s.trim()).filter(s => s) })}
+                  placeholder="Mathematics, Physics, Chemistry"
+                  helperText="Enter subjects separated by commas"
+                />
+              </>
+            )}
+
+            {editFormData.role === 'mentor' && (
+              <>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
+                  Mentor Information
+                </Typography>
+                <TextField
+                  fullWidth
+                  label="Expertise Area"
+                  value={editFormData.expertiseArea}
+                  onChange={(e) => setEditFormData({ ...editFormData, expertiseArea: e.target.value })}
+                  placeholder="Career Guidance"
+                />
+              </>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'flex-end', px: 3, pb: 2 }}>
+          <Button onClick={() => setOpenEditDialog(false)} disabled={loading}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleUpdateUser}
+            disabled={!editFormData.name || loading}
+            startIcon={loading && <CircularProgress size={20} />}
+          >
+            {loading ? 'Updating...' : 'Update User'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Action Menu */}
       <Menu
         anchorEl={anchorEl}
@@ -749,334 +736,9 @@ const UserManagement: React.FC = () => {
         )}
       </Menu>
 
-      {/* Edit User Dialog */}
-      <Dialog open={openEditUser} onClose={() => setOpenEditUser(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Edit User</DialogTitle>
-        <DialogContent>
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-          {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
-          
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-            <Typography variant="subtitle2" color="text.secondary">Basic Information</Typography>
-            
-            <TextField
-              fullWidth
-              label="Full Name"
-              value={newUser.name}
-              onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-              required
-            />
-            
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-              <TextField
-                fullWidth
-                label="Email"
-                type="email"
-                value={newUser.email}
-                disabled
-                helperText="Email cannot be changed"
-              />
-              <TextField
-                fullWidth
-                label="Phone"
-                value={newUser.phone}
-                onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
-              />
-            </Box>
 
-            <TextField
-              select
-              fullWidth
-              label="Role"
-              value={newUser.role}
-              onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })}
-              required
-            >
-              <MenuItem value="teacher">Teacher</MenuItem>
-              <MenuItem value="student">Student</MenuItem>
-              <MenuItem value="parent">Parent</MenuItem>
-              <MenuItem value="mentor">Mentor</MenuItem>
-              <MenuItem value="admin">Admin</MenuItem>
-            </TextField>
 
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
-              Department & Semester
-            </Typography>
-            
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-              <TextField
-                fullWidth
-                label="Department"
-                value={newUser.department}
-                onChange={(e) => setNewUser({ ...newUser, department: e.target.value })}
-                placeholder="e.g., Computer Science"
-              />
-              <TextField
-                fullWidth
-                label="Semester"
-                value={newUser.semester}
-                onChange={(e) => setNewUser({ ...newUser, semester: e.target.value })}
-                placeholder="e.g., Fall 2024"
-              />
-            </Box>
 
-            {newUser.role === 'student' && (
-              <>
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
-                  Student Information
-                </Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2 }}>
-                  <TextField
-                    fullWidth
-                    label="Student ID"
-                    value={newUser.studentId}
-                    onChange={(e) => setNewUser({ ...newUser, studentId: e.target.value })}
-                  />
-                  <TextField
-                    fullWidth
-                    label="Grade"
-                    value={newUser.grade}
-                    onChange={(e) => setNewUser({ ...newUser, grade: e.target.value })}
-                  />
-                  <TextField
-                    fullWidth
-                    label="Section"
-                    value={newUser.section}
-                    onChange={(e) => setNewUser({ ...newUser, section: e.target.value })}
-                  />
-                </Box>
-              </>
-            )}
-
-            {newUser.role === 'teacher' && (
-              <>
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
-                  Teacher Information
-                </Typography>
-                <TextField
-                  fullWidth
-                  label="Employee ID"
-                  value={newUser.employeeId}
-                  onChange={(e) => setNewUser({ ...newUser, employeeId: e.target.value })}
-                />
-                <TextField
-                  fullWidth
-                  label="Qualifications"
-                  value={newUser.qualifications}
-                  onChange={(e) => setNewUser({ ...newUser, qualifications: e.target.value })}
-                />
-                <TextField
-                  fullWidth
-                  label="Subjects"
-                  value={newUser.subjects.join(', ')}
-                  onChange={(e) => setNewUser({ ...newUser, subjects: e.target.value.split(',').map(s => s.trim()).filter(s => s) })}
-                  placeholder="Mathematics, Physics, Chemistry"
-                  helperText="Enter subjects separated by commas"
-                />
-              </>
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenEditUser(false)} disabled={loading}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleUpdateUser}
-            disabled={!newUser.name || loading}
-            startIcon={loading && <CircularProgress size={20} />}
-          >
-            {loading ? 'Updating...' : 'Update User'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Add User Dialog */}
-      <Dialog open={openAddUser} onClose={() => setOpenAddUser(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Add New User to {selectedSubDomain?.name}</DialogTitle>
-        <DialogContent>
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-          {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
-          
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-            <Typography variant="subtitle2" color="text.secondary">Basic Information</Typography>
-            
-            <TextField
-              fullWidth
-              label="Full Name"
-              value={newUser.name}
-              onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-              required
-            />
-            
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-              <TextField
-                fullWidth
-                label="Email"
-                type="email"
-                value={newUser.email}
-                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                required
-              />
-              <TextField
-                fullWidth
-                label="Password"
-                type="password"
-                value={newUser.password}
-                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                required
-              />
-            </Box>
-
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-              <TextField
-                fullWidth
-                label="Phone"
-                value={newUser.phone}
-                onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
-              />
-              <TextField
-                select
-                fullWidth
-                label="Role"
-                value={newUser.role}
-                onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })}
-                required
-              >
-                <MenuItem value="teacher">Teacher</MenuItem>
-                <MenuItem value="student">Student</MenuItem>
-                <MenuItem value="parent">Parent</MenuItem>
-                <MenuItem value="mentor">Mentor</MenuItem>
-                <MenuItem value="admin">Admin</MenuItem>
-              </TextField>
-            </Box>
-
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
-              Department & Semester
-            </Typography>
-            
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-              <TextField
-                fullWidth
-                label="Department"
-                value={newUser.department}
-                onChange={(e) => setNewUser({ ...newUser, department: e.target.value })}
-                placeholder="e.g., Computer Science"
-              />
-              <TextField
-                fullWidth
-                label="Semester"
-                value={newUser.semester}
-                onChange={(e) => setNewUser({ ...newUser, semester: e.target.value })}
-                placeholder="e.g., Fall 2024"
-              />
-            </Box>
-
-            {newUser.role === 'student' && (
-              <>
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
-                  Student Information
-                </Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2 }}>
-                  <TextField
-                    fullWidth
-                    label="Student ID"
-                    value={newUser.studentId}
-                    onChange={(e) => setNewUser({ ...newUser, studentId: e.target.value })}
-                  />
-                  <TextField
-                    fullWidth
-                    label="Grade"
-                    value={newUser.grade}
-                    onChange={(e) => setNewUser({ ...newUser, grade: e.target.value })}
-                  />
-                  <TextField
-                    fullWidth
-                    label="Section"
-                    value={newUser.section}
-                    onChange={(e) => setNewUser({ ...newUser, section: e.target.value })}
-                  />
-                </Box>
-              </>
-            )}
-
-            {newUser.role === 'teacher' && (
-              <>
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
-                  Teacher Information
-                </Typography>
-                <TextField
-                  fullWidth
-                  label="Employee ID"
-                  value={newUser.employeeId}
-                  onChange={(e) => setNewUser({ ...newUser, employeeId: e.target.value })}
-                />
-                <TextField
-                  fullWidth
-                  label="Qualifications"
-                  value={newUser.qualifications}
-                  onChange={(e) => setNewUser({ ...newUser, qualifications: e.target.value })}
-                />
-                <TextField
-                  fullWidth
-                  label="Subjects"
-                  value={newUser.subjects.join(', ')}
-                  onChange={(e) => setNewUser({ ...newUser, subjects: e.target.value.split(',').map(s => s.trim()).filter(s => s) })}
-                  placeholder="Mathematics, Physics, Chemistry"
-                  helperText="Enter subjects separated by commas"
-                />
-              </>
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenAddUser(false)} disabled={loading}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleCreateUser}
-            disabled={!newUser.name || !newUser.email || !newUser.password || loading}
-            startIcon={loading && <CircularProgress size={20} />}
-          >
-            {loading ? 'Creating...' : 'Create User'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Settings Dialog */}
-      <Dialog open={openSettings} onClose={() => setOpenSettings(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Subdomain Settings</DialogTitle>
-        <DialogContent>
-          {selectedSubDomain && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                <strong>Name:</strong> {selectedSubDomain.name}
-              </Typography>
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                <strong>Type:</strong> {selectedSubDomain.type}
-              </Typography>
-              {selectedSubDomain.department_name && (
-                <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                  <strong>Department:</strong> {selectedSubDomain.department_name}
-                </Typography>
-              )}
-              {selectedSubDomain.semester_name && (
-                <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                  <strong>Semester:</strong> {selectedSubDomain.semester_name}
-                </Typography>
-              )}
-              <Alert severity="info" sx={{ mt: 2 }}>
-                All users created in this subdomain will have their data isolated to this subdomain only.
-              </Alert>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenSettings(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };

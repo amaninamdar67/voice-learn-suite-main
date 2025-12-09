@@ -71,6 +71,9 @@ export const initializeAdminLinkingRoutes = (supabase) => {
     try {
       const { parent_id, student_id, relationship } = req.body;
 
+      console.log('[LINK PARENT-STUDENT] Creating link:', { parent_id, student_id });
+
+      // 1. Create parent-student link
       const { data, error } = await supabase
         .from('parent_student_links')
         .insert([{
@@ -82,9 +85,54 @@ export const initializeAdminLinkingRoutes = (supabase) => {
         .single();
 
       if (error) throw error;
+
+      // 2. Ensure mentor-student link exists
+      // If the student doesn't have a mentor, link them to the first available mentor
+      const { data: existingMentor } = await supabase
+        .from('mentor_student_links')
+        .select('id')
+        .eq('student_id', student_id)
+        .single();
+
+      if (!existingMentor) {
+        console.log('[LINK PARENT-STUDENT] No mentor found for student, linking to first available mentor');
+        
+        // Get the first available mentor
+        const { data: mentors } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('role', 'mentor')
+          .order('created_at', { ascending: true })
+          .limit(1);
+
+        if (mentors && mentors.length > 0) {
+          const mentorId = mentors[0].id;
+          console.log('[LINK PARENT-STUDENT] Linking student to mentor:', mentorId);
+
+          const { error: mentorError } = await supabase
+            .from('mentor_student_links')
+            .insert([{
+              mentor_id: mentorId,
+              student_id
+            }]);
+
+          if (mentorError) {
+            console.error('[LINK PARENT-STUDENT] Error linking mentor:', mentorError);
+            // Don't throw - the parent-student link was created successfully
+          } else {
+            console.log('[LINK PARENT-STUDENT] Mentor linked successfully');
+          }
+        } else {
+          console.warn('[LINK PARENT-STUDENT] No mentors available to link');
+        }
+      } else {
+        console.log('[LINK PARENT-STUDENT] Student already has a mentor');
+      }
+
+      console.log('[LINK PARENT-STUDENT] Link created successfully');
       res.json({ success: true, link: data });
     } catch (error) {
-      console.error('Error creating parent-student link:', error);
+      console.error('[LINK PARENT-STUDENT] Error creating parent-student link:', error);
       res.status(400).json({ error: error.message });
     }
   });

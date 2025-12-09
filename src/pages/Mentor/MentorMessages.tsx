@@ -157,10 +157,11 @@ export const MentorMessages: React.FC = () => {
       }
       
       // Filter to only show messages FROM parent TO mentor (incoming messages only)
-      // A message is from parent if: parent_id is the sender (mentor_id is the receiver)
+      // Use sender_id to determine who actually sent the message
       allMessages = allMessages.filter((msg: Message) => {
-        // Message is from parent if parent_id is NOT the mentor (meaning parent sent it)
-        return msg.mentor_id === user?.id && msg.parent_id === parentId;
+        // Message is from parent if sender_id is the parent (not the mentor)
+        // and it doesn't have a reply_to_id (original messages only, not replies)
+        return msg.sender_id === msg.parent_id && !msg.reply_to_id;
       });
       
       setMessages(allMessages);

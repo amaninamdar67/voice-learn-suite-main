@@ -647,6 +647,7 @@ export const submitQuiz = async (req, res) => {
     
     const percentage = (score / quiz.total_marks) * 100;
     
+    // Insert quiz result - allow multiple attempts
     const { data, error } = await supabase
       .from('quiz_results')
       .insert([{
@@ -663,7 +664,10 @@ export const submitQuiz = async (req, res) => {
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Quiz submission error:', error);
+      throw error;
+    }
     
     res.json({ success: true, result: data });
   } catch (error) {

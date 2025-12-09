@@ -68,47 +68,71 @@ const AdminDashboard: React.FC = () => {
     loadDashboardStats();
     loadActivities();
     loadAnalytics();
-    const interval = setInterval(() => {
+    
+    // Refresh stats every 10 seconds for real-time updates
+    const statsInterval = setInterval(() => {
+      loadDashboardStats();
+    }, 10000);
+    
+    // Refresh activities and analytics every 15 seconds
+    const analyticsInterval = setInterval(() => {
       loadActivities();
       loadAnalytics();
-    }, 30000); // Refresh every 30 seconds
-    return () => clearInterval(interval);
+    }, 15000);
+    
+    return () => {
+      clearInterval(statsInterval);
+      clearInterval(analyticsInterval);
+    };
   }, [timeRange]);
 
   const loadDashboardStats = async () => {
     try {
-      // Load users to count students and teachers
-      const usersResponse = await fetch('http://localhost:3001/api/users');
-      const usersData = await usersResponse.json();
-      
-      // Load domains
-      const domainsResponse = await fetch('http://localhost:3001/api/domains');
-      const domainsData = await domainsResponse.json();
-      
-      // Load live classes
-      const liveClassesResponse = await fetch('http://localhost:3001/api/lms/live-classes');
-      const liveClassesData = await liveClassesResponse.json();
+      const [domainsRes, subdomainsRes, studentsRes, teachersRes, liveClassesRes, ongoingLiveClassesRes] = await Promise.all([
+        fetch('http://localhost:3001/api/stats/domains-count').catch(() => null),
+        fetch('http://localhost:3001/api/subdomains-count').catch(() => null),
+        fetch('http://localhost:3001/api/stats/students-count').catch(() => null),
+        fetch('http://localhost:3001/api/stats/teachers-count').catch(() => null),
+        fetch('http://localhost:3001/api/stats/live-classes-count').catch(() => null),
+        fetch('http://localhost:3001/api/stats/ongoing-live-classes-count').catch(() => null),
+      ]);
 
-      if (usersData.users && domainsData.domains) {
-        const students = usersData.users.filter((u: any) => u.role === 'student').length;
-        const teachers = usersData.users.filter((u: any) => u.role === 'teacher').length;
-        const domains = domainsData.domains.length;
-        const liveClasses = liveClassesData.liveClasses?.length || 0;
-        
-        // Count subdomains (assuming they're in the domains data)
-        const subdomains = domainsData.domains?.filter((d: any) => d.parent_domain_id)?.length || 0;
-        setSubdomainCount(subdomains);
+      const domainsData = domainsRes?.ok ? await domainsRes.json() : { totalDomains: 0 };
+      const subdomainsData = subdomainsRes?.ok ? await subdomainsRes.json() : { totalSubdomains: 0 };
+      const studentsData = studentsRes?.ok ? await studentsRes.json() : { totalStudents: 0 };
+      const teachersData = teachersRes?.ok ? await teachersRes.json() : { totalTeachers: 0 };
+      const liveClassesData = liveClassesRes?.ok ? await liveClassesRes.json() : { totalLiveClasses: 0 };
+      const ongoingLiveClassesData = ongoingLiveClassesRes?.ok ? await ongoingLiveClassesRes.json() : { ongoingLiveClasses: 0 };
 
-        setStats([
-          { title: 'Total Domains', value: domains, icon: <School />, color: '#2196F3' },
-          { title: 'Total Sub-Domain', value: subdomains, icon: <School />, color: '#00BCD4' },
-          { title: 'Total Students', value: students, icon: <People />, color: '#4CAF50' },
-          { title: 'Total Teachers', value: teachers, icon: <Person />, color: '#FF9800' },
-          { title: 'Live Classes', value: liveClasses, icon: <Videocam />, color: '#9C27B0' },
-        ]);
-      }
+      const domains = domainsData.totalDomains || 0;
+      const subdomains = subdomainsData.totalSubdomains || 0;
+      const students = studentsData.totalStudents || 0;
+      const teachers = teachersData.totalTeachers || 0;
+      const liveClasses = liveClassesData.totalLiveClasses || 0;
+      const ongoingLiveClasses = ongoingLiveClassesData.ongoingLiveClasses || 0;
+
+      setSubdomainCount(subdomains);
+
+      setStats([
+        { title: 'Total Domains', value: domains, icon: <School />, color: '#2196F3' },
+        { title: 'Total Sub-Domain', value: subdomains, icon: <School />, color: '#00BCD4' },
+        { title: 'Total Students', value: students, icon: <People />, color: '#4CAF50' },
+        { title: 'Total Teachers', value: teachers, icon: <Person />, color: '#FF9800' },
+        { title: 'Live Classes Conducted', value: liveClasses, icon: <Videocam />, color: '#9C27B0' },
+        { title: 'Ongoing Live Classes', value: ongoingLiveClasses, icon: <Videocam />, color: '#FF5722' },
+      ]);
+
+      console.log('✅ Dashboard Stats Updated:', {
+        domains,
+        subdomains,
+        students,
+        teachers,
+        liveClasses,
+        ongoingLiveClasses,
+        timestamp: new Date().toLocaleTimeString(),
+      });
     } catch (error) {
-      console.error('Error loading dashboard stats:', error);
+      console.error('❌ Error loading dashboard stats:', error);
     }
   };
 
@@ -518,14 +542,14 @@ const AdminDashboard: React.FC = () => {
         </Paper>
 
         {/* Right Column: Recent Activities */}
-        <Paper sx={{ p: 2.5, display: 'flex', flexDirection: 'column', height: 'fit-content', maxHeight: '600px' }}>
+        <Paper sx={{ p: 2.5, display: 'flex', flexDirection: 'column', height: '500px' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
             <TrendingUp color="primary" fontSize="small" />
             <Typography variant="subtitle2" fontWeight={600}>
               Recent Activities
             </Typography>
           </Box>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, overflow: 'auto', flex: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, overflowY: 'auto', flex: 1, pr: 1, '&::-webkit-scrollbar': { width: '6px' }, '&::-webkit-scrollbar-track': { bgcolor: '#f1f1f1', borderRadius: '10px' }, '&::-webkit-scrollbar-thumb': { bgcolor: '#888', borderRadius: '10px', '&:hover': { bgcolor: '#555' } } }}>
             {activities.length > 0 ? (
               activities.map((activity) => (
                 <Box

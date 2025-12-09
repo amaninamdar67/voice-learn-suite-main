@@ -4,7 +4,7 @@ import {
   DialogActions, TextField, Alert, CircularProgress, List, ListItem, ListItemButton,
   ListItemText, InputAdornment, Divider, Card, CardContent, Switch, FormControlLabel, MenuItem,
 } from '@mui/material';
-import { Add, Edit, Delete, Search, Settings as SettingsIcon, PersonAdd } from '@mui/icons-material';
+import { Add, Edit, Delete, Search, Settings as SettingsIcon, PersonAdd, Visibility, VisibilityOff } from '@mui/icons-material';
 
 interface Domain {
   id: string;
@@ -39,6 +39,7 @@ const DomainManagement: React.FC = () => {
   const [editingDomain, setEditingDomain] = useState<Domain | null>(null);
   const [managingSubDomain, setManagingSubDomain] = useState<SubDomain | null>(null);
   const [selectedSubDomainForUsers, setSelectedSubDomainForUsers] = useState<SubDomain | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -216,7 +217,7 @@ const DomainManagement: React.FC = () => {
       }
 
       setSuccess(`User ${userForm.name} created successfully!`);
-      setOpenAddUserDialog(false);
+      // Clear form after successful creation
       setUserForm({
         name: '',
         email: '',
@@ -232,6 +233,10 @@ const DomainManagement: React.FC = () => {
         expertiseArea: '',
         subjects: [],
       });
+      // Close dialog after a short delay to show success message
+      setTimeout(() => {
+        setOpenAddUserDialog(false);
+      }, 1500);
     } catch (err: any) {
       setError(err.message || 'Failed to create user');
     } finally {
@@ -506,11 +511,22 @@ const DomainManagement: React.FC = () => {
               <TextField
                 fullWidth
                 label="Password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={userForm.password}
                 onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
                 required
                 helperText="Min 6 characters"
+                InputProps={{
+                  endAdornment: (
+                    <IconButton
+                      onClick={() => setShowPassword(!showPassword)}
+                      edge="end"
+                      sx={{ mr: -1 }}
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  ),
+                }}
               />
             </Box>
 
@@ -538,26 +554,30 @@ const DomainManagement: React.FC = () => {
               />
             </Box>
 
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
-              Department & Semester
-            </Typography>
-            
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-              <TextField
-                fullWidth
-                label="Department"
-                value={userForm.department}
-                onChange={(e) => setUserForm({ ...userForm, department: e.target.value })}
-                placeholder="e.g., Computer Science"
-              />
-              <TextField
-                fullWidth
-                label="Semester"
-                value={userForm.semester}
-                onChange={(e) => setUserForm({ ...userForm, semester: e.target.value })}
-                placeholder="e.g., Fall 2024"
-              />
-            </Box>
+            {(userForm.role === 'student' || userForm.role === 'teacher' || userForm.role === 'mentor') && (
+              <>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
+                  Department & Semester
+                </Typography>
+                
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                  <TextField
+                    fullWidth
+                    label="Department"
+                    value={userForm.department}
+                    onChange={(e) => setUserForm({ ...userForm, department: e.target.value })}
+                    placeholder="e.g., Computer Science"
+                  />
+                  <TextField
+                    fullWidth
+                    label="Semester"
+                    value={userForm.semester}
+                    onChange={(e) => setUserForm({ ...userForm, semester: e.target.value })}
+                    placeholder="e.g., Fall 2024"
+                  />
+                </Box>
+              </>
+            )}
 
             {userForm.role === 'student' && (
               <>
@@ -581,13 +601,6 @@ const DomainManagement: React.FC = () => {
                 </Typography>
                 <TextField
                   fullWidth
-                  label="Employee ID"
-                  value={userForm.employeeId}
-                  onChange={(e) => setUserForm({ ...userForm, employeeId: e.target.value })}
-                  placeholder="EMP001"
-                />
-                <TextField
-                  fullWidth
                   label="Qualifications"
                   value={userForm.qualifications}
                   onChange={(e) => setUserForm({ ...userForm, qualifications: e.target.value })}
@@ -609,37 +622,50 @@ const DomainManagement: React.FC = () => {
                 <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
                   Mentor Information
                 </Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                  <TextField
-                    fullWidth
-                    label="Mentor ID"
-                    value={userForm.mentorId}
-                    onChange={(e) => setUserForm({ ...userForm, mentorId: e.target.value })}
-                    placeholder="MEN001"
-                  />
-                  <TextField
-                    fullWidth
-                    label="Expertise Area"
-                    value={userForm.expertiseArea}
-                    onChange={(e) => setUserForm({ ...userForm, expertiseArea: e.target.value })}
-                    placeholder="Career Guidance"
-                  />
-                </Box>
+                <TextField
+                  fullWidth
+                  label="Expertise Area"
+                  value={userForm.expertiseArea}
+                  onChange={(e) => setUserForm({ ...userForm, expertiseArea: e.target.value })}
+                  placeholder="Career Guidance"
+                />
               </>
             )}
           </Box>
         </DialogContent>
-        <DialogActions sx={{ justifyContent: 'flex-end', px: 3, pb: 2 }}>
-          <Button onClick={() => setOpenAddUserDialog(false)} disabled={loading}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleAddUser}
-            disabled={!userForm.name || !userForm.email || !userForm.password || loading}
+        <DialogActions sx={{ justifyContent: 'space-between', px: 3, pb: 2 }}>
+          <Button 
+            onClick={() => setUserForm({
+              name: '',
+              email: '',
+              password: '',
+              role: 'student',
+              phone: '',
+              employeeId: '',
+              mentorId: '',
+              section: '',
+              department: '',
+              semester: '',
+              qualifications: '',
+              expertiseArea: '',
+              subjects: [],
+            })}
+            disabled={loading}
           >
-            {loading ? 'Creating...' : 'Create User'}
+            Clear
           </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button onClick={() => setOpenAddUserDialog(false)} disabled={loading}>
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleAddUser}
+              disabled={!userForm.name || !userForm.email || !userForm.password || loading}
+            >
+              {loading ? 'Creating...' : 'Create User'}
+            </Button>
+          </Box>
         </DialogActions>
       </Dialog>
     </Box>

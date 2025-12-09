@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -37,11 +37,11 @@ const Analytics: React.FC = () => {
   const [timeRange, setTimeRange] = useState('week');
   const [stats, setStats] = useState([
     { label: 'Total Students', value: '0', change: '+0%', icon: <People />, color: '#2196F3' },
-    { label: 'Student Interaction', value: '0', change: '+0%', icon: <School />, color: '#FF6B6B' },
+    { label: 'Community Activity', value: '0', change: '+0%', icon: <School />, color: '#FF6B6B' },
     { label: 'Parent Reports', value: '0', change: '+0%', icon: <People />, color: '#4CAF50', subtext: '' },
     { label: 'Mentor Talk', value: '0', change: '+0%', icon: <School />, color: '#FF9800', subtext: '' },
     { label: 'Account Linked', value: '0', change: '+0%', icon: <People />, color: '#2196F3', subtext: '' },
-    { label: 'Active Live-Classes', value: '0', change: '+0%', icon: <SmartToy />, color: '#9C27B0' },
+    { label: 'Ongoing Live Classes', value: '0', change: '+0%', icon: <SmartToy />, color: '#9C27B0' },
   ]);
   const [lmsStats, setLmsStats] = useState({
     videoLessons: 0,
@@ -61,7 +61,7 @@ const Analytics: React.FC = () => {
     popularQuestions: [],
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     loadAnalyticsData();
     loadAttendanceData();
     loadQuizPerformance();
@@ -69,97 +69,94 @@ const Analytics: React.FC = () => {
     loadLmsAnalytics();
   }, [timeRange]);
 
+  // Real-time polling for all stats (every 10 seconds)
+  useEffect(() => {
+    const realTimeInterval = setInterval(() => {
+      loadAnalyticsData();
+      loadAttendanceData();
+      loadQuizPerformance();
+      loadAiTutorStats();
+      loadLmsAnalytics();
+    }, 10000);
+
+    return () => clearInterval(realTimeInterval);
+  }, [timeRange]);
+
   const loadAnalyticsData = async () => {
     try {
-      const usersResponse = await fetch('http://localhost:3001/api/users');
-      const usersData = await usersResponse.json();
-      
-      const [lessonsRes, recordedVideosRes, assignmentsRes, liveClassesRes, quizzesRes] = await Promise.all([
-        fetch('http://localhost:3001/api/lessons'),
-        fetch('http://localhost:3001/api/lms/recorded-videos'),
-        fetch('http://localhost:3001/api/lms/assignments'),
-        fetch('http://localhost:3001/api/lms/live-classes'),
-        fetch('http://localhost:3001/api/lms/quizzes'),
+      const [studentsRes, liveClassesRes, ongoingLiveClassesRes, lmsRes, communityRes, parentReportsRes, mentorTalkRes, accountLinkedRes] = await Promise.all([
+        fetch('http://localhost:3001/api/stats/students-count').catch((e) => { console.error('Students fetch error:', e); return null; }),
+        fetch('http://localhost:3001/api/stats/live-classes-count').catch((e) => { console.error('Live classes fetch error:', e); return null; }),
+        fetch('http://localhost:3001/api/stats/ongoing-live-classes-count').catch((e) => { console.error('Ongoing live classes fetch error:', e); return null; }),
+        fetch(`http://localhost:3001/api/admin/lms-analytics?range=${timeRange}`).catch((e) => { console.error('LMS analytics fetch error:', e); return null; }),
+        fetch('http://localhost:3001/api/stats/community-activity-count').catch((e) => { console.error('Community activity fetch error:', e); return null; }),
+        fetch('http://localhost:3001/api/stats/parent-reports-count').catch((e) => { console.error('Parent reports fetch error:', e); return null; }),
+        fetch('http://localhost:3001/api/stats/mentor-talk-count').catch((e) => { console.error('Mentor talk fetch error:', e); return null; }),
+        fetch('http://localhost:3001/api/stats/account-linked-count').catch((e) => { console.error('Account linked fetch error:', e); return null; }),
       ]);
 
-      const lessons = lessonsRes.ok ? await lessonsRes.json() : { lessons: [] };
-      const recordedVideos = recordedVideosRes.ok ? await recordedVideosRes.json() : { videos: [] };
-      const assignments = assignmentsRes.ok ? await assignmentsRes.json() : { assignments: [] };
-      const liveClasses = liveClassesRes.ok ? await liveClassesRes.json() : { liveClasses: [] };
-      const quizzes = quizzesRes.ok ? await quizzesRes.json() : { quizzes: [] };
-      
-      const commentsRes = await fetch('http://localhost:3001/api/admin/comments-count');
-      const commentsData = commentsRes.ok ? await commentsRes.json() : { totalComments: 0 };
-
-      const students = usersData.users?.filter((u) => u.role === 'student').length || 0;
-      const totalStudyMaterials = Array.isArray(lessons.lessons) ? lessons.lessons.length : 0;
-      const totalRecordedVideos = Array.isArray(recordedVideos.videos) ? recordedVideos.videos.length : 0;
-      const totalAssignments = Array.isArray(assignments.assignments) ? assignments.assignments.length : 0;
-      const totalComments = commentsData.totalComments || 0;
-      const allLiveClasses = liveClasses.liveClasses || [];
-      const totalLiveClasses = allLiveClasses.length || 0;
-      const activeLiveClasses = allLiveClasses.filter((lc) => lc.status === 'active' || lc.status === 'ongoing').length || 0;
-      const totalQuizzes = quizzes.quizzes?.length || 0;
-      
-      // Fetch parent and mentor messaging data
-      let parentReports = 0;
-      let mentorReplies = 0;
-      let replyRatio = '0/0';
-      try {
-        const interactionsRes = await fetch('http://localhost:3001/api/admin/mentor-parent-interactions');
-        if (interactionsRes.ok) {
-          const interactionsData = await interactionsRes.json();
-          console.log('Mentor-Parent Interactions:', interactionsData);
-          parentReports = interactionsData.totalParentMessages || 0;
-          mentorReplies = interactionsData.totalMentorReplies || 0;
-          replyRatio = interactionsData.replyRatio || '0/0';
-        }
-      } catch (error) {
-        console.error('Error fetching parent/mentor data:', error);
+      if (!studentsRes && !liveClassesRes) {
+        console.warn('⚠️ Backend server is not running on http://localhost:3001. Please start the backend server.');
       }
 
-      // Fetch account linking data
-      let accountsLinked = 0;
-      try {
-        const linkedRes = await fetch('http://localhost:3001/api/admin/accounts-linked-count');
-        if (linkedRes.ok) {
-          const linkedData = await linkedRes.json();
-          console.log('Accounts Linked:', linkedData);
-          accountsLinked = linkedData.totalLinked || 0;
-        }
-      } catch (error) {
-        console.error('Error fetching linking data:', error);
-      }
+      const studentsData = studentsRes?.ok ? await studentsRes.json() : { totalStudents: 0 };
+      const liveClassesData = liveClassesRes?.ok ? await liveClassesRes.json() : { totalLiveClasses: 0 };
+      const ongoingLiveClassesData = ongoingLiveClassesRes?.ok ? await ongoingLiveClassesRes.json() : { ongoingLiveClasses: 0 };
+      const lmsData = lmsRes?.ok ? await lmsRes.json() : {};
+      const communityData = communityRes?.ok ? await communityRes.json() : { totalCommunityActivity: 0 };
+      const parentReportsData = parentReportsRes?.ok ? await parentReportsRes.json() : { totalParentReports: 0 };
+      const mentorTalkData = mentorTalkRes?.ok ? await mentorTalkRes.json() : { totalMentorTalk: 0 };
+      const accountLinkedData = accountLinkedRes?.ok ? await accountLinkedRes.json() : { totalAccountLinked: 0 };
 
-      console.log('Analytics Data:', {
+      const students = studentsData.totalStudents || 0;
+      const totalLiveClasses = liveClassesData.totalLiveClasses || 0;
+      const ongoingLiveClasses = ongoingLiveClassesData.ongoingLiveClasses || 0;
+      const videoLessons = lmsData.videoLessons || 0;
+      const studyMaterials = lmsData.studyMaterials || 0;
+      const assignments = lmsData.assignments || 0;
+      const quizzes = lmsData.quizzes || 0;
+      const totalViews = lmsData.totalViews || 0;
+      const avgCompletion = lmsData.avgCompletion || 0;
+      const totalComments = communityData.totalCommunityActivity || 0;
+      const parentReports = parentReportsData.totalParentReports || 0;
+      const mentorReplies = mentorTalkData.totalMentorTalk || 0;
+      const accountsLinked = accountLinkedData.totalAccountLinked || 0;
+
+      console.log('✅ Analytics Data Updated:', {
         students,
+        videoLessons,
+        studyMaterials,
+        assignments,
+        quizzes,
+        totalLiveClasses,
+        ongoingLiveClasses,
         totalComments,
         parentReports,
         mentorReplies,
         accountsLinked,
-        activeLiveClasses,
+        timestamp: new Date().toLocaleTimeString(),
       });
 
       setStats([
         { label: 'Total Students', value: students.toString(), change: '+0%', icon: <People />, color: '#2196F3' },
-        { label: 'Student Interaction', value: totalComments.toString(), change: '+0%', icon: <School />, color: '#FF6B6B' },
+        { label: 'Community Activity', value: totalComments.toString(), change: '+0%', icon: <School />, color: '#FF6B6B' },
         { label: 'Parent Reports', value: parentReports.toString(), change: '+0%', icon: <People />, color: '#4CAF50', subtext: '' },
-        { label: 'Mentor Talk', value: mentorReplies.toString(), change: '+0%', icon: <School />, color: '#FF9800', subtext: replyRatio },
+        { label: 'Mentor Talk', value: mentorReplies.toString(), change: '+0%', icon: <School />, color: '#FF9800', subtext: '' },
         { label: 'Account Linked', value: accountsLinked.toString(), change: '+0%', icon: <People />, color: '#2196F3', subtext: '' },
-        { label: 'Active Live-Classes', value: activeLiveClasses.toString(), change: '+0%', icon: <SmartToy />, color: '#9C27B0' },
+        { label: 'Ongoing Live Classes', value: ongoingLiveClasses.toString(), change: '+0%', icon: <SmartToy />, color: '#9C27B0' },
       ]);
 
       setLmsStats({
-        videoLessons: totalRecordedVideos,
-        studyMaterials: totalStudyMaterials,
-        assignments: totalAssignments,
+        videoLessons,
+        studyMaterials,
+        assignments,
         liveClasses: totalLiveClasses,
-        quizzes: totalQuizzes,
-        totalViews: 0,
-        avgCompletion: 0,
+        quizzes,
+        totalViews,
+        avgCompletion,
       });
     } catch (error) {
-      console.error('Error loading analytics:', error);
+      console.error('❌ Error loading analytics:', error);
     }
   };
 

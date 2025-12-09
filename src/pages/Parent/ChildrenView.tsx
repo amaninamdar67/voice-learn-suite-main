@@ -99,8 +99,9 @@ const ChildrenView: React.FC = () => {
       const data = await res.json();
       
       // Filter for replies only (messages where mentor is sender, parent is receiver, has reply_to_id, AND belongs to this child)
+      // Use sender_id to determine who sent the message (mentor or parent)
       const mentorReplies = (data.messages || []).filter((msg: any) => 
-        msg.mentor_id === mentorData.id && 
+        msg.sender_id === mentorData.id && 
         msg.parent_id === user.id && 
         msg.student_id === child.id &&
         msg.reply_to_id
@@ -236,11 +237,13 @@ const ChildrenView: React.FC = () => {
           studentId: child.id,
           message: `Subject: ${messageSubject}\n\n${messageContent}`,
           messageType: 'text',
+          senderId: user?.id,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to send message');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send message');
       }
 
       alert('Message sent successfully!');

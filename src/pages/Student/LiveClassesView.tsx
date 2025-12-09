@@ -99,14 +99,28 @@ export default function LiveClassesView() {
           const startTime = new Date(liveClass.start_time);
           const endTime = new Date(liveClass.end_time);
           
-          // Determine actual status based on current time
+          // Determine actual status based on database status and current time
           let actualStatus: 'upcoming' | 'live' | 'ended' = liveClass.status;
-          if (now >= startTime && now <= endTime) {
-            actualStatus = 'live';
-          } else if (now > endTime) {
+          
+          // If status is 'ended' in database, keep it as ended (teacher manually ended it)
+          if (liveClass.status === 'ended') {
             actualStatus = 'ended';
-          } else {
-            actualStatus = 'upcoming';
+          } else if (liveClass.status === 'live') {
+            // If marked as live, check if time has passed
+            if (now > endTime) {
+              actualStatus = 'ended';
+            } else {
+              actualStatus = 'live';
+            }
+          } else if (liveClass.status === 'upcoming') {
+            // If marked as upcoming, check if it's time to go live
+            if (now >= startTime && now <= endTime) {
+              actualStatus = 'live';
+            } else if (now > endTime) {
+              actualStatus = 'ended';
+            } else {
+              actualStatus = 'upcoming';
+            }
           }
           
           return {
