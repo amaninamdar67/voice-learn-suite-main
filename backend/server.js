@@ -177,58 +177,63 @@ app.get('/api/admin/analytics', async (req, res) => {
       supabase.from('live_attendance').select('id, is_present, created_at').gte('created_at', startDate.toISOString()),
     ]);
 
-    // Group data by date
-    const groupByDate = (data, range) => {
+    // Group data by date (using ISO date string as key for proper sorting)
+    const groupByDate = (data) => {
       const grouped = {};
       
       if (!data) return grouped;
       
       data.forEach((item) => {
         const date = new Date(item.created_at);
-        let key;
+        // Use ISO date string (YYYY-MM-DD) as key for consistent grouping
+        const dateStr = date.toISOString().split('T')[0];
         
-        if (range === 'week' || range === 'month') {
-          key = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        } else {
-          key = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-        }
-        
-        if (!grouped[key]) grouped[key] = 0;
-        grouped[key]++;
+        if (!grouped[dateStr]) grouped[dateStr] = 0;
+        grouped[dateStr]++;
       });
       
       return grouped;
     };
 
-    const usersByDate = groupByDate(usersRes.data, range);
-    const lessonsByDate = groupByDate(lessonsRes.data, range);
-    const quizzesByDate = groupByDate(quizzesRes.data, range);
-    const assignmentsByDate = groupByDate(assignmentsRes.data, range);
-    const liveClassesByDate = groupByDate(liveClassesRes.data, range);
+    const usersByDate = groupByDate(usersRes.data);
+    const lessonsByDate = groupByDate(lessonsRes.data);
+    const quizzesByDate = groupByDate(quizzesRes.data);
+    const assignmentsByDate = groupByDate(assignmentsRes.data);
+    const liveClassesByDate = groupByDate(liveClassesRes.data);
 
     // Calculate attendance stats
     const totalAttendance = attendanceRes.data?.length || 0;
     const presentCount = attendanceRes.data?.filter(a => a.is_present)?.length || 0;
     const attendanceRate = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0;
 
-    // Merge all dates
-    const allDates = new Set([
-      ...Object.keys(usersByDate),
-      ...Object.keys(lessonsByDate),
-      ...Object.keys(quizzesByDate),
-      ...Object.keys(assignmentsByDate),
-      ...Object.keys(liveClassesByDate),
-    ]);
+    // Generate all dates in range (linear progression)
+    const allDatesInRange = [];
+    const currentDate = new Date(startDate);
+    currentDate.setHours(0, 0, 0, 0); // Set to start of day
+    
+    while (currentDate <= endDate) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      allDatesInRange.push(dateStr);
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
 
-    const chartData = Array.from(allDates).map(date => ({
-      date,
-      users: usersByDate[date] || 0,
-      lessons: lessonsByDate[date] || 0,
-      quizzes: quizzesByDate[date] || 0,
-      assignments: assignmentsByDate[date] || 0,
-      liveClasses: liveClassesByDate[date] || 0,
-      total: (usersByDate[date] || 0) + (lessonsByDate[date] || 0) + (quizzesByDate[date] || 0) + (assignmentsByDate[date] || 0) + (liveClassesByDate[date] || 0),
-    }));
+    // chartData is already in linear order since we iterate through allDatesInRange
+    const chartData = allDatesInRange.map((dateStr, index) => {
+      const date = new Date(dateStr + 'T00:00:00Z');
+      const displayDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      
+      return {
+        date: displayDate,
+        dateStr: dateStr, // Keep ISO date for reference
+        dateIndex: index, // Use index for proper x-axis ordering
+        users: usersByDate[dateStr] || 0,
+        lessons: lessonsByDate[dateStr] || 0,
+        quizzes: quizzesByDate[dateStr] || 0,
+        assignments: assignmentsByDate[dateStr] || 0,
+        liveClasses: liveClassesByDate[dateStr] || 0,
+        total: (usersByDate[dateStr] || 0) + (lessonsByDate[dateStr] || 0) + (quizzesByDate[dateStr] || 0) + (assignmentsByDate[dateStr] || 0) + (liveClassesByDate[dateStr] || 0),
+      };
+    });
 
     // Calculate totals
     const totals = {
@@ -2206,6 +2211,34 @@ app.get('/api/parent/:parentId/children', async (req, res) => {
   } catch (error) {
     console.error('Error fetching parent children:', error);
     res.status(400).json({ error: error.message, children: [] });
+  }
+});
+
+// ==================== ACTIVE USERS TRACKING ====================
+
+// Get active users (users who logged in within last 24 hours)
+app.get('/api/stats/active-users-count', async (req, res) => {
+  try {
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+    // Get users who have logged in within the last 24 hours
+    const { data: { users }, error } = await supabase.auth.admin.listUsers();
+    
+    if (error) throw error;
+
+    // Filter users who logged in within last 24 hours
+    const activeUsers = users.filter(user => {
+      if (!user.last_sign_in_at) return false;
+      const lastSignIn = new Date(user.last_sign_in_at);
+      return lastSignIn > oneDayAgo;
+    });
+
+    console.log(`✅ Active Users (last 24h): ${activeUsers.length}`);
+    res.json({ activeUsers: activeUsers.length });
+  } catch (error) {
+    console.error('Error fetching active users:', error);
+    res.status(400).json({ error: error.message });
   }
 });
 
