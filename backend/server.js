@@ -45,6 +45,7 @@ import {
 import { initializeMentorParentMessaging } from './mentor-parent-messaging.js';
 import { initializeAdminLinkingRoutes } from './admin-linking-routes.js';
 import { initializeParentStudentData } from './parent-student-data.js';
+import { initializeMentorRoutes } from './mentor-routes.js';
 import { initializeDatabase } from './db-setup.js';
 
 dotenv.config();
@@ -65,6 +66,10 @@ initializeLMSRoutes(supabase);
 // Initialize Mentor-Parent Messaging routes
 const mentorParentRouter = initializeMentorParentMessaging(supabase);
 app.use('/api/mentor-parent', mentorParentRouter);
+
+// Initialize Mentor routes
+const mentorRouter = initializeMentorRoutes(supabase);
+app.use('/api/mentor', mentorRouter);
 
 // Test DELETE endpoint
 app.delete('/api/test-delete/:id', (req, res) => {
@@ -2106,110 +2111,8 @@ Document: ${content.substring(0, 2000)}`;
 });
 
 // ==================== MENTOR DASHBOARD ENDPOINTS ====================
-
-// Get mentor's students
-app.get('/api/mentor/students', async (req, res) => {
-  try {
-    // First try to get from mentor_student_links
-    const { data, error } = await supabase
-      .from('mentor_student_links')
-      .select(`
-        student_id,
-        profiles!mentor_student_links_student_id_fkey(
-          id, full_name, email
-        )
-      `)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.warn('Error fetching mentor_student_links:', error.message);
-      // Return empty array if table doesn't exist yet
-      return res.json({ students: [] });
-    }
-
-    const students = data.map(link => ({
-      id: link.profiles?.id,
-      name: link.profiles?.full_name || 'Unknown',
-      email: link.profiles?.email || '',
-      mentoring_focus: 'General',
-      progress_score: 0,
-      last_session: new Date().toISOString(),
-    })).filter(s => s.id);
-
-    res.json({ students });
-  } catch (error) {
-    console.error('Error fetching mentor students:', error);
-    res.status(400).json({ error: error.message, students: [] });
-  }
-});
-
-// Get mentor's sessions
-app.get('/api/mentor/sessions', async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('mentoring_sessions')
-      .select('*')
-      .order('session_date', { ascending: false })
-      .limit(50);
-
-    if (error) {
-      console.warn('Error fetching mentoring_sessions:', error.message);
-      // Return empty array if table doesn't exist yet
-      return res.json({ sessions: [] });
-    }
-
-    const sessions = data.map(session => ({
-      id: session.id,
-      student_id: session.student_id,
-      student_name: session.student_name || 'Unknown',
-      session_date: session.session_date,
-      duration_minutes: session.duration_minutes || 60,
-      notes: session.notes || '',
-      rating: session.rating || 5,
-    }));
-
-    res.json({ sessions });
-  } catch (error) {
-    console.error('Error fetching mentor sessions:', error);
-    res.status(400).json({ error: error.message, sessions: [] });
-  }
-});
-
-// Get realtime status
-app.get('/api/mentor/realtime-status', async (req, res) => {
-  try {
-    res.json({ status: [] });
-  } catch (error) {
-    console.error('Error fetching realtime status:', error);
-    res.status(400).json({ error: error.message });
-  }
-});
-
-// Create mentoring session
-app.post('/api/mentor/sessions/create', async (req, res) => {
-  try {
-    const { student_id, duration_minutes, notes, rating } = req.body;
-
-    const { data, error } = await supabase
-      .from('mentoring_sessions')
-      .insert([{
-        student_id,
-        duration_minutes,
-        notes,
-        rating,
-        session_date: new Date().toISOString(),
-      }])
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    res.json({ success: true, session: data });
-  } catch (error) {
-    console.error('Error creating mentoring session:', error);
-    res.status(400).json({ error: error.message });
-  }
-});
+// Note: Mentor endpoints are now handled by mentor-routes.js
+// This keeps the code organized and maintainable
 
 // ==================== PARENT DASHBOARD ENDPOINTS ====================
 
@@ -2256,22 +2159,23 @@ app.get('/api/parent/:parentId/children', async (req, res) => {
 // Get active users (users who logged in within last 24 hours)
 app.get('/api/stats/active-users-count', async (req, res) => {
   try {
-    const oneDayAgo = new Date();
-    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+    // Check for users active in the last 30 minutes (more accurate for real-time)
+    const thirtyMinutesAgo = new Date();
+    thirtyMinutesAgo.setMinutes(thirtyMinutesAgo.getMinutes() - 30);
 
-    // Get users who have logged in within the last 24 hours
+    // Get users who have logged in within the last 30 minutes
     const { data: { users }, error } = await supabase.auth.admin.listUsers();
     
     if (error) throw error;
 
-    // Filter users who logged in within last 24 hours
+    // Filter users who logged in within last 30 minutes
     const activeUsers = users.filter(user => {
       if (!user.last_sign_in_at) return false;
       const lastSignIn = new Date(user.last_sign_in_at);
-      return lastSignIn > oneDayAgo;
+      return lastSignIn > thirtyMinutesAgo;
     });
 
-    console.log(`✅ Active Users (last 24h): ${activeUsers.length}`);
+    console.log(`✅ Active Users (last 30min): ${activeUsers.length}`);
     res.json({ activeUsers: activeUsers.length });
   } catch (error) {
     console.error('Error fetching active users:', error);

@@ -86,10 +86,10 @@ const AdminDashboard: React.FC = () => {
     loadActivities();
     loadAnalytics();
     
-    // Refresh stats every 10 seconds for real-time updates
+    // Refresh stats every 5 seconds for real-time updates
     const statsInterval = setInterval(() => {
       loadDashboardStats();
-    }, 10000);
+    }, 5000);
     
     // Refresh activities and analytics every 15 seconds
     const analyticsInterval = setInterval(() => {
@@ -138,7 +138,7 @@ const AdminDashboard: React.FC = () => {
         { title: 'Total Sub-Domain', value: subdomains, icon: <School />, color: '#00BCD4' },
         { title: 'Total Students', value: students, icon: <People />, color: '#4CAF50' },
         { title: 'Total Teachers', value: teachers, icon: <Person />, color: '#FF9800' },
-        { title: 'Active Users (24h)', value: activeUsers, icon: <People />, color: '#667eea' },
+        { title: 'Active Users (30min)', value: activeUsers, icon: <People />, color: '#667eea' },
         { title: 'Ongoing Live Classes', value: ongoingLiveClasses, icon: <Videocam />, color: '#FF5722' },
       ]);
 
@@ -254,7 +254,7 @@ const AdminDashboard: React.FC = () => {
                 {stats[4]?.value || 0}
               </Typography>
               <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ fontSize: '0.65rem', display: 'block' }}>
-                Active Users (24h)
+                Active Users (30min)
               </Typography>
             </Box>
           </Box>

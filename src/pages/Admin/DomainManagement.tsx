@@ -373,9 +373,9 @@ const DomainManagement: React.FC = () => {
                         <Typography variant="body2">{typeOptions.find(t => t.value === sd.type)?.label || sd.type}</Typography>
                         <Typography variant="body2" color="text.secondary" fontWeight={600}>Status:</Typography>
                         <Typography variant="body2" color={sd.is_active ? 'success.main' : 'text.secondary'}>● {sd.is_active ? 'Active' : 'In-Active'}</Typography>
-                        <Typography variant="body2" color="text.secondary" fontWeight={600}>Default Department:</Typography>
+                        <Typography variant="body2" color="text.secondary" fontWeight={600}>Department:</Typography>
                         <Typography variant="body2">{sd.default_department || '-'}</Typography>
-                        <Typography variant="body2" color="text.secondary" fontWeight={600}>Default Semester:</Typography>
+                        <Typography variant="body2" color="text.secondary" fontWeight={600}>Semester:</Typography>
                         <Typography variant="body2">{sd.default_semester || '-'}</Typography>
                       </Box>
                       <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -424,7 +424,7 @@ const DomainManagement: React.FC = () => {
             </TextField>
             
             <Box sx={{ pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
-              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5, color: 'text.secondary' }}>Default Department & Semester</Typography>
+              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5, color: 'text.secondary' }}>Department & Semester</Typography>
               <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
                 <TextField fullWidth label="Department" value={formData.defaultDepartment} onChange={(e) => setFormData({ ...formData, defaultDepartment: e.target.value })} placeholder="e.g., Computer Science" variant="outlined" size="small" helperText="Auto-assigned to all users" />
                 <TextField fullWidth label="Semester" value={formData.defaultSemester} onChange={(e) => setFormData({ ...formData, defaultSemester: e.target.value })} placeholder="e.g., Fall 2024" variant="outlined" size="small" helperText="Auto-assigned to all users" />
@@ -451,7 +451,7 @@ const DomainManagement: React.FC = () => {
             </TextField>
             
             <Box sx={{ pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
-              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5, color: 'text.secondary' }}>Default Department & Semester</Typography>
+              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5, color: 'text.secondary' }}>Department & Semester</Typography>
               <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
                 <TextField fullWidth label="Department" value={formData.defaultDepartment} onChange={(e) => setFormData({ ...formData, defaultDepartment: e.target.value })} placeholder="e.g., Computer Science" variant="outlined" size="small" helperText="Auto-assigned to all users" />
                 <TextField fullWidth label="Semester" value={formData.defaultSemester} onChange={(e) => setFormData({ ...formData, defaultSemester: e.target.value })} placeholder="e.g., Fall 2024" variant="outlined" size="small" helperText="Auto-assigned to all users" />

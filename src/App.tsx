@@ -43,6 +43,7 @@ import LiveClassesView from "./pages/Student/LiveClassesView";
 import QuizzesView from "./pages/Student/QuizzesView";
 import QuizRankingsView from "./pages/Student/QuizRankingsView";
 import OverallRankings from "./pages/Student/OverallRankings";
+import StudentMentoringView from "./pages/Student/StudentMentoringView";
 
 // Community Pages
 import RecordedClassesCommunity from "./pages/Community/RecordedClassesCommunity";
@@ -240,6 +241,16 @@ const App = () => (
                   </PrivateRoute>
                 }
               />
+              <Route
+                path="/messages"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <MentorMessages />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
               
               {/* LMS Teacher Routes */}
               <Route
@@ -340,6 +351,36 @@ const App = () => (
                   <PrivateRoute>
                     <MainLayout>
                       <QuizRankingsView />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/student/mentoring"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <StudentMentoringView />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/teacher/students"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <StudentMentoringView />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/mentor/students"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <StudentMentoringView />
                     </MainLayout>
                   </PrivateRoute>
                 }

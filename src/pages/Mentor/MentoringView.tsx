@@ -109,16 +109,29 @@ const MentoringView: React.FC = () => {
   const fetchMentees = async () => {
     try {
       setLoading(true);
-      // Fetch students assigned to this mentor
-      const { data: mentees, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, email, grade, section, avatar')
-        .eq('mentor_id', user?.id)
-        .eq('role', 'student');
+      
+      if (!user?.id) {
+        console.log('No user ID available');
+        setLoading(false);
+        return;
+      }
 
-      if (error) throw error;
+      console.log('Fetching students for mentor:', user.id);
 
-      setStudents(mentees || []);
+      // Fetch students from backend endpoint (like ParentDashboard does)
+      const response = await fetch(`http://localhost:3001/api/mentor/students/${user.id}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch students: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Backend response:', data);
+      
+      const mentees = data.students || [];
+      console.log('Mentees found:', mentees.length);
+
+      setStudents(mentees);
       if (mentees && mentees.length > 0) {
         fetchStudentData(mentees[0].id);
       }
@@ -312,63 +325,105 @@ const MentoringView: React.FC = () => {
         Monitor and guide your assigned students
       </Typography>
 
-      {/* Student Selector */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2, mb: 4 }}>
-        {students.map((s, idx) => {
-          const avgPerformance = idx === selectedStudentIndex ? studentStats.quizAverage : 0;
-          return (
-            <Card
-              key={s.id}
-              sx={{
-                cursor: 'pointer',
-                border: selectedStudentIndex === idx ? 2 : 0,
-                borderColor: 'primary.main',
-                transition: 'all 0.2s',
-                '&:hover': {
-                  boxShadow: 4,
-                },
-              }}
-              onClick={() => setSelectedStudentIndex(idx)}
-            >
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                  <Avatar sx={{ bgcolor: 'primary.main' }}>
-                    {s.full_name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                  </Avatar>
-                  <Box sx={{ flexGrow: 1 }}>
-                    <Typography variant="subtitle1" fontWeight={600}>
-                      {s.full_name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {s.grade && `Grade ${s.grade}`} {s.section && `- ${s.section}`}
-                    </Typography>
+      {/* Assigned Students List */}
+      <Paper sx={{ mb: 4 }}>
+        <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" fontWeight={600}>
+            Assigned Students ({students.length})
+          </Typography>
+          {students.length > 6 && (
+            <Typography variant="caption" color="text.secondary">
+              Scroll to see more →
+            </Typography>
+          )}
+        </Box>
+        <Box sx={{ 
+          display: 'grid', 
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' }, 
+          gap: 2, 
+          p: 2,
+          maxHeight: students.length > 8 ? '500px' : 'auto',
+          overflowY: students.length > 8 ? 'auto' : 'visible',
+          overflowX: 'hidden',
+          '&::-webkit-scrollbar': {
+            width: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: '#f1f1f1',
+            borderRadius: '4px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: '#888',
+            borderRadius: '4px',
+            '&:hover': {
+              background: '#555',
+            },
+          },
+        }}>
+          {students.map((s, idx) => {
+            const avgPerformance = idx === selectedStudentIndex ? studentStats.quizAverage : 0;
+            return (
+              <Card
+                key={s.id}
+                sx={{
+                  cursor: 'pointer',
+                  border: selectedStudentIndex === idx ? 2 : 1,
+                  borderColor: selectedStudentIndex === idx ? 'primary.main' : 'divider',
+                  transition: 'all 0.2s',
+                  backgroundColor: selectedStudentIndex === idx ? 'action.selected' : 'background.paper',
+                  '&:hover': {
+                    boxShadow: 3,
+                    borderColor: 'primary.main',
+                  },
+                }}
+                onClick={() => setSelectedStudentIndex(idx)}
+              >
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}>
+                      {s.full_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    </Avatar>
+                    <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                      <Typography variant="subtitle2" fontWeight={600} noWrap>
+                        {s.full_name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" noWrap>
+                        {s.grade && `Grade ${s.grade}`} {s.section && `- ${s.section}`}
+                      </Typography>
+                    </Box>
                   </Box>
                   {idx === selectedStudentIndex && (
-                    <Chip
-                      label={getStatusLabel(avgPerformance)}
-                      color={getStatusColor(avgPerformance)}
-                      size="small"
-                    />
+                    <>
+                      <Box sx={{ mb: 1.5 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                          <Typography variant="caption" color="text.secondary">
+                            Quiz Average
+                          </Typography>
+                          <Typography variant="caption" fontWeight={600}>
+                            {Math.round(avgPerformance)}%
+                          </Typography>
+                        </Box>
+                        <LinearProgress
+                          variant="determinate"
+                          value={avgPerformance}
+                          sx={{ height: 6, borderRadius: 3 }}
+                          color={getStatusColor(avgPerformance)}
+                        />
+                      </Box>
+                      <Chip
+                        label={getStatusLabel(avgPerformance)}
+                        color={getStatusColor(avgPerformance)}
+                        size="small"
+                        sx={{ width: '100%' }}
+                      />
+                    </>
                   )}
-                </Box>
-                {idx === selectedStudentIndex && (
-                  <>
-                    <LinearProgress
-                      variant="determinate"
-                      value={avgPerformance}
-                      sx={{ height: 6, borderRadius: 3 }}
-                      color={getStatusColor(avgPerformance)}
-                    />
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-                      Average: {Math.round(avgPerformance)}%
-                    </Typography>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </Box>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </Box>
+      </Paper>
 
       {/* Student Details */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 3 }}>
