@@ -1,0 +1,31 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    SUBDOMAIN DEFAULTS - QUICK FIX                         ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+PROBLEM:
+  Department and Semester fields in subdomain form don't persist after save
+
+SOLUTION (2 minutes):
+  1. Go to Supabase Dashboard > SQL Editor > New Query
+  2. Copy and paste this SQL:
+
+     ALTER TABLE sub_domains
+     ADD COLUMN IF NOT EXISTS default_department VARCHAR(255),
+     ADD COLUMN IF NOT EXISTS default_semester VARCHAR(255);
+
+  3. Click "Run"
+  4. Refresh your browser
+  5. Done!
+
+VERIFY IT WORKS:
+  1. Go to Domains > Edit a Sub-Domain
+  2. Fill in Department and Semester
+  3. Click "Save Changes"
+  4. Edit again - values should persist
+
+NEED HELP?
+  - Check: node backend/check-subdomain-columns.js
+  - Setup: node backend/setup-subdomain-defaults.js
+  - Guide: Read SUBDOMAIN_DEFAULTS_FIX_SUMMARY.md
+
+═══════════════════════════════════════════════════════════════════════════════

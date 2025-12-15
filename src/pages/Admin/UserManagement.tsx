@@ -72,8 +72,6 @@ const UserManagement: React.FC = () => {
     name: '',
     phone: '',
     role: 'student' as UserRole,
-    department: '',
-    semester: '',
     qualifications: '',
     expertiseArea: '',
     subjects: [] as string[],
@@ -253,8 +251,6 @@ const UserManagement: React.FC = () => {
       name: user.name,
       phone: '',
       role: user.role,
-      department: user.branch || '',
-      semester: user.semester || '',
       qualifications: '',
       expertiseArea: '',
       subjects: (user as any).subjects || [],
@@ -276,11 +272,6 @@ const UserManagement: React.FC = () => {
         phone: editFormData.phone || null,
         role: editFormData.role,
       };
-
-      if (editFormData.role === 'student' || editFormData.role === 'teacher' || editFormData.role === 'mentor') {
-        profileData.department = editFormData.department || null;
-        profileData.semester = editFormData.semester || null;
-      }
 
       if (editFormData.role === 'teacher') {
         profileData.qualifications = editFormData.qualifications;
@@ -620,30 +611,7 @@ const UserManagement: React.FC = () => {
               />
             </Box>
 
-            {(editFormData.role === 'student' || editFormData.role === 'teacher' || editFormData.role === 'mentor') && (
-              <>
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
-                  Department & Semester
-                </Typography>
-                
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                  <TextField
-                    fullWidth
-                    label="Department"
-                    value={editFormData.department}
-                    onChange={(e) => setEditFormData({ ...editFormData, department: e.target.value })}
-                    placeholder="e.g., Computer Science"
-                  />
-                  <TextField
-                    fullWidth
-                    label="Semester"
-                    value={editFormData.semester}
-                    onChange={(e) => setEditFormData({ ...editFormData, semester: e.target.value })}
-                    placeholder="e.g., Fall 2024"
-                  />
-                </Box>
-              </>
-            )}
+
 
             {editFormData.role === 'student' && (
               <>

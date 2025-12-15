@@ -1172,16 +1172,35 @@ app.get('/api/subdomains', async (req, res) => {
 // Create sub-domain
 app.post('/api/subdomains/create', async (req, res) => {
   try {
-    const { domain_id, name, description, type, department_name, semester_name } = req.body;
+    const { domain_id, name, description, type, default_department, default_semester } = req.body;
+    
+    console.log('Creating subdomain with data:', { domain_id, name, description, type, default_department, default_semester });
+    
+    // Build insert data with only non-null values
+    const insertData = {
+      domain_id,
+      name,
+      type: type || 'ug',
+    };
+    
+    if (description) insertData.description = description;
+    if (default_department) insertData.default_department = default_department;
+    if (default_semester) insertData.default_semester = default_semester;
+    
+    console.log('Insert data:', insertData);
     
     const { data, error } = await supabase
       .from('sub_domains')
-      .insert([{ domain_id, name, description, type, department_name, semester_name }])
+      .insert([insertData])
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
     
+    console.log('Created subdomain:', data);
     res.json({ success: true, subdomain: data });
   } catch (error) {
     console.error('Error creating sub-domain:', error);
@@ -1193,17 +1212,35 @@ app.post('/api/subdomains/create', async (req, res) => {
 app.put('/api/subdomains/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, type, is_active, department_name, semester_name } = req.body;
+    const { name, description, type, is_active, default_department, default_semester } = req.body;
+    
+    console.log('Updating subdomain:', id);
+    console.log('Received data:', { name, description, type, is_active, default_department, default_semester });
+    
+    const updateData = {
+      name,
+      description,
+      type,
+      is_active,
+      default_department: default_department || null,
+      default_semester: default_semester || null,
+    };
+    
+    console.log('Update data being sent to Supabase:', updateData);
     
     const { data, error } = await supabase
       .from('sub_domains')
-      .update({ name, description, type, is_active, department_name, semester_name })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
     
+    console.log('Updated subdomain data:', data);
     res.json({ success: true, subdomain: data });
   } catch (error) {
     console.error('Error updating sub-domain:', error);

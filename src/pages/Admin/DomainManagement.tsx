@@ -22,6 +22,8 @@ interface SubDomain {
   semester_name: string;
   description: string;
   is_active: boolean;
+  default_department?: string;
+  default_semester?: string;
 }
 
 const DomainManagement: React.FC = () => {
@@ -46,6 +48,8 @@ const DomainManagement: React.FC = () => {
     type: 'ug',
     description: '',
     isActive: true,
+    defaultDepartment: '',
+    defaultSemester: '',
   });
 
   const [domainForm, setDomainForm] = useState({ name: '', description: '', isActive: true });
@@ -59,8 +63,6 @@ const DomainManagement: React.FC = () => {
     employeeId: '',
     mentorId: '',
     section: '',
-    department: '',
-    semester: '',
     qualifications: '',
     expertiseArea: '',
     subjects: [] as string[],
@@ -111,24 +113,36 @@ const DomainManagement: React.FC = () => {
       setError('');
       setLoading(true);
 
+      const createData = {
+        name: formData.name,
+        type: formData.type,
+        description: formData.description,
+        domain_id: selectedDomain.id,
+        default_department: formData.defaultDepartment || null,
+        default_semester: formData.defaultSemester || null,
+      };
+      
+      console.log('Creating subdomain with data:', createData);
+
       const res = await fetch('http://localhost:3001/api/subdomains/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.name,
-          type: formData.type,
-          description: formData.description,
-          domain_id: selectedDomain.id,
-        }),
+        body: JSON.stringify(createData),
       });
 
-      if (!res.ok) throw new Error('Failed to create sub-domain');
+      const data = await res.json();
+      console.log('Response:', data);
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to create sub-domain');
+      }
 
       setSuccess('Sub-Domain created successfully!');
       setOpenAddDialog(false);
-      setFormData({ name: '', type: 'ug', description: '', isActive: true });
+      setFormData({ name: '', type: 'ug', description: '', isActive: true, defaultDepartment: '', defaultSemester: '' });
       await loadData();
     } catch (err: any) {
+      console.error('Error creating subdomain:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -140,21 +154,35 @@ const DomainManagement: React.FC = () => {
     
     try {
       setLoading(true);
-      await fetch(`http://localhost:3001/api/subdomains/${managingSubDomain.id}`, {
+      const updateData = {
+        name: formData.name,
+        type: formData.type,
+        description: formData.description,
+        is_active: formData.isActive,
+        default_department: formData.defaultDepartment || null,
+        default_semester: formData.defaultSemester || null,
+      };
+      
+      console.log('Sending update data:', updateData);
+      
+      const response = await fetch(`http://localhost:3001/api/subdomains/${managingSubDomain.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.name,
-          type: formData.type,
-          description: formData.description,
-          is_active: formData.isActive,
-        }),
+        body: JSON.stringify(updateData),
       });
+
+      const data = await response.json();
+      console.log('Response from server:', data);
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update sub-domain');
+      }
 
       setSuccess('Sub-domain updated successfully!');
       setOpenManageDialog(false);
       await loadData();
     } catch (err: any) {
+      console.error('Error updating sub-domain:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -183,8 +211,8 @@ const DomainManagement: React.FC = () => {
         full_name: userForm.name,
         phone: userForm.phone || null,
         sub_domain_id: selectedSubDomainForUsers.id,
-        department: userForm.department || null,
-        semester: userForm.semester || null,
+        department: selectedSubDomainForUsers.default_department || null,
+        semester: selectedSubDomainForUsers.default_semester || null,
       };
 
       if (userForm.role === 'student') {
@@ -227,8 +255,6 @@ const DomainManagement: React.FC = () => {
         employeeId: '',
         mentorId: '',
         section: '',
-        department: '',
-        semester: '',
         qualifications: '',
         expertiseArea: '',
         subjects: [],
@@ -322,7 +348,7 @@ const DomainManagement: React.FC = () => {
           <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
               <Typography variant="h6" fontWeight={600}>Sub-Domains</Typography>
-              <Button variant="contained" startIcon={<Add />} onClick={() => { setFormData({ name: '', type: 'ug', description: '', isActive: true }); setOpenAddDialog(true); }}>
+              <Button variant="contained" startIcon={<Add />} onClick={() => { setFormData({ name: '', type: 'ug', description: '', isActive: true, defaultDepartment: '', defaultSemester: '' }); setOpenAddDialog(true); }}>
                 Add Sub-Domain
               </Button>
             </Box>
@@ -338,7 +364,7 @@ const DomainManagement: React.FC = () => {
                     <CardContent>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                         <Typography variant="h6" fontWeight={600}>{sd.name}</Typography>
-                        <IconButton size="small" onClick={() => { setManagingSubDomain(sd); setFormData({ name: sd.name, type: sd.type, description: sd.description, isActive: sd.is_active }); setOpenManageDialog(true); }}>
+                        <IconButton size="small" onClick={() => { setManagingSubDomain(sd); setFormData({ name: sd.name, type: sd.type, description: sd.description, isActive: sd.is_active, defaultDepartment: sd.default_department || '', defaultSemester: sd.default_semester || '' }); setOpenManageDialog(true); }}>
                           <SettingsIcon fontSize="small" />
                         </IconButton>
                       </Box>
@@ -347,6 +373,10 @@ const DomainManagement: React.FC = () => {
                         <Typography variant="body2">{typeOptions.find(t => t.value === sd.type)?.label || sd.type}</Typography>
                         <Typography variant="body2" color="text.secondary" fontWeight={600}>Status:</Typography>
                         <Typography variant="body2" color={sd.is_active ? 'success.main' : 'text.secondary'}>● {sd.is_active ? 'Active' : 'In-Active'}</Typography>
+                        <Typography variant="body2" color="text.secondary" fontWeight={600}>Default Department:</Typography>
+                        <Typography variant="body2">{sd.default_department || '-'}</Typography>
+                        <Typography variant="body2" color="text.secondary" fontWeight={600}>Default Semester:</Typography>
+                        <Typography variant="body2">{sd.default_semester || '-'}</Typography>
                       </Box>
                       <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                         <Button 
@@ -364,8 +394,6 @@ const DomainManagement: React.FC = () => {
                               employeeId: '',
                               mentorId: '',
                               section: '',
-                              department: '',
-                              semester: '',
                               qualifications: '',
                               expertiseArea: '',
                               subjects: [],
@@ -387,32 +415,50 @@ const DomainManagement: React.FC = () => {
 
       {/* Add Sub-Domain Dialog */}
       <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Sub-Domain</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600, pb: 1 }}>Add Sub-Domain</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-            <TextField fullWidth label="Sub-Domain Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required placeholder="e.g., B.E, B.Tech" />
-            <TextField select fullWidth label="Type" value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })}>
-              {typeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 2 }}>
+            <TextField fullWidth label="Sub-Domain Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required placeholder="e.g., B.E, B.Tech" variant="outlined" size="small" />
+            <TextField select fullWidth label="Type" value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} variant="outlined" size="small">
+              {typeOptions.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
             </TextField>
-            <TextField fullWidth label="Description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} multiline rows={3} />
+            
+            <Box sx={{ pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5, color: 'text.secondary' }}>Default Department & Semester</Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                <TextField fullWidth label="Department" value={formData.defaultDepartment} onChange={(e) => setFormData({ ...formData, defaultDepartment: e.target.value })} placeholder="e.g., Computer Science" variant="outlined" size="small" helperText="Auto-assigned to all users" />
+                <TextField fullWidth label="Semester" value={formData.defaultSemester} onChange={(e) => setFormData({ ...formData, defaultSemester: e.target.value })} placeholder="e.g., Fall 2024" variant="outlined" size="small" helperText="Auto-assigned to all users" />
+              </Box>
+            </Box>
+            
+            <TextField fullWidth label="Description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} multiline rows={2} variant="outlined" size="small" />
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ p: 2, pt: 1 }}>
           <Button onClick={() => setOpenAddDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleAddSubDomain} disabled={!formData.name}>Create</Button>
+          <Button variant="contained" onClick={handleAddSubDomain} disabled={!formData.name}>Create Sub-Domain</Button>
         </DialogActions>
       </Dialog>
 
       {/* Manage Sub-Domain Dialog */}
       <Dialog open={openManageDialog} onClose={() => setOpenManageDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Manage Sub-Domain</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600, pb: 1 }}>Manage Sub-Domain</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-            <TextField fullWidth label="Sub-Domain Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
-            <TextField select fullWidth label="Type" value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })}>
-              {typeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 2 }}>
+            <TextField fullWidth label="Sub-Domain Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} variant="outlined" size="small" />
+            <TextField select fullWidth label="Type" value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} variant="outlined" size="small">
+              {typeOptions.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
             </TextField>
-            <TextField fullWidth label="Description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} multiline rows={3} />
+            
+            <Box sx={{ pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5, color: 'text.secondary' }}>Default Department & Semester</Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                <TextField fullWidth label="Department" value={formData.defaultDepartment} onChange={(e) => setFormData({ ...formData, defaultDepartment: e.target.value })} placeholder="e.g., Computer Science" variant="outlined" size="small" helperText="Auto-assigned to all users" />
+                <TextField fullWidth label="Semester" value={formData.defaultSemester} onChange={(e) => setFormData({ ...formData, defaultSemester: e.target.value })} placeholder="e.g., Fall 2024" variant="outlined" size="small" helperText="Auto-assigned to all users" />
+              </Box>
+            </Box>
+            
+            <TextField fullWidth label="Description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} multiline rows={2} variant="outlined" size="small" />
             <FormControlLabel control={<Switch checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} />} label="Active" />
           </Box>
         </DialogContent>
@@ -483,7 +529,7 @@ const DomainManagement: React.FC = () => {
 
       {/* Add User Dialog */}
       <Dialog open={openAddUserDialog} onClose={() => setOpenAddUserDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Add User to {selectedSubDomainForUsers?.name}</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600, pb: 1 }}>Add User to {selectedSubDomainForUsers?.name}</DialogTitle>
         <DialogContent>
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
           {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
@@ -554,30 +600,7 @@ const DomainManagement: React.FC = () => {
               />
             </Box>
 
-            {(userForm.role === 'student' || userForm.role === 'teacher' || userForm.role === 'mentor') && (
-              <>
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
-                  Department & Semester
-                </Typography>
-                
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                  <TextField
-                    fullWidth
-                    label="Department"
-                    value={userForm.department}
-                    onChange={(e) => setUserForm({ ...userForm, department: e.target.value })}
-                    placeholder="e.g., Computer Science"
-                  />
-                  <TextField
-                    fullWidth
-                    label="Semester"
-                    value={userForm.semester}
-                    onChange={(e) => setUserForm({ ...userForm, semester: e.target.value })}
-                    placeholder="e.g., Fall 2024"
-                  />
-                </Box>
-              </>
-            )}
+
 
             {userForm.role === 'student' && (
               <>
@@ -644,8 +667,6 @@ const DomainManagement: React.FC = () => {
               employeeId: '',
               mentorId: '',
               section: '',
-              department: '',
-              semester: '',
               qualifications: '',
               expertiseArea: '',
               subjects: [],
