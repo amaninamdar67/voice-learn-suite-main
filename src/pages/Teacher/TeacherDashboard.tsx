@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Users, Video, FileText, BookOpen, Clock, CheckCircle, 
+  Video, FileText, BookOpen, Clock, CheckCircle, 
   TrendingUp, AlertCircle, Award 
 } from 'lucide-react';
 
@@ -12,7 +12,6 @@ interface TeacherStats {
   totalQuizzes: number;
   totalAssignments: number;
   pendingSubmissions: number;
-  totalStudents: number;
   recentSubmissions: number;
 }
 
@@ -24,7 +23,6 @@ export default function TeacherDashboard() {
     totalQuizzes: 0,
     totalAssignments: 0,
     pendingSubmissions: 0,
-    totalStudents: 0,
     recentSubmissions: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -65,35 +63,59 @@ export default function TeacherDashboard() {
 
       const ids = assignmentIds?.map(a => a.id) || [];
       
-      const { count: pendingCount } = await supabase
-        .from('assignment_submissions')
-        .select('*', { count: 'exact', head: true })
-        .in('assignment_id', ids)
-        .neq('status', 'graded');
+      let pendingCount = 0;
+      let recentCount = 0;
 
-      // Count total students (approximate)
-      const { count: studentsCount } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('role', 'student');
+      // Only query if there are assignments
+      if (ids.length > 0) {
+        const { count: pendingResult } = await supabase
+          .from('assignment_submissions')
+          .select('*', { count: 'exact', head: true })
+          .in('assignment_id', ids)
+          .neq('status', 'graded');
+        
+        pendingCount = pendingResult || 0;
 
-      // Recent submissions (last 7 days)
+        // Recent submissions (last 7 days)
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+        const { count: recentResult } = await supabase
+          .from('assignment_submissions')
+          .select('*', { count: 'exact', head: true })
+          .in('assignment_id', ids)
+          .gte('submitted_at', oneWeekAgo.toISOString());
+        
+        recentCount = recentResult || 0;
+      }
+
+      // Get quiz submissions for this teacher (last 7 days)
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-      const { count: recentCount } = await supabase
-        .from('assignment_submissions')
-        .select('*', { count: 'exact', head: true })
-        .in('assignment_id', ids)
-        .gte('submitted_at', oneWeekAgo.toISOString());
+      const { data: quizIds } = await supabase
+        .from('quizzes')
+        .select('id')
+        .eq('teacher_id', user?.id);
+
+      const quizIdList = quizIds?.map(q => q.id) || [];
+
+      if (quizIdList.length > 0) {
+        const { count: quizRecentResult } = await supabase
+          .from('quiz_results')
+          .select('*', { count: 'exact', head: true })
+          .in('quiz_id', quizIdList)
+          .gte('completed_at', oneWeekAgo.toISOString());
+        
+        recentCount = (recentCount || 0) + (quizRecentResult || 0);
+      }
 
       setStats({
         totalVideos: videosCount || 0,
         totalQuizzes: quizzesCount || 0,
         totalAssignments: assignmentsCount || 0,
-        pendingSubmissions: pendingCount || 0,
-        totalStudents: studentsCount || 0,
-        recentSubmissions: recentCount || 0,
+        pendingSubmissions: pendingCount,
+        recentSubmissions: recentCount,
       });
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -206,19 +228,6 @@ export default function TeacherDashboard() {
               </div>
               <span className="px-4 py-2 bg-blue-600 text-white rounded-full font-bold">
                 {stats.recentSubmissions}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <Users size={24} className="text-green-600" />
-                <div>
-                  <p className="font-medium text-gray-900">Total Students</p>
-                  <p className="text-sm text-gray-600">In the system</p>
-                </div>
-              </div>
-              <span className="px-4 py-2 bg-green-600 text-white rounded-full font-bold">
-                {stats.totalStudents}
               </span>
             </div>
           </div>

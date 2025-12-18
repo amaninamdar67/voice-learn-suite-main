@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Paper, Grid, Card, CardContent, Avatar, Button,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Chip, CircularProgress, Alert, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, Rating, LinearProgress, TablePagination,
-  List, ListItem, ListItemButton, ListItemText, Divider
+  DialogActions, TextField, Rating, Divider
 } from '@mui/material';
 import { School, TrendingUp, Clock, MessageSquare, Users, Calendar, Plus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -46,8 +44,6 @@ const MentorDashboard: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [openSessionDialog, setOpenSessionDialog] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<string>('');
@@ -118,15 +114,6 @@ const MentorDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleChangePage = (event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
   };
 
   const fetchSessions = async () => {
@@ -273,64 +260,7 @@ const MentorDashboard: React.FC = () => {
 
       {/* Main Content with Sidebar */}
       <Grid container spacing={3}>
-        {/* Left Column - Students Table */}
-        <Grid item xs={12} md={6}>
-          <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>My Students</Typography>
-          {students.length === 0 ? (
-            <Paper sx={{ p: 3, textAlign: 'center', mb: 3 }}>
-              <Typography color="textSecondary">No students assigned yet</Typography>
-            </Paper>
-          ) : (
-            <TableContainer component={Paper} sx={{ mb: 3 }}>
-              <Table>
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                    <TableCell sx={{ fontWeight: 600 }}>Student Name</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Department</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Semester</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {students.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((student) => (
-                    <TableRow key={student.id}>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Avatar sx={{ width: 32, height: 32 }}>
-                            {student.full_name?.[0]?.toUpperCase() || 'S'}
-                          </Avatar>
-                          <Typography variant="body2" fontWeight={500}>
-                            {student.full_name}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">{student.department || '-'}</Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">{student.semester || '-'}</Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip label="Active" color="success" size="small" />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <TablePagination
-                rowsPerPageOptions={[5, 10, 25]}
-                component="div"
-                count={students.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-              />
-            </TableContainer>
-          )}
-        </Grid>
-
-        {/* Right Column - Sessions Sidebar */}
+        {/* Sessions Sidebar */}
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 2, height: '100%' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>

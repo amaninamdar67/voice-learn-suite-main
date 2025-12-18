@@ -28,6 +28,10 @@ export const TopBar: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { isListening, toggleListening } = useEnhancedVoiceNavigation();
+  
+  // Check if user has access to AI Tutor (all roles except parent)
+  const hasAITutorAccess = user?.role && user.role !== 'parent';
+  
   // Voice nav enabled state
   const [voiceNavEnabled, setVoiceNavEnabled] = useState(() => {
     const saved = localStorage.getItem('voiceNavEnabled');
@@ -65,10 +69,6 @@ export const TopBar: React.FC = () => {
     handleMenuClose();
   };
 
-  const handleAITutorOpen = () => {
-    window.dispatchEvent(new Event('open-ai-tutor'));
-  };
-
   return (
     <AppBar
       position="fixed"
@@ -101,12 +101,41 @@ export const TopBar: React.FC = () => {
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
-            mr: 3,
+            mr: 2,
           }}
         >
           E-Learning Using AI
         </Typography>
-        
+
+        {/* AI Tutor Button - Right of Title */}
+        {hasAITutorAccess && (
+          <Tooltip title="Open AI Tutor - Ask questions, analyze images, get instant help">
+            <Button
+              onClick={() => window.dispatchEvent(new Event('open-ai-tutor-new'))}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                fontSize: '1.2rem',
+                textTransform: 'none',
+                color: 'inherit',
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+                height: 36,
+                '&:hover': {
+                  bgcolor: 'action.hover',
+                  borderColor: 'primary.main',
+                },
+                transition: 'all 0.2s ease',
+                px: 1.5,
+              }}
+            >
+              <span>🤖</span>
+            </Button>
+          </Tooltip>
+        )}
+
         <Box sx={{ flexGrow: 1 }} />
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -162,23 +191,6 @@ export const TopBar: React.FC = () => {
                 {isListening ? 'Listening...' : 'Voice Nav'}
               </Button>
             </span>
-          </Tooltip>
-
-          <Tooltip title="AI Tutor">
-            <IconButton
-              size="large"
-              onClick={handleAITutorOpen}
-              sx={{
-                bgcolor: 'transparent',
-                color: 'inherit',
-                fontSize: '1.5rem',
-                '&:hover': {
-                  bgcolor: 'action.hover',
-                },
-              }}
-            >
-              🤖
-            </IconButton>
           </Tooltip>
 
           {/* Urgent Announcements Notification Panel */}

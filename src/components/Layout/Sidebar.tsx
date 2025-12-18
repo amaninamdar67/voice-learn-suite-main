@@ -67,7 +67,6 @@ const menuItems: MenuItem[] = [
   { text: 'Create Quiz', icon: <Quiz />, path: '/teacher/quiz-creator', roles: ['teacher'] },
   { text: 'Study Materials', icon: <School />, path: '/lessons', roles: ['teacher'] },
   { text: 'Assignments', icon: <Assignment />, path: '/projects', roles: ['teacher'] },
-  { text: 'My Students', icon: <People />, path: '/teacher/students', roles: ['teacher'] },
   { text: 'Announcements', icon: <Message />, path: '/teacher/announcements', roles: ['teacher'] },
   { text: 'Leaderboard', icon: <Quiz />, path: '/leaderboard', roles: ['teacher'] },
   { text: 'Community', icon: <Message />, path: '/community/recorded-classes', roles: ['teacher'] },
@@ -81,7 +80,6 @@ const menuItems: MenuItem[] = [
   { text: 'Take Quiz', icon: <Quiz />, path: '/student/quizzes', roles: ['student'] },
   { text: 'Study Materials', icon: <School />, path: '/lessons', roles: ['student'] },
   { text: 'Assignments', icon: <Assignment />, path: '/projects', roles: ['student'] },
-  { text: 'My Teachers', icon: <People />, path: '/student/mentoring', roles: ['student'] },
   { text: 'Announcements', icon: <Message />, path: '/student/announcements', roles: ['student'] },
   { text: 'Leaderboard', icon: <Quiz />, path: '/leaderboard', roles: ['student'] },
   { text: 'Community', icon: <Message />, path: '/community/recorded-classes', roles: ['student'] },
@@ -97,7 +95,6 @@ const menuItems: MenuItem[] = [
   // Mentor Menu
   { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['mentor'] },
   { text: 'Mentoring', icon: <People />, path: '/mentoring', roles: ['mentor'] },
-  { text: 'My Students', icon: <People />, path: '/mentor/students', roles: ['mentor'] },
   { text: 'Messages', icon: <ChalkboardIcon />, path: '/mentor/messages', roles: ['mentor'] },
   { text: 'Announcements', icon: <Message />, path: '/mentor/announcements', roles: ['mentor'] },
   { text: 'Community', icon: <Message />, path: '/mentor/community', roles: ['mentor'] },

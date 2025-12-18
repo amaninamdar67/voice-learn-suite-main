@@ -1,6 +1,8 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import {
   initializeLMSRoutes,
@@ -50,12 +52,15 @@ import { initializeTeacherRoutes } from './teacher-routes.js';
 import { initializeMessagingRoutes } from './messaging-routes.js';
 import { initializeAnnouncementsRoutes } from './announcements-routes.js';
 import { initializeDatabase } from './db-setup.js';
-
-dotenv.config();
+import { initializeAITutorSessionRoutes } from './ai-tutor-sessions-routes.js';
+import { initializeGroqRoutes } from './groq-ai-routes.js';
+import { initializeGeminiRoutes } from './gemini-ai-routes.js';
+import { initializePerplexityRoutes } from './perplexity-ai-routes.js';
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Initialize Supabase with service role key (has admin privileges)
 const supabase = createClient(
@@ -85,6 +90,18 @@ app.use('/api/messages', messagingRouter);
 // Initialize Announcements routes
 const announcementsRouter = initializeAnnouncementsRoutes(supabase);
 app.use('/api/announcements', announcementsRouter);
+
+// Initialize Groq routes (free, fast, unlimited, text only)
+initializeGroqRoutes(app);
+
+// Initialize Gemini routes (free, 60/min, image & document analysis)
+initializeGeminiRoutes(app);
+
+// Initialize Perplexity routes (free tier available, image & document analysis)
+initializePerplexityRoutes(app);
+
+// Initialize AI Tutor Sessions routes
+initializeAITutorSessionRoutes(app);
 
 // Test DELETE endpoint
 app.delete('/api/test-delete/:id', (req, res) => {

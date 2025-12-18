@@ -300,7 +300,7 @@ export function initializeAnnouncementsRoutes(supabase) {
     }
   });
 
-  // Delete an announcement (soft delete) - only sender can delete
+  // Delete an announcement (soft delete) - only sender can delete, removes from all viewers
   router.delete('/:announcementId', async (req, res) => {
     try {
       const { announcementId } = req.params;
@@ -324,29 +324,18 @@ export function initializeAnnouncementsRoutes(supabase) {
         return res.status(403).json({ error: 'You can only delete your own announcements' });
       }
 
-      // For announcements, we need to delete all instances (sent to all students)
-      // Get the message content to find all instances
-      const { data: allInstances, error: findError } = await supabase
-        .from('user_messages')
-        .select('id')
-        .eq('sender_id', sender_id)
-        .eq('message_type', 'announcement')
-        .eq('id', announcementId);
-
-      if (findError) throw findError;
-
-      // Soft delete all instances
+      // For announcements, delete ALL instances for ALL users (not just sender)
+      // This ensures the announcement is removed from all modules/viewers
       const { error: deleteError } = await supabase
         .from('user_messages')
         .update({ is_deleted: true, deleted_at: new Date().toISOString() })
-        .eq('sender_id', sender_id)
-        .eq('message_type', 'announcement')
-        .eq('id', announcementId);
+        .eq('id', announcementId)
+        .eq('message_type', 'announcement');
 
       if (deleteError) throw deleteError;
 
-      console.log('✅ Announcement deleted:', { announcementId, sender_id });
-      res.json({ success: true, message: 'Announcement deleted successfully' });
+      console.log('✅ Announcement deleted from all viewers:', { announcementId, sender_id });
+      res.json({ success: true, message: 'Announcement deleted successfully from all modules' });
     } catch (error) {
       console.error('Error deleting announcement:', error);
       res.status(400).json({ error: error.message });

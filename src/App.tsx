@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SystemConfigProvider } from './contexts/SystemConfigContext';
 import { theme } from './theme/theme';
 import { MainLayout } from './components/Layout/MainLayout';
+import { AITutorNew } from './components/AITutor/AITutorNew';
 import { Login } from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Lessons from "./pages/Lessons";
@@ -70,6 +71,7 @@ const App = () => (
         <Sonner />
         <AuthProvider>
           <SystemConfigProvider>
+            <AITutorNew />
             <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
@@ -367,37 +369,6 @@ const App = () => (
                   </PrivateRoute>
                 }
               />
-              <Route
-                path="/student/mentoring"
-                element={
-                  <PrivateRoute>
-                    <MainLayout>
-                      <Messages />
-                    </MainLayout>
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/teacher/students"
-                element={
-                  <PrivateRoute>
-                    <MainLayout>
-                      <Messages />
-                    </MainLayout>
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/mentor/students"
-                element={
-                  <PrivateRoute>
-                    <MainLayout>
-                      <Messages />
-                    </MainLayout>
-                  </PrivateRoute>
-                }
-              />
-
               {/* Messages Routes */}
               <Route
                 path="/teacher/messages"
