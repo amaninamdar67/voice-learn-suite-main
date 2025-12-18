@@ -21,6 +21,7 @@ interface Person {
   full_name: string;
   department?: string;
   semester?: string;
+  isActive?: boolean;
 }
 
 interface CommunicationSidebarProps {
@@ -148,7 +149,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                       onClick={() => setSelectedPerson(selectedPerson === person.id ? null : person.id)}
                       sx={{ py: 1 }}
                     >
-                      <ListItemAvatar sx={{ minWidth: 40 }}>
+                      <ListItemAvatar sx={{ minWidth: 40, position: 'relative' }}>
                         <Avatar sx={{ width: 32, height: 32, fontSize: '0.875rem' }}>
                           {person.full_name
                             .split(' ')
@@ -156,17 +157,27 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                             .join('')
                             .toUpperCase()}
                         </Avatar>
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            bottom: 0,
+                            right: 0,
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            bgcolor: person.isActive ? '#4caf50' : '#bdbdbd',
+                            border: '1px solid white',
+                          }}
+                        />
                       </ListItemAvatar>
                       <Box sx={{ flex: 1, minWidth: 0 }}>
                         <Typography variant="body2" fontWeight={500} noWrap>
                           {person.full_name}
                         </Typography>
-                        {person.department && (
-                          <Typography variant="caption" color="textSecondary" noWrap>
-                            {person.department}
-                            {person.semester && ` - ${person.semester}`}
-                          </Typography>
-                        )}
+                        <Typography variant="caption" color={person.isActive ? 'success.main' : 'textSecondary'} noWrap>
+                          {person.isActive ? 'Active now' : person.department ? person.department : 'Inactive'}
+                          {person.department && person.semester && ` - ${person.semester}`}
+                        </Typography>
                       </Box>
                     </ListItemButton>
                   </ListItem>

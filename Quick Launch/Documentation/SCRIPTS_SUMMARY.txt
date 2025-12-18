@@ -1,0 +1,302 @@
+================================================================================
+QUICK LAUNCH SCRIPTS SUMMARY
+================================================================================
+
+PROJECT: E-Learning Platform
+CREATED: December 2025
+
+================================================================================
+AVAILABLE SCRIPTS
+================================================================================
+
+1. START_BACKEND_SERVERS.bat
+   - Starts all 4 backend servers
+   - Ports: 3001, 8002, 8003, 11434
+   - Use when: You only need backend services
+   - Time to start: ~5 seconds
+
+2. STOP_BACKEND_SERVERS.bat
+   - Stops all 4 backend servers
+   - Kills processes on ports: 3001, 8002, 8003, 11434
+   - Use when: Shutting down backend or restarting
+   - Time to stop: ~3 seconds
+
+3. START_ALL.bat
+   - Starts backend (4 servers) + frontend (3 instances)
+   - Backend ports: 3001, 8002, 8003, 11434
+   - Frontend ports: 8000, 8001, 8002
+   - Use when: Full system startup
+   - Time to start: ~15 seconds
+
+4. STOP_ALL.bat
+   - Stops backend (4 servers) + frontend (5 instances)
+   - Kills all processes on ports: 3001, 8002, 8003, 8000-8004, 11434
+   - Use when: Complete system shutdown
+   - Time to stop: ~5 seconds
+
+5. CHECK_SERVICES.bat
+   - Shows which services are currently running
+   - Lists all ports and their status
+   - Shows Node processes
+   - Use when: Troubleshooting or checking status
+   - Time to run: ~2 seconds
+
+================================================================================
+BACKEND SERVERS (4 Total)
+================================================================================
+
+Server 1: Main Backend Server
+  - Port: 3001
+  - File: backend/server.js
+  - Purpose: API server, LMS routes, main application logic
+  - Status: REQUIRED
+
+Server 2: Voice Server
+  - Port: 8002
+  - File: backend/voice-server.js
+  - Purpose: Voice navigation and audio processing
+  - Status: REQUIRED
+
+Server 3: Whisper Voice Server
+  - Port: 8003
+  - File: backend/whisper-voice-server.js
+  - Purpose: Whisper AI voice processing
+  - Status: REQUIRED
+
+Server 4: Ollama
+  - Port: 11434
+  - Command: ollama serve
+  - Purpose: AI model serving
+  - Status: OPTIONAL (if not installed, skipped)
+
+================================================================================
+FRONTEND INSTANCES (5 Total)
+================================================================================
+
+Instance 1: Port 8000 - Development server
+Instance 2: Port 8001 - Development server
+Instance 3: Port 8002 - Development server
+Instance 4: Port 8003 - Development server
+Instance 5: Port 8004 - Development server
+
+Note: START_ALL.bat only starts instances 1-3 to avoid port conflicts
+      with backend servers (8002, 8003, 11434)
+
+================================================================================
+QUICK START GUIDE
+================================================================================
+
+OPTION 1: Backend Only (Recommended for Development)
+  1. Double-click: START_BACKEND_SERVERS.bat
+  2. In IDE/Terminal: npm run dev
+  3. Access: http://localhost:5173 (or your dev port)
+  4. To stop: Double-click STOP_BACKEND_SERVERS.bat
+
+OPTION 2: Everything (Full System)
+  1. Double-click: START_ALL.bat
+  2. Wait for all windows to open
+  3. Access: http://localhost:8000 (or 8001, 8002)
+  4. To stop: Double-click STOP_ALL.bat
+
+OPTION 3: Manual Control
+  1. Open Command Prompt
+  2. Navigate to project folder
+  3. Run individual commands from BACKEND_COMMANDS.txt
+  4. Press Ctrl+C to stop each service
+
+================================================================================
+PREREQUISITES
+================================================================================
+
+REQUIRED:
+  ✓ Node.js (v14+) - https://nodejs.org/
+  ✓ npm (comes with Node.js)
+
+OPTIONAL:
+  ○ Ollama - https://ollama.ai/
+    (If not installed, backend will work without it)
+
+INSTALLATION CHECK:
+  node --version
+  npm --version
+  ollama --version
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+PROBLEM: "Port already in use"
+SOLUTION:
+  1. Run: CHECK_SERVICES.bat
+  2. Find the process using the port
+  3. Run: STOP_ALL.bat
+  4. Try again
+
+PROBLEM: "Node.js is not installed"
+SOLUTION:
+  1. Download from https://nodejs.org/
+  2. Install with default settings
+  3. Restart computer
+  4. Try again
+
+PROBLEM: "Ollama not found"
+SOLUTION:
+  - This is optional, backend will work without it
+  - If needed, download from https://ollama.ai/
+
+PROBLEM: "Script won't run"
+SOLUTION:
+  1. Right-click the .bat file
+  2. Select "Run as administrator"
+  3. Or open Command Prompt as admin
+
+PROBLEM: "Services won't start"
+SOLUTION:
+  1. Run: CHECK_SERVICES.bat
+  2. Kill any existing processes: STOP_ALL.bat
+  3. Check if ports are free
+  4. Try starting again
+
+================================================================================
+PORT REFERENCE
+================================================================================
+
+BACKEND PORTS:
+  3001   - Main Backend Server (API)
+  8002   - Voice Server
+  8003   - Whisper Voice Server
+  11434  - Ollama (AI Models)
+
+FRONTEND PORTS:
+  8000   - Frontend Instance 1
+  8001   - Frontend Instance 2
+  8002   - Frontend Instance 3
+  8003   - Frontend Instance 4
+  8004   - Frontend Instance 5
+
+DEVELOPMENT:
+  5173   - Vite dev server (npm run dev)
+
+================================================================================
+MANUAL COMMANDS
+================================================================================
+
+START BACKEND MANUALLY:
+  cd backend
+  node server.js
+
+START VOICE SERVER MANUALLY:
+  cd backend
+  node voice-server.js
+
+START WHISPER SERVER MANUALLY:
+  cd backend
+  node whisper-voice-server.js
+
+START OLLAMA MANUALLY:
+  ollama serve
+
+START FRONTEND MANUALLY:
+  npm run dev -- --port 8000
+
+STOP SERVICES MANUALLY:
+  Press Ctrl+C in each terminal
+
+KILL ALL NODE PROCESSES:
+  taskkill /IM node.exe /F
+
+================================================================================
+DAILY WORKFLOW
+================================================================================
+
+MORNING STARTUP:
+  1. Double-click: START_BACKEND_SERVERS.bat
+  2. In IDE: npm run dev
+  3. Open browser: http://localhost:5173
+
+DURING DEVELOPMENT:
+  - Backend auto-restarts on file changes
+  - Frontend hot-reloads on file changes
+  - Check status anytime: CHECK_SERVICES.bat
+
+BEFORE LEAVING:
+  1. Double-click: STOP_BACKEND_SERVERS.bat
+  2. Stop frontend in IDE (Ctrl+C)
+  3. Or use: STOP_ALL.bat
+
+================================================================================
+TIPS & TRICKS
+================================================================================
+
+TIP 1: Run as Administrator
+  - Right-click .bat file → Run as administrator
+  - Better compatibility and fewer permission issues
+
+TIP 2: Keep Terminal Open
+  - Scripts pause at end, press any key to close
+  - Or keep open to see logs
+
+TIP 3: View Real-Time Logs
+  - Each service opens in its own terminal
+  - Watch logs as they happen
+
+TIP 4: Restart Single Service
+  - Find its terminal window
+  - Press Ctrl+C to stop
+  - Run start script again
+
+TIP 5: Check Port Usage
+  - netstat -ano | findstr :PORT_NUMBER
+  - Shows which process is using a port
+
+TIP 6: Kill Specific Process
+  - taskkill /PID PROCESS_ID /F
+  - Use PID from netstat output
+
+================================================================================
+FILE STRUCTURE
+================================================================================
+
+Quick Launch/
+├── START_BACKEND_SERVERS.bat    ← Start backend only
+├── STOP_BACKEND_SERVERS.bat     ← Stop backend only
+├── START_ALL.bat                ← Start frontend + backend
+├── STOP_ALL.bat                 ← Stop frontend + backend
+├── CHECK_SERVICES.bat           ← Check service status
+├── BACKEND_COMMANDS.txt         ← Manual commands reference
+├── START_ALL_SERVICES.bat       ← Legacy frontend starter
+├── STOP_ALL_SERVICES.bat        ← Legacy frontend stopper
+├── README.md                    ← Detailed documentation
+└── SCRIPTS_SUMMARY.txt          ← This file
+
+================================================================================
+SUPPORT & HELP
+================================================================================
+
+For detailed help, see: README.md
+
+Common Issues:
+  1. Port conflicts → Run CHECK_SERVICES.bat
+  2. Node not found → Install from nodejs.org
+  3. Ollama missing → Optional, backend works without it
+  4. Script won't run → Run as administrator
+
+Quick Links:
+  - Node.js: https://nodejs.org/
+  - Ollama: https://ollama.ai/
+  - Supabase: https://supabase.com/
+  - Project Docs: See docs_archive/ folder
+
+================================================================================
+VERSION HISTORY
+================================================================================
+
+v1.0 - December 2025
+  - Initial release
+  - 4 backend servers
+  - 5 frontend instances
+  - Full start/stop automation
+  - Service status checking
+  - Comprehensive documentation
+
+================================================================================

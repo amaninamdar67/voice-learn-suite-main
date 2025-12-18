@@ -44,7 +44,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         sx={{
           flexGrow: 1,
           p: 3,
-          bgcolor: 'background.default',
+          bgcolor: '#f5f7fa',
           ml: '240px',
         }}
       >

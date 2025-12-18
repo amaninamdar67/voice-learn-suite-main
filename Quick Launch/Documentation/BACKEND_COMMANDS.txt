@@ -1,0 +1,17 @@
+BACKEND COMMANDS - Run these manually in separate terminal windows
+
+1. Main Backend Server:
+   node backend/server.js
+
+2. Voice Server:
+   node backend/voice-server.js
+
+3. Whisper Voice Server:
+   node backend/whisper-voice-server.js
+
+4. Ollama:
+   ollama serve
+
+---
+
+To stop any service: Press Ctrl+C in its terminal window

@@ -46,6 +46,9 @@ import { initializeMentorParentMessaging } from './mentor-parent-messaging.js';
 import { initializeAdminLinkingRoutes } from './admin-linking-routes.js';
 import { initializeParentStudentData } from './parent-student-data.js';
 import { initializeMentorRoutes } from './mentor-routes.js';
+import { initializeTeacherRoutes } from './teacher-routes.js';
+import { initializeMessagingRoutes } from './messaging-routes.js';
+import { initializeAnnouncementsRoutes } from './announcements-routes.js';
 import { initializeDatabase } from './db-setup.js';
 
 dotenv.config();
@@ -70,6 +73,18 @@ app.use('/api/mentor-parent', mentorParentRouter);
 // Initialize Mentor routes
 const mentorRouter = initializeMentorRoutes(supabase);
 app.use('/api/mentor', mentorRouter);
+
+// Initialize Teacher routes
+const teacherRouter = initializeTeacherRoutes(supabase);
+app.use('/api/teacher', teacherRouter);
+
+// Initialize Messaging routes
+const messagingRouter = initializeMessagingRoutes(supabase);
+app.use('/api/messages', messagingRouter);
+
+// Initialize Announcements routes
+const announcementsRouter = initializeAnnouncementsRoutes(supabase);
+app.use('/api/announcements', announcementsRouter);
 
 // Test DELETE endpoint
 app.delete('/api/test-delete/:id', (req, res) => {
@@ -434,12 +449,46 @@ app.get('/api/admin/ai-tutor-stats', async (req, res) => {
   }
 });
 
+// Debug endpoint to test table access
+app.get('/api/admin/lms-analytics-debug', async (req, res) => {
+  try {
+    console.log('[DEBUG] Testing table access...');
+    
+    // Test each table individually
+    const videoLessonsTest = await supabase.from('video_lessons').select('id', { count: 'exact', head: true });
+    console.log('[DEBUG] video_lessons:', { count: videoLessonsTest.count, error: videoLessonsTest.error });
+    
+    const recordedVideosTest = await supabase.from('recorded_videos').select('id', { count: 'exact', head: true });
+    console.log('[DEBUG] recorded_videos:', { count: recordedVideosTest.count, error: recordedVideosTest.error });
+    
+    const liveClassesTest = await supabase.from('live_classes').select('id', { count: 'exact', head: true });
+    console.log('[DEBUG] live_classes:', { count: liveClassesTest.count, error: liveClassesTest.error });
+    
+    const quizzesTest = await supabase.from('quizzes').select('id', { count: 'exact', head: true });
+    console.log('[DEBUG] quizzes:', { count: quizzesTest.count, error: quizzesTest.error });
+    
+    const assignmentsTest = await supabase.from('assignments').select('id', { count: 'exact', head: true });
+    console.log('[DEBUG] assignments:', { count: assignmentsTest.count, error: assignmentsTest.error });
+    
+    res.json({
+      videoLessons: videoLessonsTest.count || 0,
+      recordedVideos: recordedVideosTest.count || 0,
+      liveClasses: liveClassesTest.count || 0,
+      quizzes: quizzesTest.count || 0,
+      assignments: assignmentsTest.count || 0,
+    });
+  } catch (error) {
+    console.error('[DEBUG] Error:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // Get LMS analytics
 app.get('/api/admin/lms-analytics', async (req, res) => {
   try {
     const { range = 'week' } = req.query;
     
-    // Calculate date range
+    // Calculate date range for engagement metrics only
     const endDate = new Date();
     const startDate = new Date();
     
@@ -451,16 +500,16 @@ app.get('/api/admin/lms-analytics', async (req, res) => {
       startDate.setMonth(endDate.getMonth() - 12);
     }
 
-    // Get LMS content stats
+    // Get LMS content stats - NO DATE FILTER for total counts
     const [videoLessonsRes, recordedVideosRes, liveClassesRes, quizzesRes, assignmentsRes] = await Promise.all([
-      supabase.from('lessons').select('id').gte('created_at', startDate.toISOString()),
-      supabase.from('recorded_videos').select('id').gte('created_at', startDate.toISOString()),
-      supabase.from('live_classes').select('id').gte('created_at', startDate.toISOString()),
-      supabase.from('quizzes').select('id').gte('created_at', startDate.toISOString()),
-      supabase.from('assignments').select('id').gte('created_at', startDate.toISOString()),
+      supabase.from('video_lessons').select('*', { count: 'exact', head: true }),
+      supabase.from('recorded_videos').select('*', { count: 'exact', head: true }),
+      supabase.from('live_classes').select('*', { count: 'exact', head: true }),
+      supabase.from('quizzes').select('*', { count: 'exact', head: true }),
+      supabase.from('assignments').select('*', { count: 'exact', head: true }),
     ]);
 
-    // Get engagement metrics
+    // Get engagement metrics with date range
     const { data: lessonTracking } = await supabase
       .from('lesson_attendance')
       .select('id, is_completed')
@@ -470,12 +519,21 @@ app.get('/api/admin/lms-analytics', async (req, res) => {
     const totalLessonViews = lessonTracking?.length || 0;
     const avgCompletion = totalLessonViews > 0 ? Math.round((completedLessons / totalLessonViews) * 100) : 0;
 
+    console.log('[LMS ANALYTICS] Raw Responses:', {
+      videoLessonsRes: { count: videoLessonsRes.count, error: videoLessonsRes.error },
+      recordedVideosRes: { count: recordedVideosRes.count, error: recordedVideosRes.error },
+      liveClassesRes: { count: liveClassesRes.count, error: liveClassesRes.error },
+      quizzesRes: { count: quizzesRes.count, error: quizzesRes.error },
+      assignmentsRes: { count: assignmentsRes.count, error: assignmentsRes.error },
+      timestamp: new Date().toLocaleTimeString(),
+    });
+
     res.json({
-      videoLessons: recordedVideosRes.data?.length || 0,
-      studyMaterials: videoLessonsRes.data?.length || 0,
-      liveClasses: liveClassesRes.data?.length || 0,
-      quizzes: quizzesRes.data?.length || 0,
-      assignments: assignmentsRes.data?.length || 0,
+      videoLessons: videoLessonsRes.count || 0,
+      studyMaterials: recordedVideosRes.count || 0,
+      liveClasses: liveClassesRes.count || 0,
+      quizzes: quizzesRes.count || 0,
+      assignments: assignmentsRes.count || 0,
       totalViews: totalLessonViews,
       avgCompletion,
     });

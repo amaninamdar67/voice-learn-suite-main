@@ -441,6 +441,171 @@ async function getMentoringNotes(req, res) {
 }
 
 // =====================================================
+// PARENT COMMUNITY ROUTES
+// =====================================================
+
+// Get child community posts and comments
+async function getParentChildCommunity(req, res) {
+  try {
+    const { parentUserId } = req.params;
+
+    // Get parent's children
+    const { data: childLinks, error: linksError } = await supabase
+      .from('parent_children')
+      .select('child_id')
+      .eq('parent_id', parentUserId);
+
+    if (linksError) throw linksError;
+
+    const childIds = childLinks?.map(link => link.child_id) || [];
+
+    if (childIds.length === 0) {
+      return res.json({ posts: [], comments: [] });
+    }
+
+    // Get posts from parent's children
+    const { data: posts, error: postsError } = await supabase
+      .from('community_posts')
+      .select('id, user_id, title, content, subject, likes_count, replies_count, created_at')
+      .in('user_id', childIds)
+      .order('created_at', { ascending: false });
+
+    if (postsError) throw postsError;
+
+    // Get comments from parent's children
+    const { data: comments, error: commentsError } = await supabase
+      .from('community_replies')
+      .select('id, user_id, post_id, content, likes_count, created_at')
+      .in('user_id', childIds)
+      .order('created_at', { ascending: false });
+
+    if (commentsError) throw commentsError;
+
+    // Get child names
+    const { data: children, error: childrenError } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', childIds);
+
+    if (childrenError) throw childrenError;
+
+    const childMap = new Map(children?.map(c => [c.id, c.full_name]) || []);
+
+    // Get post titles for comments
+    const postIds = comments?.map(c => c.post_id) || [];
+    const { data: postTitles, error: postTitlesError } = await supabase
+      .from('community_posts')
+      .select('id, title, subject')
+      .in('id', postIds);
+
+    if (postTitlesError) throw postTitlesError;
+
+    const postMap = new Map(postTitles?.map(p => [p.id, { title: p.title, subject: p.subject }]) || []);
+
+    // Format posts
+    const formattedPosts = posts?.map(post => ({
+      ...post,
+      child_name: childMap.get(post.user_id) || 'Unknown',
+      child_id: post.user_id
+    })) || [];
+
+    // Format comments
+    const formattedComments = comments?.map(comment => ({
+      ...comment,
+      child_name: childMap.get(comment.user_id) || 'Unknown',
+      child_id: comment.user_id,
+      post_title: postMap.get(comment.post_id)?.title || 'Unknown Post',
+      post_subject: postMap.get(comment.post_id)?.subject || ''
+    })) || [];
+
+    res.json({ posts: formattedPosts, comments: formattedComments });
+  } catch (error) {
+    console.error('Error fetching child community data:', error);
+    res.status(400).json({ error: error.message });
+  }
+}
+
+// Like a post (parent)
+async function likeParentPost(req, res) {
+  try {
+    const { postId } = req.params;
+    const { userId, unlike } = req.body;
+
+    if (unlike) {
+      await supabase
+        .from('community_likes')
+        .delete()
+        .eq('post_id', postId)
+        .eq('user_id', userId);
+    } else {
+      await supabase
+        .from('community_likes')
+        .insert({ post_id: postId, user_id: userId });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error liking post:', error);
+    res.status(400).json({ error: error.message });
+  }
+}
+
+// Like a comment (parent)
+async function likeParentComment(req, res) {
+  try {
+    const { commentId } = req.params;
+    const { userId, unlike } = req.body;
+
+    if (unlike) {
+      await supabase
+        .from('community_likes')
+        .delete()
+        .eq('reply_id', commentId)
+        .eq('user_id', userId);
+    } else {
+      await supabase
+        .from('community_likes')
+        .insert({ reply_id: commentId, user_id: userId });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error liking comment:', error);
+    res.status(400).json({ error: error.message });
+  }
+}
+
+// Reply to a post (parent)
+async function replyParentPost(req, res) {
+  try {
+    const { postId } = req.params;
+    const { userId, content } = req.body;
+
+    if (!content) {
+      return res.status(400).json({ error: 'Content is required' });
+    }
+
+    const { data: reply, error } = await supabase
+      .from('community_replies')
+      .insert({
+        post_id: postId,
+        user_id: userId,
+        content,
+        is_anonymous: false
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({ success: true, reply });
+  } catch (error) {
+    console.error('Error posting reply:', error);
+    res.status(400).json({ error: error.message });
+  }
+}
+
+// =====================================================
 // EXPORT ROUTES
 // =====================================================
 
@@ -452,6 +617,10 @@ export {
   unlinkParentFromStudent,
   getParentNotifications,
   markNotificationRead,
+  getParentChildCommunity,
+  likeParentPost,
+  likeParentComment,
+  replyParentPost,
   
   // Mentor routes
   getMentorStudents,

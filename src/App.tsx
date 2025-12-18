@@ -28,6 +28,7 @@ import QuizCreator from "./pages/Teacher/QuizCreator";
 import ChildrenView from "./pages/Parent/ChildrenView";
 import MentoringView from "./pages/Mentor/MentoringView";
 import MentorMessages from "./pages/Mentor/MentorMessages";
+import MentorCommunity from "./pages/Mentor/MentorCommunity";
 
 // LMS Teacher Pages
 import VideoLessonUpload from "./pages/Teacher/VideoLessonUpload";
@@ -43,7 +44,8 @@ import LiveClassesView from "./pages/Student/LiveClassesView";
 import QuizzesView from "./pages/Student/QuizzesView";
 import QuizRankingsView from "./pages/Student/QuizRankingsView";
 import OverallRankings from "./pages/Student/OverallRankings";
-import StudentMentoringView from "./pages/Student/StudentMentoringView";
+import Messages from "./pages/Messages";
+import Announcement from "./pages/Announcement";
 
 // Community Pages
 import RecordedClassesCommunity from "./pages/Community/RecordedClassesCommunity";
@@ -251,6 +253,16 @@ const App = () => (
                   </PrivateRoute>
                 }
               />
+              <Route
+                path="/mentor/community"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <MentorCommunity />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
               
               {/* LMS Teacher Routes */}
               <Route
@@ -360,7 +372,7 @@ const App = () => (
                 element={
                   <PrivateRoute>
                     <MainLayout>
-                      <StudentMentoringView />
+                      <Messages />
                     </MainLayout>
                   </PrivateRoute>
                 }
@@ -370,7 +382,7 @@ const App = () => (
                 element={
                   <PrivateRoute>
                     <MainLayout>
-                      <StudentMentoringView />
+                      <Messages />
                     </MainLayout>
                   </PrivateRoute>
                 }
@@ -380,7 +392,71 @@ const App = () => (
                 element={
                   <PrivateRoute>
                     <MainLayout>
-                      <StudentMentoringView />
+                      <Messages />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+
+              {/* Messages Routes */}
+              <Route
+                path="/teacher/messages"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <Messages />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/student/messages"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <Messages />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/mentor/messages"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <Messages />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+
+              {/* Announcements Routes */}
+              <Route
+                path="/teacher/announcements"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <Announcement />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/student/announcements"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <Announcement />
+                    </MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/mentor/announcements"
+                element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <Announcement />
                     </MainLayout>
                   </PrivateRoute>
                 }

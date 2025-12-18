@@ -199,12 +199,12 @@ export function initializeMentorRoutes(supabase) {
         ? sessions.reduce((sum, s) => sum + (s.rating || 0), 0) / sessions.length
         : 0;
 
-      // Calculate active students (those who logged in in last 24 hours)
-      const oneDayAgo = new Date();
-      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+      // Calculate active status for each student (30 min window)
+      const thirtyMinutesAgo = new Date();
+      thirtyMinutesAgo.setMinutes(thirtyMinutesAgo.getMinutes() - 30);
       
-      // Get last login info for each student
       let activeCount = 0;
+      let activeStudentMap = {};
       
       if (studentIds.length > 0) {
         try {
@@ -212,28 +212,30 @@ export function initializeMentorRoutes(supabase) {
           
           if (!authError && authData) {
             const usersList = authData.users || authData || [];
-            const activeStudentIds = new Set();
             
             if (Array.isArray(usersList)) {
               usersList.forEach(user => {
-                if (studentIds.includes(user.id) && user.last_sign_in_at) {
-                  const lastLogin = new Date(user.last_sign_in_at);
-                  if (lastLogin >= oneDayAgo) {
-                    activeStudentIds.add(user.id);
-                  }
+                if (studentIds.includes(user.id)) {
+                  const isActive = user.last_sign_in_at && new Date(user.last_sign_in_at) >= thirtyMinutesAgo;
+                  activeStudentMap[user.id] = isActive;
+                  if (isActive) activeCount++;
                 }
               });
             }
-            activeCount = activeStudentIds.size;
           }
         } catch (authErr) {
           console.warn('[MENTOR ROUTES] Warning fetching auth users:', authErr.message);
-          // Don't fail if auth API has issues
         }
       }
 
+      // Add active status to each student
+      const studentsWithStatus = (students || []).map(student => ({
+        ...student,
+        isActive: activeStudentMap[student.id] || false
+      }));
+
       res.status(200).json({
-        students: students || [],
+        students: studentsWithStatus,
         totalSessions,
         averageRating,
         activeStudents: activeCount
@@ -403,6 +405,8 @@ export function initializeMentorRoutes(supabase) {
       res.status(400).json({ error: error.message });
     }
   });
+
+
 
   return router;
 }

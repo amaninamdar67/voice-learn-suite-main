@@ -40,7 +40,16 @@ export default function AssignmentsView() {
   const [filterStatus, setFilterStatus] = useState('all');
 
   useEffect(() => {
-    fetchAssignments();
+    if (user) {
+      fetchAssignments();
+      
+      // Real-time polling every 5 seconds
+      const interval = setInterval(() => {
+        fetchAssignments();
+      }, 5000);
+      
+      return () => clearInterval(interval);
+    }
   }, [user]);
 
   const fetchAssignments = async () => {

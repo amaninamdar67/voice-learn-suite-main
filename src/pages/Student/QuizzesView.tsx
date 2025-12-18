@@ -51,8 +51,18 @@ export default function QuizzesView() {
   const [quizResult, setQuizResult] = useState<any>(null);
 
   useEffect(() => {
-    fetchQuizzes();
-    fetchResults();
+    if (user) {
+      fetchQuizzes();
+      fetchResults();
+      
+      // Real-time polling every 5 seconds
+      const interval = setInterval(() => {
+        fetchQuizzes();
+        fetchResults();
+      }, 5000);
+      
+      return () => clearInterval(interval);
+    }
   }, [user, profile]);
 
   const fetchQuizzes = async () => {

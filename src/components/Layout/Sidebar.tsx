@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Drawer,
   List,
@@ -12,6 +12,7 @@ import {
   Divider,
   Avatar,
   SvgIcon,
+  Badge,
 } from '@mui/material';
 import {
   Dashboard,
@@ -67,6 +68,7 @@ const menuItems: MenuItem[] = [
   { text: 'Study Materials', icon: <School />, path: '/lessons', roles: ['teacher'] },
   { text: 'Assignments', icon: <Assignment />, path: '/projects', roles: ['teacher'] },
   { text: 'My Students', icon: <People />, path: '/teacher/students', roles: ['teacher'] },
+  { text: 'Announcements', icon: <Message />, path: '/teacher/announcements', roles: ['teacher'] },
   { text: 'Leaderboard', icon: <Quiz />, path: '/leaderboard', roles: ['teacher'] },
   { text: 'Community', icon: <Message />, path: '/community/recorded-classes', roles: ['teacher'] },
   { text: 'Settings', icon: <Settings />, path: '/settings', roles: ['teacher'] },
@@ -80,6 +82,7 @@ const menuItems: MenuItem[] = [
   { text: 'Study Materials', icon: <School />, path: '/lessons', roles: ['student'] },
   { text: 'Assignments', icon: <Assignment />, path: '/projects', roles: ['student'] },
   { text: 'My Teachers', icon: <People />, path: '/student/mentoring', roles: ['student'] },
+  { text: 'Announcements', icon: <Message />, path: '/student/announcements', roles: ['student'] },
   { text: 'Leaderboard', icon: <Quiz />, path: '/leaderboard', roles: ['student'] },
   { text: 'Community', icon: <Message />, path: '/community/recorded-classes', roles: ['student'] },
   { text: 'Settings', icon: <Settings />, path: '/settings', roles: ['student'] },
@@ -96,6 +99,8 @@ const menuItems: MenuItem[] = [
   { text: 'Mentoring', icon: <People />, path: '/mentoring', roles: ['mentor'] },
   { text: 'My Students', icon: <People />, path: '/mentor/students', roles: ['mentor'] },
   { text: 'Messages', icon: <ChalkboardIcon />, path: '/mentor/messages', roles: ['mentor'] },
+  { text: 'Announcements', icon: <Message />, path: '/mentor/announcements', roles: ['mentor'] },
+  { text: 'Community', icon: <Message />, path: '/mentor/community', roles: ['mentor'] },
   { text: 'Leaderboard', icon: <Quiz />, path: '/leaderboard', roles: ['mentor'] },
   { text: 'Settings', icon: <Settings />, path: '/settings', roles: ['mentor'] },
 ];
@@ -104,6 +109,39 @@ export const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, profile } = useAuth();
+  const [unreadUrgentCount, setUnreadUrgentCount] = useState(0);
+
+  // Fetch unread urgent announcements count
+  useEffect(() => {
+    if (!user?.id || (user.role !== 'student' && user.role !== 'teacher' && user.role !== 'mentor')) return;
+
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await fetch(`http://localhost:3001/api/announcements/unread-urgent/${user.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setUnreadUrgentCount(data.count || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching unread urgent count:', error);
+      }
+    };
+
+    // If on announcements page, clear the badge immediately
+    if (location.pathname.includes('/announcements')) {
+      setUnreadUrgentCount(0);
+    } else {
+      fetchUnreadCount();
+    }
+    
+    // Poll every 10 seconds for new urgent announcements (but not on announcements page)
+    const interval = setInterval(() => {
+      if (!location.pathname.includes('/announcements')) {
+        fetchUnreadCount();
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [user?.id, user?.role, location.pathname]);
 
   const filteredMenuItems = menuItems.filter(item => 
     user && item.roles.includes(user.role)
@@ -158,6 +196,9 @@ export const Sidebar: React.FC = () => {
       <List sx={{ flexGrow: 1, pt: 2 }}>
         {filteredMenuItems.map((item) => {
           const isActive = location.pathname === item.path;
+          const isAnnouncementItem = item.text === 'Announcements';
+          const showBadge = isAnnouncementItem && unreadUrgentCount > 0;
+
           return (
             <ListItem key={item.text} disablePadding sx={{ px: 1 }}>
               <ListItemButton
@@ -179,7 +220,27 @@ export const Sidebar: React.FC = () => {
                 }}
               >
                 <ListItemIcon sx={{ minWidth: 40, color: isActive ? 'inherit' : 'text.secondary' }}>
-                  {item.icon}
+                  {showBadge ? (
+                    <Badge
+                      badgeContent={unreadUrgentCount}
+                      color="error"
+                      sx={{
+                        '& .MuiBadge-badge': {
+                          backgroundColor: '#d32f2f',
+                          color: '#fff',
+                          fontSize: '0.65rem',
+                          height: '18px',
+                          minWidth: '18px',
+                          padding: '0 4px',
+                          fontWeight: 700,
+                        },
+                      }}
+                    >
+                      {item.icon}
+                    </Badge>
+                  ) : (
+                    item.icon
+                  )}
                 </ListItemIcon>
                 <ListItemText 
                   primary={item.text}

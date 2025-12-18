@@ -1,0 +1,416 @@
+================================================================================
+VISUAL GUIDE - QUICK LAUNCH SCRIPTS
+================================================================================
+
+PROJECT: E-Learning Platform
+PURPOSE: Visual reference for all scripts and their functions
+
+================================================================================
+SCRIPT SELECTION FLOWCHART
+================================================================================
+
+                        START HERE
+                            |
+                            v
+                    What do you want?
+                            |
+                ____________|____________
+               |            |            |
+               v            v            v
+          Backend    Everything    Check Status
+          Only       (Full)        or Menu
+               |            |            |
+               v            v            v
+        START_BACKEND   START_ALL    CHECK_SERVICES
+        _SERVERS.bat    .bat         .bat
+               |            |            |
+               v            v            v
+          [Running]    [Running]    [Status]
+               |            |            |
+               v            v            v
+          npm run dev  Open Browser  Troubleshoot
+               |            |            |
+               v            v            v
+          Develop      Test Multi    Fix Issues
+               |        Instance     |
+               v            |        v
+          STOP_BACKEND  STOP_ALL   Restart
+          _SERVERS.bat  .bat       Services
+
+================================================================================
+QUICK DECISION TREE
+================================================================================
+
+Are you a beginner?
+  YES → Use MENU.bat (interactive menu)
+  NO  → Use specific script
+
+Do you know what you want?
+  YES → Use specific script
+  NO  → Use MENU.bat
+
+Do you want to start backend only?
+  YES → START_BACKEND_SERVERS.bat
+  NO  → START_ALL.bat
+
+Do you want to stop everything?
+  YES → STOP_ALL.bat
+  NO  → STOP_BACKEND_SERVERS.bat
+
+Do you want to check status?
+  YES → CHECK_SERVICES.bat
+  NO  → Use other scripts
+
+================================================================================
+SCRIPT COMPARISON TABLE
+================================================================================
+
+┌─────────────────────┬──────────────┬──────────────┬──────────────┐
+│ Script              │ Backend      │ Frontend     │ Use Case     │
+├─────────────────────┼──────────────┼──────────────┼──────────────┤
+│ START_BACKEND_      │ 4 servers    │ None         │ Development  │
+│ SERVERS.bat         │ (3001,8002,  │              │ with IDE     │
+│                     │  8003,11434) │              │              │
+├─────────────────────┼──────────────┼──────────────┼──────────────┤
+│ STOP_BACKEND_       │ Stops all    │ None         │ Cleanup      │
+│ SERVERS.bat         │              │              │              │
+├─────────────────────┼──────────────┼──────────────┼──────────────┤
+│ START_ALL.bat       │ 4 servers    │ 3 instances  │ Full testing │
+│                     │              │ (8000,8001,  │              │
+│                     │              │  8002)       │              │
+├─────────────────────┼──────────────┼──────────────┼──────────────┤
+│ STOP_ALL.bat        │ Stops all    │ Stops all    │ Complete     │
+│                     │              │              │ shutdown     │
+├─────────────────────┼──────────────┼──────────────┼──────────────┤
+│ CHECK_SERVICES.bat  │ Shows status │ Shows status │ Verify       │
+│                     │              │              │ running      │
+├─────────────────────┼──────────────┼──────────────┼──────────────┤
+│ MENU.bat            │ Interactive  │ Interactive  │ Beginner     │
+│                     │ menu         │ menu         │ friendly     │
+└─────────────────────┴──────────────┴──────────────┴──────────────┘
+
+================================================================================
+PORT ALLOCATION DIAGRAM
+================================================================================
+
+BACKEND SERVERS:
+┌─────────────────────────────────────────────────────────────┐
+│ Port 3001   │ Main Backend Server (API)                     │
+│ Port 8002   │ Voice Server                                  │
+│ Port 8003   │ Whisper Voice Server                          │
+│ Port 11434  │ Ollama (AI Models)                            │
+└─────────────────────────────────────────────────────────────┘
+
+FRONTEND INSTANCES:
+┌─────────────────────────────────────────────────────────────┐
+│ Port 8000   │ Frontend Instance 1                           │
+│ Port 8001   │ Frontend Instance 2                           │
+│ Port 8002   │ Frontend Instance 3 (may conflict)            │
+│ Port 8003   │ Frontend Instance 4 (may conflict)            │
+│ Port 8004   │ Frontend Instance 5 (may conflict)            │
+└─────────────────────────────────────────────────────────────┘
+
+DEVELOPMENT:
+┌─────────────────────────────────────────────────────────────┐
+│ Port 5173   │ Vite Dev Server (npm run dev)                 │
+└─────────────────────────────────────────────────────────────┘
+
+================================================================================
+DAILY WORKFLOW DIAGRAM
+================================================================================
+
+MORNING:
+┌──────────────────────────────────────────────────────────────┐
+│ 1. Double-click: START_BACKEND_SERVERS.bat                  │
+│    ↓                                                          │
+│ 2. Wait for 4 terminal windows to open                       │
+│    ↓                                                          │
+│ 3. In IDE: npm run dev                                       │
+│    ↓                                                          │
+│ 4. Open browser: http://localhost:5173                       │
+│    ↓                                                          │
+│ 5. START CODING!                                             │
+└──────────────────────────────────────────────────────────────┘
+
+DURING DAY:
+┌──────────────────────────────────────────────────────────────┐
+│ • Backend auto-restarts on file changes                      │
+│ • Frontend hot-reloads on file changes                       │
+│ • Check status: CHECK_SERVICES.bat (anytime)                │
+│ • Restart service: Find terminal, Ctrl+C, run start script  │
+└──────────────────────────────────────────────────────────────┘
+
+EVENING:
+┌──────────────────────────────────────────────────────────────┐
+│ 1. Double-click: STOP_BACKEND_SERVERS.bat                   │
+│    OR                                                         │
+│    Stop frontend in IDE (Ctrl+C)                             │
+│    OR                                                         │
+│    Double-click: STOP_ALL.bat                                │
+│    ↓                                                          │
+│ 2. All services stopped                                      │
+│    ↓                                                          │
+│ 3. DONE FOR THE DAY!                                         │
+└──────────────────────────────────────────────────────────────┘
+
+================================================================================
+TROUBLESHOOTING FLOWCHART
+================================================================================
+
+                    Something Wrong?
+                            |
+                            v
+                    Run CHECK_SERVICES.bat
+                            |
+                ____________|____________
+               |            |            |
+               v            v            v
+          Services    Services    Port
+          Running     Not Running Conflict
+               |            |            |
+               v            v            v
+          Check      Run START   Run STOP
+          Logs       Script      Script
+               |            |            |
+               v            v            v
+          Error?     Still     Try
+          Found      Not       Again
+               |      Running?
+               v            |
+          Fix Code    YES → Check
+               |      Logs
+               v            |
+          Restart     NO → Check
+          Service     Prerequisites
+               |            |
+               v            v
+          Test      Install
+               |      Node.js
+               v            |
+          Working?   v
+               |      Try
+               v      Again
+          DONE!
+
+================================================================================
+SCRIPT EXECUTION TIMELINE
+================================================================================
+
+START_BACKEND_SERVERS.bat:
+  0s   - Script starts
+  1s   - Check Node.js installation
+  2s   - Start Main Backend (3001)
+  4s   - Start Voice Server (8002)
+  6s   - Start Whisper Server (8003)
+  8s   - Start Ollama (11434)
+  10s  - All servers running
+  11s  - Display status
+  12s  - Pause for user
+
+STOP_BACKEND_SERVERS.bat:
+  0s   - Script starts
+  1s   - Kill port 3001
+  2s   - Kill port 8002
+  3s   - Kill port 8003
+  4s   - Kill port 11434
+  5s   - Kill all Node processes
+  6s   - Display status
+  7s   - Pause for user
+
+START_ALL.bat:
+  0s   - Script starts
+  2s   - Start Main Backend (3001)
+  4s   - Start Voice Server (8002)
+  6s   - Start Whisper Server (8003)
+  8s   - Start Ollama (11434)
+  10s  - Start Frontend 1 (8000)
+  13s  - Start Frontend 2 (8001)
+  16s  - Start Frontend 3 (8002)
+  19s  - All services running
+  20s  - Display status
+  21s  - Pause for user
+
+================================================================================
+TERMINAL WINDOW LAYOUT
+================================================================================
+
+When you run START_BACKEND_SERVERS.bat, you'll see:
+
+┌─────────────────────────────────────────────────────────────┐
+│ Main Backend Server (3001)                                  │
+│ ─────────────────────────────────────────────────────────── │
+│ [INFO] Server running on port 3001                          │
+│ [INFO] Connected to Supabase                                │
+│ [INFO] Routes initialized                                   │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│ Voice Server (8002)                                         │
+│ ─────────────────────────────────────────────────────────── │
+│ [INFO] Voice server running on port 8002                    │
+│ [INFO] Ready for voice input                                │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│ Whisper Voice Server (8003)                                 │
+│ ─────────────────────────────────────────────────────────── │
+│ [INFO] Whisper server running on port 8003                  │
+│ [INFO] Ready for voice processing                           │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│ Ollama (11434)                                              │
+│ ─────────────────────────────────────────────────────────── │
+│ [INFO] Ollama running on port 11434                         │
+│ [INFO] Models loaded                                        │
+└─────────────────────────────────────────────────────────────┘
+
+================================================================================
+BROWSER ACCESS DIAGRAM
+================================================================================
+
+After running START_BACKEND_SERVERS.bat + npm run dev:
+
+┌─────────────────────────────────────────────────────────────┐
+│ Browser                                                     │
+│ ─────────────────────────────────────────────────────────── │
+│ http://localhost:5173  ← Main application                   │
+│                                                              │
+│ Backend APIs:                                               │
+│ http://localhost:3001  ← API server                         │
+│ http://localhost:8002  ← Voice server                       │
+│ http://localhost:8003  ← Whisper server                     │
+│ http://localhost:11434 ← Ollama                             │
+└─────────────────────────────────────────────────────────────┘
+
+After running START_ALL.bat:
+
+┌─────────────────────────────────────────────────────────────┐
+│ Browser                                                     │
+│ ─────────────────────────────────────────────────────────── │
+│ http://localhost:8000  ← Frontend Instance 1                │
+│ http://localhost:8001  ← Frontend Instance 2                │
+│ http://localhost:8002  ← Frontend Instance 3                │
+│                                                              │
+│ Backend APIs:                                               │
+│ http://localhost:3001  ← API server                         │
+│ http://localhost:8002  ← Voice server                       │
+│ http://localhost:8003  ← Whisper server                     │
+│ http://localhost:11434 ← Ollama                             │
+└─────────────────────────────────────────────────────────────┘
+
+================================================================================
+KEYBOARD SHORTCUTS REFERENCE
+================================================================================
+
+In Terminal Windows:
+┌─────────────────────────────────────────────────────────────┐
+│ Ctrl+C     │ Stop the service                               │
+│ Ctrl+L     │ Clear screen                                   │
+│ Ctrl+A     │ Select all                                     │
+│ Ctrl+V     │ Paste                                          │
+│ Ctrl+X     │ Cut                                            │
+│ Ctrl+Z     │ Undo                                           │
+└─────────────────────────────────────────────────────────────┘
+
+In Command Prompt:
+┌─────────────────────────────────────────────────────────────┐
+│ Up Arrow   │ Previous command                               │
+│ Down Arrow │ Next command                                   │
+│ Tab        │ Auto-complete                                  │
+│ Ctrl+C     │ Cancel current command                         │
+│ Ctrl+L     │ Clear screen                                   │
+└─────────────────────────────────────────────────────────────┘
+
+================================================================================
+QUICK REFERENCE CARD
+================================================================================
+
+START BACKEND:
+  Double-click: START_BACKEND_SERVERS.bat
+
+STOP BACKEND:
+  Double-click: STOP_BACKEND_SERVERS.bat
+
+START ALL:
+  Double-click: START_ALL.bat
+
+STOP ALL:
+  Double-click: STOP_ALL.bat
+
+CHECK STATUS:
+  Double-click: CHECK_SERVICES.bat
+
+INTERACTIVE MENU:
+  Double-click: MENU.bat
+
+HELP:
+  Read: README.md
+  Read: GETTING_STARTED.txt
+  Read: SCRIPTS_SUMMARY.txt
+
+================================================================================
+COMMON ISSUES & SOLUTIONS
+================================================================================
+
+ISSUE: Port Already in Use
+SOLUTION:
+  1. Run: CHECK_SERVICES.bat
+  2. Run: STOP_ALL.bat
+  3. Try again
+
+ISSUE: Node.js Not Found
+SOLUTION:
+  1. Install from https://nodejs.org/
+  2. Restart computer
+  3. Try again
+
+ISSUE: Script Won't Run
+SOLUTION:
+  1. Right-click .bat file
+  2. Select "Run as administrator"
+
+ISSUE: Services Won't Start
+SOLUTION:
+  1. Run: CHECK_SERVICES.bat
+  2. Run: STOP_ALL.bat
+  3. Check for errors
+  4. Try again
+
+================================================================================
+GETTING HELP
+================================================================================
+
+For Quick Help:
+  → See: INDEX.txt
+  → See: SCRIPTS_SUMMARY.txt
+
+For Detailed Help:
+  → See: README.md
+  → See: GETTING_STARTED.txt
+
+For Troubleshooting:
+  → Run: CHECK_SERVICES.bat
+  → See: README.md (Troubleshooting)
+
+For Manual Commands:
+  → See: BACKEND_COMMANDS.txt
+
+================================================================================
+SUMMARY
+================================================================================
+
+✓ 6 automated scripts
+✓ 5 documentation files
+✓ 4 backend servers
+✓ 5 frontend instances
+✓ Complete automation
+✓ Easy to use
+✓ Beginner-friendly
+✓ Professional-grade
+
+START HERE: START_BACKEND_SERVERS.bat
+
+Happy coding!
+
+================================================================================

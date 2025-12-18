@@ -1,0 +1,425 @@
+================================================================================
+QUICK LAUNCH SCRIPTS - COMPLETE INDEX
+================================================================================
+
+PROJECT: E-Learning Platform
+LOCATION: Quick Launch/ folder
+CREATED: December 2025
+
+================================================================================
+NEW SCRIPTS CREATED
+================================================================================
+
+✓ START_BACKEND_SERVERS.bat
+  - Starts all 4 backend servers
+  - Ports: 3001, 8002, 8003, 11434
+  - Recommended for daily development
+
+✓ STOP_BACKEND_SERVERS.bat
+  - Stops all 4 backend servers
+  - Kills processes on all backend ports
+  - Use before restarting
+
+✓ START_ALL.bat
+  - Starts backend (4 servers) + frontend (3 instances)
+  - Complete system startup
+  - Use for full testing
+
+✓ STOP_ALL.bat
+  - Stops backend (4 servers) + frontend (5 instances)
+  - Complete system shutdown
+  - Use for cleanup
+
+✓ CHECK_SERVICES.bat
+  - Shows which services are running
+  - Lists all ports and their status
+  - Helpful for troubleshooting
+
+✓ MENU.bat
+  - Interactive menu for easy access
+  - Beginner-friendly
+  - Access all scripts from one place
+
+================================================================================
+EXISTING SCRIPTS (LEGACY)
+================================================================================
+
+START_ALL_SERVICES.bat
+  - Legacy frontend starter
+  - Starts 5 frontend instances only
+  - Kept for backward compatibility
+
+STOP_ALL_SERVICES.bat
+  - Legacy frontend stopper
+  - Stops 5 frontend instances
+  - Kept for backward compatibility
+
+================================================================================
+DOCUMENTATION FILES
+================================================================================
+
+✓ README.md
+  - Comprehensive documentation
+  - Detailed usage instructions
+  - Troubleshooting guide
+  - Tips and tricks
+
+✓ SCRIPTS_SUMMARY.txt
+  - Quick reference guide
+  - All scripts at a glance
+  - Port reference
+  - Daily workflow
+
+✓ GETTING_STARTED.txt
+  - Beginner-friendly guide
+  - First-time setup instructions
+  - Common tasks
+  - Quick reference
+
+✓ BACKEND_COMMANDS.txt
+  - Manual backend commands
+  - For advanced users
+  - Reference for each server
+
+✓ INDEX.txt
+  - This file
+  - Complete file listing
+  - Quick navigation
+
+================================================================================
+QUICK START
+================================================================================
+
+FASTEST WAY TO START:
+  1. Double-click: START_BACKEND_SERVERS.bat
+  2. In IDE: npm run dev
+  3. Open: http://localhost:5173
+
+INTERACTIVE WAY:
+  1. Double-click: MENU.bat
+  2. Choose option from menu
+  3. Follow prompts
+
+FULL SYSTEM:
+  1. Double-click: START_ALL.bat
+  2. Open: http://localhost:8000
+
+================================================================================
+BACKEND SERVERS (4 Total)
+================================================================================
+
+1. Main Backend Server
+   - Port: 3001
+   - File: backend/server.js
+   - Purpose: API, LMS routes
+   - Status: REQUIRED
+
+2. Voice Server
+   - Port: 8002
+   - File: backend/voice-server.js
+   - Purpose: Voice navigation
+   - Status: REQUIRED
+
+3. Whisper Voice Server
+   - Port: 8003
+   - File: backend/whisper-voice-server.js
+   - Purpose: Whisper AI processing
+   - Status: REQUIRED
+
+4. Ollama
+   - Port: 11434
+   - Command: ollama serve
+   - Purpose: AI model serving
+   - Status: OPTIONAL
+
+================================================================================
+FRONTEND INSTANCES (5 Total)
+================================================================================
+
+Instance 1: Port 8000
+Instance 2: Port 8001
+Instance 3: Port 8002
+Instance 4: Port 8003
+Instance 5: Port 8004
+
+Note: START_ALL.bat starts instances 1-3 only
+      to avoid conflicts with backend servers
+
+================================================================================
+FILE STRUCTURE
+================================================================================
+
+Quick Launch/
+├── START_BACKEND_SERVERS.bat    ← Start backend only
+├── STOP_BACKEND_SERVERS.bat     ← Stop backend only
+├── START_ALL.bat                ← Start frontend + backend
+├── STOP_ALL.bat                 ← Stop frontend + backend
+├── CHECK_SERVICES.bat           ← Check service status
+├── MENU.bat                     ← Interactive menu
+├── START_ALL_SERVICES.bat       ← Legacy frontend starter
+├── STOP_ALL_SERVICES.bat        ← Legacy frontend stopper
+├── README.md                    ← Detailed documentation
+├── SCRIPTS_SUMMARY.txt          ← Quick reference
+├── GETTING_STARTED.txt          ← Beginner guide
+├── BACKEND_COMMANDS.txt         ← Manual commands
+└── INDEX.txt                    ← This file
+
+================================================================================
+WHICH SCRIPT TO USE?
+================================================================================
+
+SCENARIO 1: Daily Development
+  Use: START_BACKEND_SERVERS.bat
+  Then: npm run dev in IDE
+  Stop: STOP_BACKEND_SERVERS.bat
+
+SCENARIO 2: Testing Multiple Instances
+  Use: START_ALL.bat
+  Test: http://localhost:8000, 8001, 8002
+  Stop: STOP_ALL.bat
+
+SCENARIO 3: Checking Status
+  Use: CHECK_SERVICES.bat
+  Shows: All running services and ports
+
+SCENARIO 4: Not Sure What to Do
+  Use: MENU.bat
+  Choose: Option from interactive menu
+
+SCENARIO 5: Manual Control
+  Use: BACKEND_COMMANDS.txt
+  Run: Commands manually in terminal
+
+================================================================================
+PREREQUISITES
+================================================================================
+
+REQUIRED:
+  ✓ Node.js v14+ (https://nodejs.org/)
+  ✓ npm (comes with Node.js)
+
+OPTIONAL:
+  ○ Ollama (https://ollama.ai/)
+
+VERIFY INSTALLATION:
+  node --version
+  npm --version
+  ollama --version
+
+================================================================================
+COMMON COMMANDS
+================================================================================
+
+Start Backend:
+  START_BACKEND_SERVERS.bat
+
+Stop Backend:
+  STOP_BACKEND_SERVERS.bat
+
+Start Everything:
+  START_ALL.bat
+
+Stop Everything:
+  STOP_ALL.bat
+
+Check Status:
+  CHECK_SERVICES.bat
+
+Interactive Menu:
+  MENU.bat
+
+View Documentation:
+  README.md
+  SCRIPTS_SUMMARY.txt
+  GETTING_STARTED.txt
+
+Manual Commands:
+  BACKEND_COMMANDS.txt
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Port Already in Use:
+  1. Run: CHECK_SERVICES.bat
+  2. Run: STOP_ALL.bat
+  3. Try again
+
+Node.js Not Found:
+  1. Download from https://nodejs.org/
+  2. Install with default settings
+  3. Restart computer
+
+Script Won't Run:
+  1. Right-click .bat file
+  2. Select "Run as administrator"
+
+Services Won't Start:
+  1. Run: CHECK_SERVICES.bat
+  2. Run: STOP_ALL.bat
+  3. Check for errors in terminal
+  4. Try again
+
+For More Help:
+  See: README.md or GETTING_STARTED.txt
+
+================================================================================
+DAILY WORKFLOW
+================================================================================
+
+MORNING:
+  1. Double-click: START_BACKEND_SERVERS.bat
+  2. In IDE: npm run dev
+  3. Open: http://localhost:5173
+  4. Start coding!
+
+DURING DAY:
+  - Backend auto-restarts on changes
+  - Frontend hot-reloads on changes
+  - Check status: CHECK_SERVICES.bat
+
+EVENING:
+  1. Double-click: STOP_BACKEND_SERVERS.bat
+  2. Stop frontend in IDE (Ctrl+C)
+  3. Or use: STOP_ALL.bat
+
+================================================================================
+TIPS & TRICKS
+================================================================================
+
+TIP 1: Run as Administrator
+  - Right-click .bat file → Run as administrator
+  - Better compatibility
+
+TIP 2: Keep Terminals Open
+  - Scripts pause at end
+  - Press any key to close
+  - Or keep open to see logs
+
+TIP 3: Watch Real-Time Logs
+  - Each service has its own terminal
+  - See errors as they happen
+
+TIP 4: Use the Menu
+  - MENU.bat is easiest
+  - Interactive and user-friendly
+
+TIP 5: Check Status Regularly
+  - Run CHECK_SERVICES.bat anytime
+  - Verify everything is running
+
+TIP 6: Restart Single Service
+  - Find its terminal window
+  - Press Ctrl+C to stop
+  - Run start script again
+
+================================================================================
+KEYBOARD SHORTCUTS
+================================================================================
+
+In Terminal:
+  Ctrl+C     - Stop service
+  Ctrl+L     - Clear screen
+  Ctrl+A     - Select all
+  Ctrl+V     - Paste
+
+In Command Prompt:
+  Up Arrow   - Previous command
+  Down Arrow - Next command
+  Tab        - Auto-complete
+
+================================================================================
+SUPPORT & HELP
+================================================================================
+
+For Detailed Help:
+  1. Read: README.md
+  2. Read: GETTING_STARTED.txt
+  3. Read: SCRIPTS_SUMMARY.txt
+
+For Quick Reference:
+  1. Check: SCRIPTS_SUMMARY.txt
+  2. Check: BACKEND_COMMANDS.txt
+  3. Check: This file (INDEX.txt)
+
+For Troubleshooting:
+  1. Run: CHECK_SERVICES.bat
+  2. Read: README.md (Troubleshooting section)
+  3. Read: GETTING_STARTED.txt (Troubleshooting section)
+
+For Manual Commands:
+  1. See: BACKEND_COMMANDS.txt
+  2. Open: Command Prompt
+  3. Run: Commands manually
+
+================================================================================
+QUICK LINKS
+================================================================================
+
+Node.js:        https://nodejs.org/
+Ollama:         https://ollama.ai/
+Supabase:       https://supabase.com/
+Project Docs:   See docs_archive/ folder
+
+================================================================================
+VERSION INFORMATION
+================================================================================
+
+Version: 1.0
+Created: December 2025
+Platform: Windows (cmd)
+Node.js: v14+
+npm: v6+
+
+Scripts Included:
+  - 6 new batch scripts
+  - 2 legacy batch scripts
+  - 5 documentation files
+
+Total Files: 13
+
+================================================================================
+GETTING STARTED
+================================================================================
+
+STEP 1: Install Node.js
+  - Download from https://nodejs.org/
+  - Install with default settings
+
+STEP 2: Install Dependencies
+  - npm install
+  - npm install (in backend folder)
+
+STEP 3: Start Backend
+  - Double-click: START_BACKEND_SERVERS.bat
+
+STEP 4: Start Frontend
+  - In IDE: npm run dev
+
+STEP 5: Open Browser
+  - http://localhost:5173
+
+STEP 6: Start Coding!
+  - Happy coding!
+
+For detailed setup, see: GETTING_STARTED.txt
+
+================================================================================
+SUMMARY
+================================================================================
+
+✓ 6 new automated scripts created
+✓ 2 legacy scripts maintained
+✓ 5 comprehensive documentation files
+✓ Complete backend automation
+✓ Frontend + backend integration
+✓ Service status checking
+✓ Interactive menu system
+✓ Troubleshooting guides
+✓ Quick reference materials
+✓ Beginner-friendly setup
+
+All scripts are ready to use!
+Start with: START_BACKEND_SERVERS.bat
+
+================================================================================

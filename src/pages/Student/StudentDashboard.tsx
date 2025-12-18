@@ -44,16 +44,20 @@ export default function StudentDashboard() {
   });
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (user && !hasLoaded) {
       fetchDashboardData();
+      setHasLoaded(true);
     }
-  }, [user]);
+  }, [user, hasLoaded]);
 
   const fetchDashboardData = async () => {
     try {
-      setLoading(true);
+      if (!hasLoaded) {
+        setLoading(true);
+      }
 
       // Fetch video watch history
       const { data: videoHistory, count: videosWatchedCount } = await supabase

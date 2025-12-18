@@ -1,0 +1,336 @@
+================================================================================
+GETTING STARTED - QUICK LAUNCH SCRIPTS
+================================================================================
+
+Welcome! This guide will help you get started with the Quick Launch scripts.
+
+================================================================================
+WHAT YOU NEED
+================================================================================
+
+1. Node.js (Required)
+   - Download: https://nodejs.org/
+   - Install with default settings
+   - Verify: Open Command Prompt and type: node --version
+
+2. Ollama (Optional)
+   - Download: https://ollama.ai/
+   - Only needed for AI features
+   - Backend works fine without it
+
+================================================================================
+FIRST TIME SETUP
+================================================================================
+
+Step 1: Install Node.js
+  1. Go to https://nodejs.org/
+  2. Download LTS version
+  3. Run installer with default settings
+  4. Restart your computer
+
+Step 2: Verify Installation
+  1. Open Command Prompt
+  2. Type: node --version
+  3. Type: npm --version
+  4. Both should show version numbers
+
+Step 3: Install Project Dependencies
+  1. Open Command Prompt
+  2. Navigate to project folder
+  3. Type: npm install
+  4. Wait for installation to complete
+
+Step 4: Install Backend Dependencies
+  1. In Command Prompt, navigate to backend folder
+  2. Type: npm install
+  3. Wait for installation to complete
+
+Step 5: You're Ready!
+  - All scripts are now ready to use
+  - See "DAILY USAGE" section below
+
+================================================================================
+DAILY USAGE
+================================================================================
+
+OPTION A: Backend Only (Recommended for Development)
+  1. Double-click: START_BACKEND_SERVERS.bat
+  2. Wait for 4 terminal windows to open
+  3. In your IDE, run: npm run dev
+  4. Open browser: http://localhost:5173
+  5. Start coding!
+  6. To stop: Double-click STOP_BACKEND_SERVERS.bat
+
+OPTION B: Everything at Once
+  1. Double-click: START_ALL.bat
+  2. Wait for all windows to open
+  3. Open browser: http://localhost:8000
+  4. Start coding!
+  5. To stop: Double-click STOP_ALL.bat
+
+OPTION C: Using the Menu
+  1. Double-click: MENU.bat
+  2. Choose option from menu
+  3. Follow the prompts
+  4. Easy and interactive!
+
+================================================================================
+WHAT EACH SCRIPT DOES
+================================================================================
+
+START_BACKEND_SERVERS.bat
+  - Starts 4 backend servers
+  - Main Backend (3001)
+  - Voice Server (8002)
+  - Whisper Server (8003)
+  - Ollama (11434)
+  - Use this for development
+
+STOP_BACKEND_SERVERS.bat
+  - Stops all 4 backend servers
+  - Frees up all ports
+  - Use before restarting
+
+START_ALL.bat
+  - Starts backend (4 servers)
+  - Starts frontend (3 instances)
+  - Complete system startup
+  - Use for full testing
+
+STOP_ALL.bat
+  - Stops everything
+  - Backend and frontend
+  - Complete system shutdown
+  - Use for cleanup
+
+CHECK_SERVICES.bat
+  - Shows which services are running
+  - Lists all ports and status
+  - Helpful for troubleshooting
+  - Use to verify startup
+
+MENU.bat
+  - Interactive menu
+  - Easy access to all scripts
+  - Beginner-friendly
+  - Use if unsure
+
+================================================================================
+COMMON TASKS
+================================================================================
+
+TASK: Start working on the project
+  1. Double-click: START_BACKEND_SERVERS.bat
+  2. In IDE: npm run dev
+  3. Open: http://localhost:5173
+  4. Done!
+
+TASK: Test multiple frontend instances
+  1. Double-click: START_ALL.bat
+  2. Open: http://localhost:8000
+  3. Open: http://localhost:8001
+  4. Open: http://localhost:8002
+  5. Test across instances
+
+TASK: Check if services are running
+  1. Double-click: CHECK_SERVICES.bat
+  2. See which ports are in use
+  3. See which services are running
+
+TASK: Stop everything
+  1. Double-click: STOP_ALL.bat
+  2. Wait for completion
+  3. All services stopped
+
+TASK: Restart a service
+  1. Find its terminal window
+  2. Press Ctrl+C to stop
+  3. Run start script again
+
+TASK: Free up a specific port
+  1. Run: CHECK_SERVICES.bat
+  2. Find the port number
+  3. Run: STOP_ALL.bat
+  4. Or manually kill the process
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+PROBLEM: "Node.js is not installed"
+SOLUTION:
+  1. Download from https://nodejs.org/
+  2. Install with default settings
+  3. Restart computer
+  4. Try again
+
+PROBLEM: "Port already in use"
+SOLUTION:
+  1. Run: CHECK_SERVICES.bat
+  2. See which process is using the port
+  3. Run: STOP_ALL.bat
+  4. Try starting again
+
+PROBLEM: "Script won't run"
+SOLUTION:
+  1. Right-click the .bat file
+  2. Select "Run as administrator"
+  3. Try again
+
+PROBLEM: "Ollama not found"
+SOLUTION:
+  - This is optional
+  - Backend works without it
+  - If needed, download from https://ollama.ai/
+
+PROBLEM: "Services won't start"
+SOLUTION:
+  1. Run: CHECK_SERVICES.bat
+  2. Kill existing processes: STOP_ALL.bat
+  3. Check if ports are free
+  4. Try starting again
+
+PROBLEM: "Frontend won't load"
+SOLUTION:
+  1. Make sure backend is running
+  2. Check: CHECK_SERVICES.bat
+  3. Verify port 3001 is running
+  4. Check browser console for errors
+
+PROBLEM: "Can't connect to backend"
+SOLUTION:
+  1. Run: CHECK_SERVICES.bat
+  2. Verify port 3001 is running
+  3. Check backend terminal for errors
+  4. Restart backend: STOP_BACKEND_SERVERS.bat then START_BACKEND_SERVERS.bat
+
+================================================================================
+PORT REFERENCE
+================================================================================
+
+BACKEND:
+  3001   - Main Backend Server (API)
+  8002   - Voice Server
+  8003   - Whisper Voice Server
+  11434  - Ollama (AI Models)
+
+FRONTEND:
+  8000   - Frontend Instance 1
+  8001   - Frontend Instance 2
+  8002   - Frontend Instance 3
+  8003   - Frontend Instance 4
+  8004   - Frontend Instance 5
+
+DEVELOPMENT:
+  5173   - Vite dev server (npm run dev)
+
+================================================================================
+KEYBOARD SHORTCUTS
+================================================================================
+
+In Terminal Windows:
+  Ctrl+C     - Stop the service
+  Ctrl+L     - Clear screen
+  Ctrl+A     - Select all
+  Ctrl+V     - Paste
+
+In Command Prompt:
+  Up Arrow   - Previous command
+  Down Arrow - Next command
+  Tab        - Auto-complete
+
+================================================================================
+TIPS & TRICKS
+================================================================================
+
+TIP 1: Run as Administrator
+  - Right-click .bat file → Run as administrator
+  - Avoids permission issues
+
+TIP 2: Keep Terminals Open
+  - Scripts pause at end
+  - Press any key to close
+  - Or keep open to see logs
+
+TIP 3: Watch Real-Time Logs
+  - Each service has its own terminal
+  - See errors and logs as they happen
+
+TIP 4: Use the Menu
+  - MENU.bat is easiest for beginners
+  - Interactive and user-friendly
+
+TIP 5: Check Status Regularly
+  - Run CHECK_SERVICES.bat anytime
+  - Verify everything is running
+
+TIP 6: Restart Services
+  - Find terminal window
+  - Press Ctrl+C
+  - Run start script again
+
+TIP 7: Keep Documentation Handy
+  - README.md has detailed info
+  - SCRIPTS_SUMMARY.txt has reference
+  - BACKEND_COMMANDS.txt has manual commands
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. Install Node.js (if not already done)
+2. Run: npm install
+3. Run: npm install (in backend folder)
+4. Double-click: START_BACKEND_SERVERS.bat
+5. In IDE: npm run dev
+6. Open: http://localhost:5173
+7. Start developing!
+
+For more help:
+  - See README.md for detailed documentation
+  - See SCRIPTS_SUMMARY.txt for reference
+  - See BACKEND_COMMANDS.txt for manual commands
+
+================================================================================
+QUICK REFERENCE
+================================================================================
+
+Start Backend:     START_BACKEND_SERVERS.bat
+Stop Backend:      STOP_BACKEND_SERVERS.bat
+Start All:         START_ALL.bat
+Stop All:          STOP_ALL.bat
+Check Status:      CHECK_SERVICES.bat
+Interactive Menu:  MENU.bat
+View Docs:         README.md
+View Summary:      SCRIPTS_SUMMARY.txt
+Manual Commands:   BACKEND_COMMANDS.txt
+
+================================================================================
+SUPPORT
+================================================================================
+
+If you need help:
+  1. Check the Troubleshooting section above
+  2. Read README.md for detailed info
+  3. Check SCRIPTS_SUMMARY.txt for reference
+  4. Verify Node.js is installed
+  5. Run CHECK_SERVICES.bat to verify status
+
+Common Links:
+  - Node.js: https://nodejs.org/
+  - Ollama: https://ollama.ai/
+  - Supabase: https://supabase.com/
+  - Project Docs: See docs_archive/ folder
+
+================================================================================
+HAPPY CODING!
+================================================================================
+
+You're all set! Start with:
+  1. START_BACKEND_SERVERS.bat
+  2. npm run dev
+  3. Open http://localhost:5173
+
+Enjoy developing the E-Learning Platform!
+
+================================================================================
