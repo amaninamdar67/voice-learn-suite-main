@@ -245,7 +245,12 @@ export const AITutorEnhanced: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/ai-tutor/chat', {
+      // Use Ollama endpoint for local models
+      const endpoint = selectedModel.includes('deepseek') || selectedModel.includes('llama') 
+        ? '/api/ollama/chat' 
+        : '/api/ai-tutor/chat';
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: messageToSend, model: selectedModel })
@@ -273,7 +278,7 @@ export const AITutorEnhanced: React.FC = () => {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: `⚠️ Error: ${error instanceof Error ? error.message : 'Failed to get response'}\n\nMake sure Ollama is running. Start it with:\n• Windows: Double-click START_DEEPSEEK_OLLAMA.bat\n• Mac/Linux: ollama serve`,
+        content: `⚠️ Error: ${error instanceof Error ? error.message : 'Failed to get response'}\n\nTo use Ollama locally:\n1. Install Ollama from https://ollama.ai/\n2. Pull the model: ollama pull deepseek-r1:1.5b\n3. Start Ollama: ollama serve\n4. Ollama will run on http://localhost:11434`,
         timestamp: new Date()
       };
 

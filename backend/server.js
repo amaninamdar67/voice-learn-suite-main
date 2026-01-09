@@ -56,6 +56,7 @@ import { initializeAITutorSessionRoutes } from './ai-tutor-sessions-routes.js';
 import { initializeGroqRoutes } from './groq-ai-routes.js';
 import { initializeGeminiRoutes } from './gemini-ai-routes.js';
 import { initializePerplexityRoutes } from './perplexity-ai-routes.js';
+import { initializeOllamaRoutes } from './ollama-ai-routes.js';
 
 const app = express();
 app.use(cors());
@@ -99,6 +100,9 @@ initializeGeminiRoutes(app);
 
 // Initialize Perplexity routes (free tier available, image & document analysis)
 initializePerplexityRoutes(app);
+
+// Initialize Ollama routes (local, free, deepseek-r1:1.5b model)
+initializeOllamaRoutes(app);
 
 // Initialize AI Tutor Sessions routes
 initializeAITutorSessionRoutes(app);
