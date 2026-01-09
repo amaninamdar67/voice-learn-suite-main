@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Maximize2, Minimize2, Mic, MicOff, Send, Upload, Volume2, VolumeX, PanelRight, Square, History, Settings } from 'lucide-react';
+import { X, Maximize2, Minimize2, Mic, MicOff, Send, Upload, Volume2, VolumeX, PanelRight, Square, History, Settings, Brain } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -26,6 +26,7 @@ export const AITutorEnhanced: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState('deepseek-r1:1.5b');
   const [availableModels, setAvailableModels] = useState<string[]>(['deepseek-r1:1.5b', 'deepseek-r1:1b', 'llama2']);
   const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
+  const [modelError, setModelError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -386,23 +387,37 @@ export const AITutorEnhanced: React.FC = () => {
               </button>
             </div>
             <div className="flex gap-1 items-center">
-              {/* Model Selector */}
+              {/* Model Selector with Error Handling */}
               <select
                 value={selectedModel}
                 onChange={(e) => {
+                  const newModel = e.target.value;
+                  if (!newModel) {
+                    setModelError('Please select a model');
+                    return;
+                  }
+                  
                   // Save current session before switching models
                   if (messages.length > 0) {
                     saveSessionToHistory();
                   }
-                  setSelectedModel(e.target.value);
+                  
+                  setSelectedModel(newModel);
+                  setModelError(null);
                   // Clear messages for new model
                   setMessages([]);
                   localStorage.removeItem('aiTutorCurrentSession');
+                  showNotification(`Switched to ${newModel}`);
                 }}
-                className="px-2 py-1 text-xs bg-slate-700 text-blue-300 rounded border border-blue-500/30 focus:outline-none focus:border-blue-500"
+                className={`px-2 py-1 text-xs rounded border focus:outline-none transition ${
+                  modelError 
+                    ? 'bg-red-700/30 text-red-300 border-red-500/50' 
+                    : 'bg-slate-700 text-blue-300 border-blue-500/30 focus:border-blue-500'
+                }`}
+                title={modelError || 'Select AI model'}
               >
                 {availableModels.length === 0 ? (
-                  <option value="">No models available</option>
+                  <option value="">No models available - Start Ollama</option>
                 ) : (
                   availableModels.map(model => (
                     <option key={model} value={model}>{model}</option>
@@ -429,6 +444,14 @@ export const AITutorEnhanced: React.FC = () => {
                 title="Full screen"
               >
                 <Maximize2 size={16} />
+              </button>
+              {/* DeepSeek AI Button */}
+              <button
+                className="p-2 rounded-lg transition hover:bg-purple-500/20 text-purple-300 flex items-center gap-1"
+                title={`Using: ${selectedModel}`}
+              >
+                <Brain size={16} />
+                <span className="text-xs font-semibold">DeepSeek</span>
               </button>
               <button
                 onClick={() => {
@@ -567,12 +590,17 @@ export const AITutorEnhanced: React.FC = () => {
           </div>
 
           <div className="p-4 border-t border-blue-500/20 space-y-3">
+            {modelError && (
+              <div className="text-xs text-red-300 bg-red-500/20 p-2 rounded border border-red-500/30">
+                ⚠️ {modelError}
+              </div>
+            )}
             <div className="flex gap-2">
               <input
                 type="text"
                 value={inputValue}
                 onChange={e => setInputValue(e.target.value)}
-                onKeyPress={e => e.key === 'Enter' && handleSendMessage()}
+                onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
                 placeholder="Type or speak..."
                 className="flex-1 bg-slate-700 text-white px-4 py-2 rounded-lg border border-blue-500/30 focus:outline-none focus:border-blue-500"
               />
