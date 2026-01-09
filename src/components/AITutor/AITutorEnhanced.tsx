@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Maximize2, Minimize2, Mic, MicOff, Send, Upload, Volume2, VolumeX, PanelRight, Square, History, Settings, Brain } from 'lucide-react';
+import { X, Maximize2, Mic, MicOff, Send, Upload, Volume2, VolumeX, PanelRight, Square, History, Brain, ChevronDown } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -23,8 +23,13 @@ export const AITutorEnhanced: React.FC = () => {
   const [notification, setNotification] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('deepseek-r1:1.5b');
-  const [availableModels, setAvailableModels] = useState<string[]>(['deepseek-r1:1.5b', 'deepseek-r1:1b', 'llama2']);
+  const [selectedModel, setSelectedModel] = useState('groq-mixtral');
+  const [availableModels, setAvailableModels] = useState<string[]>([
+    'groq-mixtral',
+    'groq-llama2',
+    'groq-gemma',
+    'deepseek-local'
+  ]);
   const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
   const [modelError, setModelError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -63,17 +68,22 @@ export const AITutorEnhanced: React.FC = () => {
       const response = await fetch('http://localhost:11434/api/tags');
       if (response.ok) {
         const data = await response.json();
-        const models = data.models?.map((m: any) => m.name) || [];
-        if (models.length > 0) {
-          setAvailableModels(models);
-          // Set first available model as default
-          if (!models.includes(selectedModel)) {
-            setSelectedModel(models[0]);
-          }
+        const ollamaModels = data.models?.map((m: any) => m.name) || [];
+        // Add Groq models and local DeepSeek option
+        const allModels = [
+          'groq-mixtral',
+          'groq-llama2',
+          'groq-gemma',
+          'deepseek-local'
+        ];
+        // Add any additional Ollama models found
+        if (ollamaModels.length > 0) {
+          allModels.push(...ollamaModels.filter((m: string) => !allModels.includes(m)));
         }
+        setAvailableModels(allModels);
       }
     } catch (error) {
-      console.warn('Could not fetch models from Ollama:', error);
+      console.warn('Could not fetch Ollama models:', error);
       // Keep default models if Ollama is not accessible
     }
   };
@@ -246,15 +256,28 @@ export const AITutorEnhanced: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Use Ollama endpoint for local models
-      const endpoint = selectedModel.includes('deepseek') || selectedModel.includes('llama') 
-        ? '/api/ollama/chat' 
-        : '/api/ai-tutor/chat';
+      // Route to correct endpoint based on model
+      let endpoint = '/api/ai-tutor/chat';
+      let body: any = { message: messageToSend, model: selectedModel };
+
+      if (selectedModel === 'deepseek-local') {
+        endpoint = '/api/ollama/chat';
+        body.model = 'deepseek-r1:1.5b';
+      } else if (selectedModel.startsWith('groq-')) {
+        endpoint = '/api/ai-tutor/chat';
+        // Map groq- prefix to actual model names
+        const modelMap: { [key: string]: string } = {
+          'groq-mixtral': 'mixtral-8x7b-32768',
+          'groq-llama2': 'llama2-70b-4096',
+          'groq-gemma': 'gemma-7b-it'
+        };
+        body.model = modelMap[selectedModel] || 'mixtral-8x7b-32768';
+      }
 
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: messageToSend, model: selectedModel })
+        body: JSON.stringify(body)
       });
 
       const data = await response.json();
@@ -276,10 +299,16 @@ export const AITutorEnhanced: React.FC = () => {
     } catch (error) {
       console.error('Error:', error);
       
+      let errorContent = `⚠️ Error: ${error instanceof Error ? error.message : 'Failed to get response'}`;
+      
+      if (selectedModel === 'deepseek-local') {
+        errorContent += `\n\nTo use DeepSeek locally:\n1. Install Ollama from https://ollama.ai/\n2. Pull the model: ollama pull deepseek-r1:1.5b\n3. Start Ollama: ollama serve\n4. Ollama will run on http://localhost:11434`;
+      }
+      
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: `⚠️ Error: ${error instanceof Error ? error.message : 'Failed to get response'}\n\nTo use Ollama locally:\n1. Install Ollama from https://ollama.ai/\n2. Pull the model: ollama pull deepseek-r1:1.5b\n3. Start Ollama: ollama serve\n4. Ollama will run on http://localhost:11434`,
+        content: errorContent,
         timestamp: new Date()
       };
 
@@ -386,44 +415,56 @@ export const AITutorEnhanced: React.FC = () => {
                 <History size={16} />
               </button>
             </div>
-            <div className="flex gap-1 items-center">
-              {/* Model Selector with Error Handling */}
-              <select
-                value={selectedModel}
-                onChange={(e) => {
-                  const newModel = e.target.value;
-                  if (!newModel) {
-                    setModelError('Please select a model');
-                    return;
-                  }
-                  
-                  // Save current session before switching models
-                  if (messages.length > 0) {
-                    saveSessionToHistory();
-                  }
-                  
-                  setSelectedModel(newModel);
-                  setModelError(null);
-                  // Clear messages for new model
-                  setMessages([]);
-                  localStorage.removeItem('aiTutorCurrentSession');
-                  showNotification(`Switched to ${newModel}`);
-                }}
-                className={`px-2 py-1 text-xs rounded border focus:outline-none transition ${
-                  modelError 
-                    ? 'bg-red-700/30 text-red-300 border-red-500/50' 
-                    : 'bg-slate-700 text-blue-300 border-blue-500/30 focus:border-blue-500'
-                }`}
-                title={modelError || 'Select AI model'}
-              >
-                {availableModels.length === 0 ? (
-                  <option value="">No models available - Start Ollama</option>
-                ) : (
-                  availableModels.map(model => (
-                    <option key={model} value={model}>{model}</option>
-                  ))
-                )}
-              </select>
+            <div className="flex gap-2 items-center">
+              {/* Model Selector - More Prominent */}
+              <div className="flex items-center gap-1 bg-slate-700/50 px-3 py-2 rounded-lg border border-purple-500/30">
+                <Brain size={16} className="text-purple-400" />
+                <select
+                  value={selectedModel}
+                  onChange={(e) => {
+                    const newModel = e.target.value;
+                    if (!newModel) {
+                      setModelError('Please select a model');
+                      return;
+                    }
+                    
+                    // Save current session before switching models
+                    if (messages.length > 0) {
+                      saveSessionToHistory();
+                    }
+                    
+                    setSelectedModel(newModel);
+                    setModelError(null);
+                    // Clear messages for new model
+                    setMessages([]);
+                    localStorage.removeItem('aiTutorCurrentSession');
+                    showNotification(`Switched to ${newModel}`);
+                  }}
+                  className={`px-2 py-1 text-xs rounded border-0 focus:outline-none transition bg-slate-600 text-purple-300 focus:ring-2 focus:ring-purple-500 cursor-pointer font-semibold ${
+                    modelError 
+                      ? 'text-red-300' 
+                      : 'text-purple-300'
+                  }`}
+                  title={modelError || 'Select AI model'}
+                >
+                  {availableModels.length === 0 ? (
+                    <option value="">No models available</option>
+                  ) : (
+                    availableModels.map(model => {
+                      let label = model;
+                      if (model === 'groq-mixtral') label = 'Groq Mixtral';
+                      else if (model === 'groq-llama2') label = 'Groq Llama 2';
+                      else if (model === 'groq-gemma') label = 'Groq Gemma';
+                      else if (model === 'deepseek-local') label = 'DeepSeek (Local)';
+                      return (
+                        <option key={model} value={model}>{label}</option>
+                      );
+                    })
+                  )}
+                </select>
+                <ChevronDown size={14} className="text-purple-400 pointer-events-none" />
+              </div>
+
               <button
                 onClick={() => setMode('popup')}
                 className={`p-2 rounded-lg transition ${uiMode.type === 'popup' ? 'bg-blue-500/40 text-blue-200' : 'hover:bg-blue-500/20 text-blue-300'}`}
@@ -444,14 +485,6 @@ export const AITutorEnhanced: React.FC = () => {
                 title="Full screen"
               >
                 <Maximize2 size={16} />
-              </button>
-              {/* DeepSeek AI Button */}
-              <button
-                className="p-2 rounded-lg transition hover:bg-purple-500/20 text-purple-300 flex items-center gap-1"
-                title={`Using: ${selectedModel}`}
-              >
-                <Brain size={16} />
-                <span className="text-xs font-semibold">DeepSeek</span>
               </button>
               <button
                 onClick={() => {
@@ -548,8 +581,17 @@ export const AITutorEnhanced: React.FC = () => {
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {messages.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-slate-400">
-                  <p>Start a conversation...</p>
+                <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-4">
+                  <div className="text-center">
+                    <Brain size={48} className="text-purple-400 mx-auto mb-3" />
+                    <p className="text-lg font-semibold text-purple-300">
+                      {selectedModel === 'deepseek-local' ? 'DeepSeek AI' : 'Groq AI'}
+                    </p>
+                    <p className="text-sm text-slate-400 mt-2">
+                      Using: <span className="text-purple-300 font-semibold">{selectedModel}</span>
+                    </p>
+                    <p className="text-xs text-slate-500 mt-3">Start a conversation...</p>
+                  </div>
                 </div>
               ) : (
                 messages.map(msg => (

@@ -106,29 +106,25 @@ export const AITutorNew: React.FC = () => {
     }
 
     try {
-      // Determine endpoint based on whether image is present
-      let endpoint = '/api/groq/chat'; // Default: Groq for text
-      let payload: any = {
+      // Always use Groq
+      const endpoint = '/api/groq/chat';
+      const payload = { 
         message: messageContent,
         model: 'llama-3.1-8b-instant'
       };
       
-      // For now, always use Groq (text-only)
-      // Image support coming soon with proper provider
-      if (uploadedImage) {
-        console.log('[AI Chat] Image detected - describing image in text instead');
-        // User can describe the image in their message
-      } else {
-        console.log('[AI Chat] Text only - using Groq');
-      }
+      console.log('[AI Chat] Using Groq model');
       
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...await getAuthHeader()
+        },
         body: JSON.stringify(payload)
       });
 
-      let data;
+      let data: any;
       try {
         data = await response.json();
       } catch (parseError) {

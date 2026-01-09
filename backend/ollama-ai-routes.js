@@ -53,7 +53,7 @@ export function initializeOllamaRoutes(app) {
       console.log(`[Ollama] Response received: ${aiResponse.substring(0, 100)}...`);
 
       res.json({
-        response: aiResponse,
+        response: aiResponse.trim(),
         model: model,
         tokens: {
           prompt: response.data.prompt_eval_count || 0,
