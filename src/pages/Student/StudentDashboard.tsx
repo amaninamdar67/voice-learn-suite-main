@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { 
-  BookOpen, Video, FileText, Trophy, Clock, CheckCircle, 
-  TrendingUp, Award, Target 
+  BookOpen, Video, FileText, Trophy, CheckCircle, 
+  TrendingUp, Award
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -45,6 +45,8 @@ export default function StudentDashboard() {
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     if (user && !hasLoaded) {
@@ -52,6 +54,40 @@ export default function StudentDashboard() {
       setHasLoaded(true);
     }
   }, [user, hasLoaded]);
+
+  // Subscribe to real-time updates
+  useEffect(() => {
+    if (!user) return;
+
+    const subscriptions = [
+      supabase
+        .channel(`video_watch_history:student_id=eq.${user.id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'video_watch_history', filter: `student_id=eq.${user.id}` }, () => {
+          fetchDashboardData();
+        })
+        .subscribe(),
+
+      supabase
+        .channel(`quiz_results:student_id=eq.${user.id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'quiz_results', filter: `student_id=eq.${user.id}` }, () => {
+          fetchDashboardData();
+        })
+        .subscribe(),
+
+      supabase
+        .channel(`assignment_submissions:student_id=eq.${user.id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'assignment_submissions', filter: `student_id=eq.${user.id}` }, () => {
+          fetchDashboardData();
+        })
+        .subscribe(),
+    ];
+
+    return () => {
+      subscriptions.forEach(sub => {
+        supabase.removeChannel(sub);
+      });
+    };
+  }, [user]);
 
   const fetchDashboardData = async () => {
     try {
@@ -163,11 +199,18 @@ export default function StudentDashboard() {
       });
 
       setRecentActivity(activities);
+      setLastUpdated(new Date());
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
+  };
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchDashboardData();
   };
 
   if (loading) {
@@ -181,9 +224,31 @@ export default function StudentDashboard() {
   return (
     <div className="max-w-7xl mx-auto p-6">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">My Learning Dashboard</h1>
-        <p className="text-gray-600 mt-1">Track your progress and continue learning</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">My Learning Dashboard</h1>
+          <p className="text-gray-600 mt-1">Track your progress and continue learning</p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs text-gray-500">
+            Last updated: {lastUpdated.toLocaleTimeString()}
+          </p>
+          <button
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors text-sm font-medium"
+          >
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
+      </div>
+
+      {/* Live Indicator */}
+      <div className="mb-4 flex items-center gap-2">
+        <div className="flex items-center gap-2 px-3 py-1 bg-green-50 border border-green-200 rounded-full">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <span className="text-xs font-medium text-green-700">Live Data</span>
+        </div>
       </div>
 
       {/* Stats Cards */}

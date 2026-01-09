@@ -1,5 +1,5 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -9,6 +9,7 @@ import {
   Button,
   ButtonGroup,
 } from '@mui/material';
+import { supabase } from '../../lib/supabase';
 import {
   School,
   People,
@@ -66,22 +67,23 @@ interface WeeklyAttendance {
   date: string;
 }
 
-const AdminDashboard: React.FC = () => {
+const AdminDashboard = () => {
   const navigate = useNavigate();
-  const [stats, setStats] = React.useState<StatCard[]>([
+  const [stats, setStats] = useState<StatCard[]>([
     { title: 'Total Domains', value: 0, icon: <School />, color: '#2196F3' },
     { title: 'Total Sub-Domain', value: 0, icon: <School />, color: '#00BCD4' },
     { title: 'Total Students', value: 0, icon: <People />, color: '#4CAF50' },
     { title: 'Total Teachers', value: 0, icon: <Person />, color: '#FF9800' },
     { title: 'Live Classes', value: 0, icon: <Videocam />, color: '#9C27B0' },
   ]);
-  const [activities, setActivities] = React.useState<Activity[]>([]);
-  const [activityChartData, setActivityChartData] = React.useState<ActivityData[]>([]);
-  const [timeRange, setTimeRange] = React.useState('week');
-  const [analyticsData, setAnalyticsData] = React.useState<any>(null);
-  const [subdomainCount, setSubdomainCount] = React.useState(0);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activityChartData, setActivityChartData] = useState<ActivityData[]>([]);
+  const [timeRange, setTimeRange] = useState('week');
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [subdomainCount, setSubdomainCount] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
-  React.useEffect(() => {
+  useEffect(() => {
     loadDashboardStats();
     loadActivities();
     loadAnalytics();
@@ -96,10 +98,55 @@ const AdminDashboard: React.FC = () => {
       loadActivities();
       loadAnalytics();
     }, 15000);
+
+    // Subscribe to real-time updates for live classes
+    const liveClassesSubscription = supabase
+      .channel('live_classes_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_classes' }, () => {
+        loadDashboardStats();
+      })
+      .subscribe();
+
+    // Subscribe to real-time updates for profiles (users)
+    const profilesSubscription = supabase
+      .channel('profiles_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+        loadDashboardStats();
+      })
+      .subscribe();
+
+    // Subscribe to real-time updates for video watch history (analytics)
+    const videoHistorySubscription = supabase
+      .channel('video_watch_history_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'video_watch_history' }, () => {
+        loadAnalytics();
+      })
+      .subscribe();
+
+    // Subscribe to quiz results (analytics)
+    const quizResultsSubscription = supabase
+      .channel('quiz_results_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quiz_results' }, () => {
+        loadAnalytics();
+      })
+      .subscribe();
+
+    // Subscribe to assignments (analytics)
+    const assignmentsSubscription = supabase
+      .channel('assignment_submissions_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'assignment_submissions' }, () => {
+        loadAnalytics();
+      })
+      .subscribe();
     
     return () => {
       clearInterval(statsInterval);
       clearInterval(analyticsInterval);
+      supabase.removeChannel(liveClassesSubscription);
+      supabase.removeChannel(profilesSubscription);
+      supabase.removeChannel(videoHistorySubscription);
+      supabase.removeChannel(quizResultsSubscription);
+      supabase.removeChannel(assignmentsSubscription);
     };
   }, [timeRange]);
 
@@ -142,6 +189,8 @@ const AdminDashboard: React.FC = () => {
         { title: 'Ongoing Live Classes', value: ongoingLiveClasses, icon: <Videocam />, color: '#FF5722' },
       ]);
 
+      setLastUpdated(new Date());
+
       console.log('✅ Dashboard Stats Updated:', {
         domains,
         subdomains,
@@ -180,6 +229,7 @@ const AdminDashboard: React.FC = () => {
       if (data.chartData) {
         setActivityChartData(data.chartData);
         setAnalyticsData(data.totals);
+        setLastUpdated(new Date());
       }
     } catch (error) {
       console.error('Error loading analytics:', error);
@@ -197,12 +247,25 @@ const AdminDashboard: React.FC = () => {
       {/* Header with Title and Live Data Cards */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4, gap: 2 }}>
         <Box>
-          <Typography variant="h4" gutterBottom fontWeight={600}>
-            Admin Dashboard
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            System overview and management
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography variant="h4" gutterBottom fontWeight={600} sx={{ mb: 0 }}>
+              Admin Dashboard
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 0.5, bgcolor: '#E8F5E9', border: '1px solid #4CAF50', borderRadius: 1 }}>
+              <Box sx={{ width: 8, height: 8, bgcolor: '#4CAF50', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
+              <Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.75rem', color: '#2E7D32' }}>
+                Live Data
+              </Typography>
+            </Box>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
+            <Typography variant="body1" color="text.secondary">
+              System overview and management
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+              Last updated: {lastUpdated.toLocaleTimeString()}
+            </Typography>
+          </Box>
         </Box>
 
         {/* Live Data Cards - Top Right */}
@@ -664,5 +727,19 @@ const AdminDashboard: React.FC = () => {
     </Box>
   );
 };
+
+// Add pulse animation
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+`;
+document.head.appendChild(style);
 
 export default AdminDashboard;
